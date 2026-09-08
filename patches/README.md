@@ -52,45 +52,17 @@ ST invia la notifica di campo RF prima che il lato JNI sia inizializzato: `nat` 
 (`NFA_DM_RF_FIELD_EVT` e `NFA_DM_NFCC_TRANSPORT_ERR_EVT`/`TIMEOUT`). La notifica arrivata troppo
 presto viene ignorata invece di far cadere il processo.
 
-## packages_apps_Nfc-mifare-classic-extras.patch
+## packages_apps_Nfc-mifare-classic-extras.patch — RIMOSSA, non serve piu'
 
-**Progetto**: `packages/apps/Nfc`
+Aggiungeva a `NativeNfcTag.java` il `case TagTechnology.MIFARE_CLASSIC` che
+mancava: senza, il `Bundle` degli extras restava null e ogni app che apriva una
+carta Mifare moriva con `NullPointerException` dentro `NfcA.<init>`.
 
-**Sintomo**: avvicinando una carta Mifare Classic, **qualsiasi** app che la apra si chiude subito.
-Verificato con due app diverse, quindi non è un problema dell'applicazione:
+**LineageOS 20 ora lo ha di suo.** Alla riga 756 di quel file c'e' lo stesso
+identico codice -- SAK preso da `mTechActBytes[i][0]`, ATQA da
+`mTechPollBytes[i]` -- e la patch non si applicava piu'. Verificato sull'albero
+sincronizzato l'8 settembre 2026.
 
-```
-FATAL EXCEPTION: main
-java.lang.NullPointerException: Attempt to invoke virtual method
-  'short android.os.Bundle.getShort(java.lang.String)'
-    at android.nfc.tech.NfcA.<init>(NfcA.java:76)
-```
-
-**Causa**: `NfcA`, quando il tag è anche Mifare Classic, legge il SAK dagli extras di
-`MIFARE_CLASSIC`:
-
-```java
-if (tag.hasTech(TagTechnology.MIFARE_CLASSIC)) {
-    extras = tag.getTechExtras(TagTechnology.MIFARE_CLASSIC);
-    mSak = extras.getShort(EXTRA_SAK);
-}
-```
-
-Ma `NativeNfcTag.getTechExtras()`, che quegli extras li costruisce, non ha un `case` per
-`MIFARE_CLASSIC`: finisce nel `default`, che dichiara "Leave the entry in the array null" e fa
-`continue`. Il Bundle resta `null` e la riga sopra solleva l'eccezione. Le due parti del framework
-non sono d'accordo su chi popola quel campo.
-
-**Modifica**: aggiunto il `case TagTechnology.MIFARE_CLASSIC` che riempie SAK e ATQA come già si fa
-per `NFC_A`.
-
-Nota: non serve toccare `LEGACY_MIFARE_READER` in `libnfc-nci.conf`. Con questa patch la lettura
-funziona lasciando la configurazione del vendor com'è (`0x0`).
-
-**Da Android 13 questa patch non serve più**: AOSP ha corretto il difetto a monte. In
-LineageOS 20.0 il `case TagTechnology.MIFARE_CLASSIC` c'è già e fa esattamente le stesse due cose,
-SAK e ATQA. Applicandola si ottiene `Hunk #1 FAILED at 725`, che è il modo in cui il difetto
-annuncia di essere stato risolto.
 
 ## packages_apps_FMRadio-antenna-selection.patch
 

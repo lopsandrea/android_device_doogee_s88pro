@@ -185,3 +185,57 @@ SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/system_ext/private
 # BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE e' vuota, e qui vale ext4.
 TARGET_USES_PREBUILT_VENDOR_SEPOLICY := true
 TARGET_HAS_FUSEBLK_SEPOLICY_ON_VENDOR := true
+
+# ---------------------------------------------------------------------------
+# IL KERNEL SI COMPILA DAI SORGENTI
+#
+# Il charter di LineageOS lo chiede: "Non-GKI devices MUST NOT ship a prebuilt
+# kernel". I sorgenti stanno in kernel/doogee/s88pro, e il manifest locale
+# (s88pro.xml) li porta giu' insieme al resto.
+#
+# prebuilt/kernel resta nel repo per chi vuole solo installare senza
+# ricompilare: LineageOS lo userebbe solo con TARGET_FORCE_PREBUILT_KERNEL.
+TARGET_KERNEL_SOURCE := kernel/doogee/s88pro
+TARGET_KERNEL_CONFIG := lineage_s88pro_defconfig
+
+# La versione di clang va fissata, non lasciata al default "clang-stable":
+# in prebuilts/clang/host/linux-x86/clang-stable c'e' solo clang-format, e la
+# build muore con "clang: command not found".
+#
+# LineageOS 20 porta clang-r450784d (14.0.6), e va bene: i due warning che su
+# clang-17 costringevano a spegnerli -- deprecated-non-prototype e
+# single-bit-bitfield-constant-conversion -- sono stati INTRODOTTI in clang-15
+# e 16. clang-14 non li emette, quindi i rispettivi -Wno- non servono; e
+# passarglieli lo farebbe fallire, perche' li segnala come opzione sconosciuta
+# e il test di -fstack-protector-strong non passa.
+TARGET_KERNEL_CLANG_VERSION := r450784d
+
+# I warning che clang-14 ha e il clang-9 di fabbrica no. Il kernel compila con
+# -Werror, e codice del 2019 diventa errore solo perche' il compilatore e' piu'
+# recente. Si spengono i SINGOLI warning, non -Werror per intero: cosi' un
+# difetto vero continua a fermare il build.
+KERNEL_WARN_OFF := -Wno-unused-but-set-variable
+KERNEL_WARN_OFF += -Wno-void-pointer-to-enum-cast
+KERNEL_WARN_OFF += -Wno-strict-prototypes
+KERNEL_WARN_OFF += -Wno-enum-conversion
+KERNEL_WARN_OFF += -Wno-sometimes-uninitialized
+KERNEL_WARN_OFF += -Wno-misleading-indentation
+KERNEL_WARN_OFF += -Wno-bool-operation
+KERNEL_WARN_OFF += -Wno-gnu-variable-sized-type-not-at-end
+
+# LLVM_IAS=0: l'assembler integrato di clang non digerisce l'assembly di un
+# kernel 4.14 (arch/arm64/mm/fault.c, "junk at end of line"); si usa quello di
+# GNU binutils, che quel codice lo accetta.
+#
+# KCFLAGS=-gdwarf-4: con l'assembler di binutils 4.9 -- del 2014 -- le direttive
+# DWARF 5 diventano "file number less than one". Chiedendo DWARF 4 il formato
+# torna leggibile e CONFIG_DEBUG_INFO resta acceso come in fabbrica.
+TARGET_KERNEL_ADDITIONAL_FLAGS := LLVM_IAS=0 KCFLAGS="-gdwarf-4 $(KERNEL_WARN_OFF)"
+
+# ---------------------------------------------------------------------------
+# Va per ULTIMO: tira dentro BoardConfigKernel.mk e BoardConfigSoong.mk, che
+# esportano a soong PATH_OVERRIDE_SOONG e le altre variabili del kernel.
+# Senza, soong si ferma subito con:
+#   vendor/lineage/build/soong/Android.bp:24:8: module
+#   "generated_kernel_includes": cmd: unknown variable '$(PATH_OVERRIDE_SOONG)'
+include vendor/lineage/config/BoardConfigLineage.mk
