@@ -69,10 +69,21 @@ MODULE
         # lo stesso LOCAL_MODULE si sovrascriverebbero a vicenda. Il file a 32
         # bit viene quindi saltato se esiste anche la sua versione a 64.
         other="$(echo "$f" | sed 's#/lib64/#/lib/#')"
-        if [ "$bits" = "32" ] && grep -qxF "$(echo "$f" | sed 's#/lib/#/lib64/#')" "$LIST"; then
+        # Il confronto va fatto sulla DESTINAZIONE, non sulla riga intera: una
+        # riga puo' essere "system/lib64/x.so" oppure "product/lib64/x.so:system/lib64/x.so",
+        # e con `grep -x` la seconda forma non corrisponde mai -- il file
+        # finiva per generare due moduli con lo stesso LOCAL_MODULE.
+        elencata() {                       # $1 = percorso di destinazione
+                awk -v p="$1" '
+                        /^[[:space:]]*(#|$)/ { next }
+                        { sub(/^-/, ""); if (index($0, ":")) sub(/^[^:]*:/, "");
+                          if ($0 == p) { trovato = 1; exit } }
+                        END { exit !trovato }' "$LIST"
+        }
+        if [ "$bits" = "32" ] && elencata "$(echo "$f" | sed 's#/lib/#/lib64/#')"; then
           continue
         fi
-        if [ "$bits" = "64" ] && grep -qxF "$other" "$LIST"; then
+        if [ "$bits" = "64" ] && elencata "$other"; then
           cat << MODULE
 include \$(CLEAR_VARS)
 LOCAL_MODULE := $name
