@@ -79,6 +79,7 @@ BOARD_DOOGEE_DYNAMIC_PARTITIONS_SIZE := 4827643904
 # (in vendor/etc/vintf il build crea la directory manifest/ per i frammenti,
 # ma il manifest principale deve fornirlo il device tree)
 DEVICE_MANIFEST_FILE := $(DEVICE_PATH)/manifest.xml
+DEVICE_MATRIX_FILE := $(DEVICE_PATH)/compatibility_matrix.xml
 
 TARGET_COPY_OUT_VENDOR := vendor
 
