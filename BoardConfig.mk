@@ -69,6 +69,17 @@ BOARD_DOOGEE_DYNAMIC_PARTITIONS_SIZE := 4827643904
 # device.mk. Metterla qui fa fallire la configurazione con
 #   cannot assign to readonly variable: PRODUCT_USE_DYNAMIC_PARTITIONS
 
+# Il manifest VINTF del vendor. E' quello della ROM di fabbrica, estratto da
+# /vendor/etc/vintf/manifest.xml del telefono: descrive quali HAL il vendor
+# offre, e i blob in vendor/doogee/s88pro sono proprio quelli.
+#
+# Senza, il build si ferma in fondo, quando verifica la compatibilita':
+#   Fetch 'out/.../vendor/etc/vintf/manifest.xml': NAME_NOT_FOUND
+#   ERROR: Cannot fetch vendor manifest.
+# (in vendor/etc/vintf il build crea la directory manifest/ per i frammenti,
+# ma il manifest principale deve fornirlo il device tree)
+DEVICE_MANIFEST_FILE := $(DEVICE_PATH)/manifest.xml
+
 TARGET_COPY_OUT_VENDOR := vendor
 
 # Fa creare la directory /metadata nella system.
