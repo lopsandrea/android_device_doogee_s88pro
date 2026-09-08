@@ -238,7 +238,13 @@ KERNEL_WARN_OFF += -Wno-gnu-variable-sized-type-not-at-end
 # KCFLAGS=-gdwarf-4: con l'assembler di binutils 4.9 -- del 2014 -- le direttive
 # DWARF 5 diventano "file number less than one". Chiedendo DWARF 4 il formato
 # torna leggibile e CONFIG_DEBUG_INFO resta acceso come in fabbrica.
-TARGET_KERNEL_ADDITIONAL_FLAGS := LLVM_IAS=0 KCFLAGS="-gdwarf-4 $(KERNEL_WARN_OFF)"
+# HOSTCFLAGS=-fuse-ld=lld: il build di Android sanifica il PATH e non ci mette
+# "ld" (in prebuilts/build-tools/path/linux-x86 non c'e'). Il kernel 4.14 linka
+# i suoi strumenti host -- il primo e' scripts/basic/fixdep -- chiamando HOSTCC
+# senza passare HOSTLDFLAGS, e clang cerca "ld":
+#   clang-14: error: unable to execute command: Executable "ld" doesn't exist!
+# Con -fuse-ld=lld usa il linker che sta accanto al compilatore.
+TARGET_KERNEL_ADDITIONAL_FLAGS := LLVM_IAS=0 HOSTCFLAGS="-fuse-ld=lld" KCFLAGS="-gdwarf-4 $(KERNEL_WARN_OFF)"
 
 # NIENTE "include vendor/lineage/config/BoardConfigLineage.mk" qui: lo fa gia'
 # build/core/config.mk:361, e includerlo una seconda volta rompe l'esportazione
