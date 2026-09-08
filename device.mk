@@ -9,18 +9,34 @@ LOCAL_PATH := device/doogee/s88pro
 # Partizioni dinamiche: variabile di prodotto, non di board.
 PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
-# fstab senza cifratura, nel solo vendor.
+# fstab senza cifratura: nel vendor E NEL RAMDISK.
 #
-# NON va copiato nel ramdisk: il boot non viene ricompilato. Si continua a
-# usare boot_nocrypt.img prodotto in Fase 2, che ha gia' il fstab corretto nel
-# ramdisk e conserva la patch Magisk.
+# Nel ramdisk serve perche' il first stage init lo cerca li': gira prima che il
+# vendor sia montato, e senza si ferma subito --
+#
+#     init: Failed to create FirstStageMount failed to read default fstab for
+#           first stage mount
+#     init: Failed to mount required partitions early
+#
+# e il telefono ripiega in recovery dopo un minuto e mezzo. Misurato l'8
+# settembre 2026, leggendo /sys/fs/pstore/console-ramoops dopo il tentativo.
+#
+# Qui c'era scritto il contrario -- "NON va copiato nel ramdisk: il boot non
+# viene ricompilato" -- e allora era giusto: si usava boot_nocrypt.img, montato
+# a mano in Fase 2, che il fstab nel ramdisk ce l'aveva gia'. Da quando il
+# boot.img esce dal build quel presupposto e' caduto.
+#
+# ATTENZIONE, il boot.img costruito dal build NON contiene la patch Magisk che
+# boot_nocrypt.img aveva (il suo ramdisk ha .backup/ e overlay.d/, e init pesa
+# 199 KB invece di 2,9 MB): chi vuole il root deve ripatcharlo.
 #
 # E soprattutto: NON reintrodurre "fileencryption" in questo fstab. Il TEE
 # MediaTek (TrustKernel keymaster v4) rifiuta keystore2 con
 # Error::Km(ErrorCode(-64)), vold non riesce a creare la chiave e il sistema
 # non completa l'avvio. Vedi docs/bringup/fase2-risultato-gsi-funzionante.md
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/rootdir/etc/fstab.mt6771:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt6771
+    $(LOCAL_PATH)/rootdir/etc/fstab.mt6771:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt6771 \
+    $(LOCAL_PATH)/rootdir/etc/fstab.mt6771:$(TARGET_COPY_OUT_RAMDISK)/fstab.mt6771
 
 # Le due fotocamere in piu' -- senza questa, la HAL non le cerca nemmeno.
 #
