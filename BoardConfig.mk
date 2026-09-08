@@ -49,7 +49,16 @@ TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/kernel
 # arch/arm64/boot/dts/mediatek/mt6771.dtb (110.304 byte). Finche' il kernel era
 # precompilato la questione non si poneva, perche' il boot.img veniva
 # confezionato a parte sostituendo la sola sezione kernel.
-BOARD_PREBUILT_DTBIMAGE_DIR := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/arch/arm64/boot/dts/mediatek
+# BOARD_PREBUILT_DTBIMAGE_DIR resta NON impostata di proposito.
+#
+# Puntandola alla directory dei dtb del kernel, build/make/core/Makefile:861
+# ne fa le dipendenze con $(wildcard ...), che make valuta quando legge il
+# Makefile: in quel momento il kernel non e' ancora stato compilato, la
+# directory e' vuota e dtb.img esce di 0 byte.
+#
+# Lasciandola vuota entra in funzione il percorso di LineageOS
+# (vendor/lineage/build/tasks/kernel.mk:566): compila i dtb dal kernel con
+# make-dtb-target e le dipendenze giuste.
 BOARD_INCLUDE_DTB_IN_BOOTIMG := true
 
 # Non si costruisce la recovery.
