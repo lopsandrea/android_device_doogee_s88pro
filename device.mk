@@ -21,7 +21,7 @@ LOCAL_PATH := device/doogee/s88pro
 # Questa riga salta quel blocco di condizioni e fa generare il pacchetto lo
 # stesso. Il giorno in cui si costruira' il recovery di LineageOS -- che il
 # charter chiede -- si puo' togliere.
-PRODUCT_BUILD_GENERIC_OTA_PACKAGE := true
+# (la riga vera sta in lineage_s88pro.mk: da qui non veniva raccolta)
 
 PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
