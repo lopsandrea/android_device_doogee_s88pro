@@ -7,6 +7,22 @@
 LOCAL_PATH := device/doogee/s88pro
 
 # Partizioni dinamiche: variabile di prodotto, non di board.
+# Serve a far uscire la ROM installabile SENZA costruire il recovery.
+#
+# Il BoardConfig dichiara TARGET_NO_RECOVERY := true, e con una ragione: si usa
+# la TWRP di lopestom, l'unica che espone fastbootd, e costruire il recovery qui
+# fallisce comunque su mkbootimg ("DTB image must not be empty").
+#
+# Ma build/make/core/Makefile lega le due cose: senza recovery non calcola
+# recovery_fstab, quindi spegne build_ota_package, quindi
+# INTERNAL_OTA_PACKAGE_TARGET resta vuota e il target "bacon" non produce
+# nulla -- falliva su "ln -f" di uno zip che nessuno aveva costruito.
+#
+# Questa riga salta quel blocco di condizioni e fa generare il pacchetto lo
+# stesso. Il giorno in cui si costruira' il recovery di LineageOS -- che il
+# charter chiede -- si puo' togliere.
+PRODUCT_BUILD_GENERIC_OTA_PACKAGE := true
+
 PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
 # fstab senza cifratura, nel solo vendor.
