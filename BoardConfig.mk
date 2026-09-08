@@ -232,10 +232,7 @@ KERNEL_WARN_OFF += -Wno-gnu-variable-sized-type-not-at-end
 # torna leggibile e CONFIG_DEBUG_INFO resta acceso come in fabbrica.
 TARGET_KERNEL_ADDITIONAL_FLAGS := LLVM_IAS=0 KCFLAGS="-gdwarf-4 $(KERNEL_WARN_OFF)"
 
-# ---------------------------------------------------------------------------
-# Va per ULTIMO: tira dentro BoardConfigKernel.mk e BoardConfigSoong.mk, che
-# esportano a soong PATH_OVERRIDE_SOONG e le altre variabili del kernel.
-# Senza, soong si ferma subito con:
-#   vendor/lineage/build/soong/Android.bp:24:8: module
-#   "generated_kernel_includes": cmd: unknown variable '$(PATH_OVERRIDE_SOONG)'
-include vendor/lineage/config/BoardConfigLineage.mk
+# NIENTE "include vendor/lineage/config/BoardConfigLineage.mk" qui: lo fa gia'
+# build/core/config.mk:361, e includerlo una seconda volta rompe l'esportazione
+# a soong -- SOONG_CONFIG_NAMESPACES si ritrova lineageVarsPlugin due volte e
+# l'elenco delle variabili esportate si ferma a meta'.
