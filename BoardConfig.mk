@@ -203,6 +203,12 @@ TARGET_HAS_FUSEBLK_SEPOLICY_ON_VENDOR := true
 #   ln: cannot create hard link from '.../lineage-20.0-...-s88pro.zip'
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/etc/fstab.mt6771
 
+# Quale file prendere da arch/arm64/boot/. Senza, il build copia la DIRECTORY:
+#   cp "out/.../obj/KERNEL_OBJ/arch/arm64/boot/" "out/.../kernel"
+#   cp: Skipped dir '...': No such file or directory
+# Serviva solo con il kernel prebuilt, dove il file era gia' scelto.
+BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
+
 TARGET_KERNEL_SOURCE := kernel/doogee/s88pro
 TARGET_KERNEL_CONFIG := lineage_s88pro_defconfig
 
