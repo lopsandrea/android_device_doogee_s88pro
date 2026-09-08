@@ -1,0 +1,13 @@
+diff --git a/src/java/com/android/internal/telephony/GsmCdmaPhone.java b/src/java/com/android/internal/telephony/GsmCdmaPhone.java
+index fff77b6..c7269ad 100644
+--- a/src/java/com/android/internal/telephony/GsmCdmaPhone.java
++++ b/src/java/com/android/internal/telephony/GsmCdmaPhone.java
+@@ -3036,7 +3036,7 @@ public class GsmCdmaPhone extends Phone {
+                 String version = (String)ar.result;
+                 if (version != null) {
+                     int length = version.length();
+-                    final int MAX_VERSION_LEN = SystemProperties.PROP_VALUE_MAX/2;
++                    final int MAX_VERSION_LEN = SystemProperties.PROP_VALUE_MAX/4;
+                     TelephonyManager.from(mContext).setBasebandVersionForPhone(getPhoneId(),
+                             length <= MAX_VERSION_LEN ? version
+                                 : version.substring(length - MAX_VERSION_LEN, length));

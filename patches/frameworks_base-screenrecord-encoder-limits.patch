@@ -1,0 +1,65 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java b/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java
+index 6100b603..2ce15eba 100644
+--- a/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java
++++ b/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java
+@@ -197,21 +197,37 @@ public class ScreenMediaRecorder {
+                 .getCapabilitiesForType(videoType).getVideoCapabilities();
+         decoder.release();
+ 
++        // And from the encoder too: a size the decoder can play back is useless if
++        // the encoder cannot produce it in the first place. On devices where the
++        // decoder reaches 4K while the encoder stops at 1080p, asking the encoder
++        // for the native screen size yields a black or corrupted recording, with no
++        // error reported anywhere.
++        MediaCodec encoder = MediaCodec.createEncoderByType(videoType);
++        MediaCodecInfo.VideoCapabilities evc = encoder.getCodecInfo()
++                .getCapabilitiesForType(videoType).getVideoCapabilities();
++        encoder.release();
++
+         // Check if we can support screen size as-is
+-        int width = vc.getSupportedWidths().getUpper();
+-        int height = vc.getSupportedHeights().getUpper();
++        int width = Math.min(vc.getSupportedWidths().getUpper(),
++                evc.getSupportedWidths().getUpper());
++        int height = Math.min(vc.getSupportedHeights().getUpper(),
++                evc.getSupportedHeights().getUpper());
++
++        int widthAlignment = Math.max(vc.getWidthAlignment(), evc.getWidthAlignment());
++        int heightAlignment = Math.max(vc.getHeightAlignment(), evc.getHeightAlignment());
+ 
+         int screenWidthAligned = screenWidth;
+-        if (screenWidthAligned % vc.getWidthAlignment() != 0) {
+-            screenWidthAligned -= (screenWidthAligned % vc.getWidthAlignment());
++        if (screenWidthAligned % widthAlignment != 0) {
++            screenWidthAligned -= (screenWidthAligned % widthAlignment);
+         }
+         int screenHeightAligned = screenHeight;
+-        if (screenHeightAligned % vc.getHeightAlignment() != 0) {
+-            screenHeightAligned -= (screenHeightAligned % vc.getHeightAlignment());
++        if (screenHeightAligned % heightAlignment != 0) {
++            screenHeightAligned -= (screenHeightAligned % heightAlignment);
+         }
+ 
+         if (width >= screenWidthAligned && height >= screenHeightAligned
+-                && vc.isSizeSupported(screenWidthAligned, screenHeightAligned)) {
++                && vc.isSizeSupported(screenWidthAligned, screenHeightAligned)
++                && evc.isSizeSupported(screenWidthAligned, screenHeightAligned)) {
+             // Desired size is supported, now get the rate
+             int maxRate = vc.getSupportedFrameRatesFor(screenWidthAligned,
+                     screenHeightAligned).getUpper().intValue();
+@@ -229,11 +245,11 @@ public class ScreenMediaRecorder {
+ 
+         int scaledWidth = (int) (screenWidth * scale);
+         int scaledHeight = (int) (screenHeight * scale);
+-        if (scaledWidth % vc.getWidthAlignment() != 0) {
+-            scaledWidth -= (scaledWidth % vc.getWidthAlignment());
++        if (scaledWidth % widthAlignment != 0) {
++            scaledWidth -= (scaledWidth % widthAlignment);
+         }
+-        if (scaledHeight % vc.getHeightAlignment() != 0) {
+-            scaledHeight -= (scaledHeight % vc.getHeightAlignment());
++        if (scaledHeight % heightAlignment != 0) {
++            scaledHeight -= (scaledHeight % heightAlignment);
+         }
+ 
+         // Find max supported rate for size

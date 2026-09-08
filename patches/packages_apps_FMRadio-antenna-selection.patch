@@ -1,0 +1,32 @@
+diff --git a/src/com/android/fmradio/FmService.java b/src/com/android/fmradio/FmService.java
+index 508f090..769c18f 100644
+--- a/src/com/android/fmradio/FmService.java
++++ b/src/com/android/fmradio/FmService.java
+@@ -55,6 +55,7 @@ import android.os.IBinder;
+ import android.os.Looper;
+ import android.os.Message;
+ import android.os.PowerManager;
++import android.os.SystemProperties;
+ import android.os.PowerManager.WakeLock;
+ import android.os.Process;
+ import android.text.TextUtils;
+@@ -644,6 +645,19 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
+             return false;
+         }
+         mPowerStatus = POWER_UP;
++
++        // Sceglie il percorso di antenna sui device che non hanno la presa per
++        // gli auricolari. Altrove ci pensa il broadcast HEADSET_PLUG, che qui
++        // non arriva mai: senza questa chiamata il chip resta sul valore
++        // predefinito. 0 e' l'antenna lunga (il cavo collegato al connettore),
++        // 1 quella corta interna; quale delle due riceva meglio dipende dal
++        // telefono, per cui il valore si puo' cambiare a caldo con
++        //   setprop persist.vendor.fm.antenna 0
++        if (FmUtils.hasBuiltInFmAntennaSupport()) {
++            int antenna = SystemProperties.getInt("persist.vendor.fm.antenna", 1);
++            Log.d(TAG, "powerUp, switchAntenna " + antenna);
++            FmNative.switchAntenna(antenna);
++        }
+         // need mute after power up
+         setMute(true);
+ 

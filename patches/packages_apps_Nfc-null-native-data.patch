@@ -1,0 +1,26 @@
+diff --git a/nci/jni/NativeNfcManager.cpp b/nci/jni/NativeNfcManager.cpp
+index 28ae464..01e39d4 100644
+--- a/nci/jni/NativeNfcManager.cpp
++++ b/nci/jni/NativeNfcManager.cpp
+@@ -823,6 +823,10 @@ void nfaDeviceManagementCallback(uint8_t dmEvent,
+           eventData->rf_field.status, eventData->rf_field.rf_field_status);
+       if (!sP2pActive && eventData->rf_field.status == NFA_STATUS_OK) {
+         struct nfc_jni_native_data* nat = getNative(NULL, NULL);
++        if (nat == NULL) {
++          LOG(ERROR) << StringPrintf("%s: native data is null", __func__);
++          return;
++        }
+         JNIEnv* e = NULL;
+         ScopedAttach attach(nat->vm, &e);
+         if (e == NULL) {
+@@ -849,6 +853,10 @@ void nfaDeviceManagementCallback(uint8_t dmEvent,
+ 
+       if (recovery_option) {
+         struct nfc_jni_native_data* nat = getNative(NULL, NULL);
++        if (nat == NULL) {
++          LOG(ERROR) << StringPrintf("%s: native data is null", __func__);
++          return;
++        }
+         JNIEnv* e = NULL;
+         ScopedAttach attach(nat->vm, &e);
+         if (e == NULL) {

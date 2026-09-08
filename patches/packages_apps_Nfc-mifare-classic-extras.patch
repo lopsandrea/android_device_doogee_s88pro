@@ -1,0 +1,26 @@
+diff --git a/nci/src/com/android/nfc/dhimpl/NativeNfcTag.java b/nci/src/com/android/nfc/dhimpl/NativeNfcTag.java
+index 671ea2b..3278fc4 100755
+--- a/nci/src/com/android/nfc/dhimpl/NativeNfcTag.java
++++ b/nci/src/com/android/nfc/dhimpl/NativeNfcTag.java
+@@ -725,6 +725,21 @@ public class NativeNfcTag implements TagEndpoint {
+                         break;
+                     }
+ 
++                    case TagTechnology.MIFARE_CLASSIC: {
++                        // NfcA legge il SAK da questi extras quando il tag
++                        // e' Mifare Classic. Senza questo case si finisce
++                        // nel default qui sotto, che lascia il Bundle a
++                        // null, e ogni app che apre una carta Mifare muore
++                        // con NullPointerException dentro NfcA.<init>.
++                        byte[] mfcActBytes = mTechActBytes[i];
++                        if ((mfcActBytes != null) && (mfcActBytes.length > 0)) {
++                            extras.putShort(NfcA.EXTRA_SAK,
++                                    (short) (mfcActBytes[0] & (short) 0xFF));
++                        }
++                        extras.putByteArray(NfcA.EXTRA_ATQA, mTechPollBytes[i]);
++                        break;
++                    }
++
+                     case TagTechnology.MIFARE_ULTRALIGHT: {
+                         boolean isUlc = isUltralightC();
+                         extras.putBoolean(MifareUltralight.EXTRA_IS_UL_C, isUlc);

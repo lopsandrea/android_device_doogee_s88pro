@@ -1,0 +1,44 @@
+diff --git a/media/libstagefright/wifi-display/source/Converter.cpp b/media/libstagefright/wifi-display/source/Converter.cpp
+index 5502b06..10b8a93 100644
+--- a/media/libstagefright/wifi-display/source/Converter.cpp
++++ b/media/libstagefright/wifi-display/source/Converter.cpp
+@@ -148,8 +148,37 @@ status_t Converter::initEncoder() {
+     bool isAudio = !strncasecmp(outputMIME.c_str(), "audio/", 6);
+ 
+     if (!mIsPCMAudio) {
+-        mEncoder = MediaCodec::CreateByType(
+-                mCodecLooper, outputMIME.c_str(), true /* encoder */);
++        // Su alcuni device l'encoder hardware non sa gestire i buffer che
++        // arrivano da una Surface e produce immagini illeggibili: codifica
++        // correttamente il video della fotocamera, ma non lo schermo. Dove
++        // succede, questa proprieta' permette di indicare un encoder diverso
++        // per il solo WiFi Display, senza toccare la scelta predefinita per
++        // tutto il resto:
++        //
++        //   media.wfd.video-encoder=c2.android.avc.encoder
++        //
++        AString encoderName;
++        char encoderProp[PROPERTY_VALUE_MAX];
++        if (!isAudio
++                && property_get("media.wfd.video-encoder", encoderProp, NULL) > 0) {
++            encoderName.setTo(encoderProp);
++        }
++
++        if (!encoderName.empty()) {
++            ALOGI("using encoder '%s' from media.wfd.video-encoder",
++                  encoderName.c_str());
++            mEncoder = MediaCodec::CreateByComponentName(
++                    mCodecLooper, encoderName.c_str());
++            if (mEncoder == NULL) {
++                ALOGW("encoder '%s' not available, falling back to the default one",
++                      encoderName.c_str());
++            }
++        }
++
++        if (mEncoder == NULL) {
++            mEncoder = MediaCodec::CreateByType(
++                    mCodecLooper, outputMIME.c_str(), true /* encoder */);
++        }
+ 
+         if (mEncoder == NULL) {
+             return ERROR_UNSUPPORTED;
