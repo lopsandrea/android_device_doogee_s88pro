@@ -41,7 +41,16 @@ BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOTIMG_HEADER_VERSION)
 BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
 TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/kernel
-BOARD_INCLUDE_DTB_IN_BOOTIMG :=
+# Il device tree binario. Il boot.img di fabbrica ne ha uno separato di 110.368
+# byte (header version 2), e mkbootimg lo pretende:
+#   ValueError: DTB image must not be empty.
+#
+# Non e' un prebuilt: lo compila il nostro kernel, da
+# arch/arm64/boot/dts/mediatek/mt6771.dtb (110.304 byte). Finche' il kernel era
+# precompilato la questione non si poneva, perche' il boot.img veniva
+# confezionato a parte sostituendo la sola sezione kernel.
+BOARD_PREBUILT_DTBIMAGE_DIR := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/arch/arm64/boot/dts/mediatek
+BOARD_INCLUDE_DTB_IN_BOOTIMG := true
 
 # Non si costruisce la recovery.
 #
