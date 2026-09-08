@@ -1,0 +1,38 @@
+# Boost EAS per le app in primo piano.
+#
+# Senza, l'interfaccia e' vistosamente a scatti. Misurato con dumpsys gfxinfo
+# su uno scorrimento nelle Impostazioni, stessa sequenza, due misure ciascuno:
+#
+#                     senza          con
+#   frame fuori tempo  28,4%         0,4%
+#   frame mediano      19 ms         11 ms      (budget a 60 Hz: 16,6 ms)
+#   99esimo percentile 32 ms         22 ms
+#
+# Il motivo e' un disallineamento fra framework e kernel. Questo kernel
+# MediaTek ha SchedTune (CONFIG_SCHED_TUNE=y) e non espone uclamp nei cgroup:
+# /dev/cpuctl/*/cpu.uclamp.min non esiste. AOSP fino ad Android 11 impostava i
+# boost di /dev/stune dentro init.rc; in Android 12 quelle righe sono state
+# tolte perche' si e' passati a uclamp, e ne resta una sola, per nnapi-hal.
+#
+# Risultato: le app finiscono nel gruppo giusto -- lo fa task_profiles_29.json,
+# che c'e' ed e' quello che il sistema carica visto che il vendor e' API 29
+# (MaxPerformance -> JoinCgroup schedtune top-app) -- ma quel gruppo resta con
+# boost=0 e prefer_idle=0, cioe' senza alcun effetto. Nessuno alza la frequenza
+# per quello che l'utente sta guardando, e nessuno preferisce i core liberi.
+#
+# Perche' un servizio e non dei "write" qui dentro: provati, non funzionano.
+# Con "on post-fs-data" o "on property:sys.boot_completed=1" init esegue le
+# righe (verificato con un setprop sentinella) ma il solo prefer_idle attecchisce,
+# mentre boost torna a zero. Applicati cinque secondi piu' tardi restano.
+#
+# Da rivedere se un domani si passa a un kernel con uclamp nei cgroup: li' il
+# framework fa da se' e questo file va tolto.
+
+service s88pro_schedtune /system/bin/sh /system/etc/s88pro-schedtune.sh
+    user root
+    group root system
+    disabled
+    oneshot
+
+on property:sys.boot_completed=1
+    start s88pro_schedtune

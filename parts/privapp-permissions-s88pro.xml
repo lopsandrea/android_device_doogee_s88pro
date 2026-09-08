@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+<permissions>
+    <!--
+         Le app privilegiate devono elencare qui le permission di livello
+         signature|privileged che chiedono nel manifest. Non è una formalità:
+         se manca la voce, PermissionManagerService solleva
+         IllegalStateException in systemReady() e system_server non parte,
+         lasciando il telefono in bootloop.
+    -->
+    <privapp-permissions package="org.lineageos.settings.doogee">
+        <permission name="android.permission.WRITE_SECURE_SETTINGS" />
+    </privapp-permissions>
+</permissions>

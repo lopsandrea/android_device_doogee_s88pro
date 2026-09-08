@@ -1,0 +1,37 @@
+# Dichiara che l'antenna FM è interna.
+#
+# Questo telefono non ha una presa per gli auricolari, che sugli altri fanno da
+# antenna. L'app FMRadio di LineageOS lo prevede: in FmService.isAntennaAvailable()
+#
+#     if (FmUtils.hasBuiltInFmAntennaSupport()) return true;
+#     return mAudioManager.isWiredHeadsetOn();
+#
+# e hasBuiltInFmAntennaSupport() legge la proprietà impostata qui sotto. Senza,
+# l'app resta ferma a chiedere di collegare gli auricolari, che non si possono
+# collegare.
+#
+# Non si può mettere in build.prop: le proprietà ro.vendor.* dichiarate nei file
+# di system vengono rifiutate da init, e il vendor è quello di fabbrica, che non
+# ricostruiamo.
+on early-init
+    setprop ro.vendor.builtin_fm_antenna_support 1
+
+# Dà accesso al tuner all'app della radio.
+#
+# Il kernel crea /dev/fm come media:media, ma l'app FMRadio gira come system e
+# resta fuori:
+#
+#     FMLIB_COM: Open /dev/fm failed, Permission denied
+#     FMLIB_CORE: FMR_pwr_up failed, [ret=-1]
+#
+# e l'unica cosa che si vede è "Al momento non disponibile", senza indizi. Nel
+# firmware di fabbrica l'app stava in product e girava con altri privilegi;
+# qui si sposta la proprietà del nodo.
+#
+# Il trigger non può essere "on boot": a quel punto /dev/fm non esiste ancora,
+# perché lo crea il modulo fmradio_drv.ko, che il vendor carica solo quando il
+# chip di connettività è pronto (vendor.connsys.driver.ready=yes). Il chown
+# fallirebbe in silenzio. A boot completato il nodo c'è di sicuro.
+on property:sys.boot_completed=1
+    chown system system /dev/fm
+    chmod 0660 /dev/fm

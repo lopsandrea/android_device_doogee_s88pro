@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <!--
+         Dichiara il lettore di impronte.
+
+         La HAL del vendor c'e' e gira (init.svc.vendor.fps_hal = running, e
+         android.hardware.biometrics.fingerprint@2.1::IBiometricsFingerprint
+         risulta registrata), la feature android.hardware.fingerprint e'
+         dichiarata e il servizio di sistema esiste. Manca solo questo elenco,
+         che in AOSP e' vuoto: senza, AuthService non registra alcun
+         autenticatore e il servizio ripete
+
+           E FingerprintService: No providers found
+           W FingerprintService: Null provider for isHardwareDetectedDeprecated
+
+         a ogni richiesta, cosi' nelle impostazioni non compare nulla.
+
+         Il formato e' ID:Modalita':Robustezza, come da commento in
+         frameworks/base/core/res/res/values/config.xml: qui sensore 0,
+         modalita' 2 (impronta), robustezza 15 (strong).
+    -->
+    <string-array name="config_biometric_sensors" translatable="false">
+        <item>0:2:15</item>
+    </string-array>
+
+    <!--
+         Abilita il WiFi Display (Miracast).
+
+         AOSP lo tiene spento per impostazione predefinita e chiede due cose:
+         il modulo audio "audio.r_submix.default", che qui c'è
+         (/vendor/lib64/hw/), e il supporto del vendor, che si dichiara con
+         ro.vendor.mtk_wfd_support=1. Entrambe verificate sul device.
+
+         È l'unica uscita video che questo telefono possa avere: l'HDMI non è
+         nemmeno compilato nel kernel (CONFIG_MTK_HDMI_SUPPORT is not set) e la
+         porta USB-C dichiara solo i ruoli dati "ufp dfp", senza alt mode.
+    -->
+    <bool name="config_enableWifiDisplay">true</bool>
+
+    <!--
+         ImsService predefinito del device, per VoLTE.
+
+         E' il pacchetto che ImsResolver lega per la feature MMTEL. L'APK non
+         dichiara i metadata android.telephony.ims.MMTEL_FEATURE, ma non e' un
+         problema: quando i metadata mancano ImsResolver ricade sulla dynamic
+         query: si lega al servizio e gli chiede quali feature supporta. E'
+         proprio quello che il nome MtkDynamicImsService lascia intendere, e la
+         risposta arriva corretta (MMTEL ed EMERGENCY_MMTEL su tutti gli slot).
+
+         Vale solo se ImsService e' stato preparato e installato: vedi
+         device/doogee/S88Pro/ims/ e docs/bringup/volte-stato-esperimento.md.
+         Se il pacchetto non c'e', ImsResolver non trova nulla e non cambia
+         niente rispetto a prima.
+
+         Per collaudare senza ricompilare il framework c'e' l'override runtime,
+         che vuole la feature come intero (1 = MMTEL):
+           cmd phone ims set-ims-service -s 0 -c -f 1 com.mediatek.ims
+    -->
+    <string name="config_ims_mmtel_package" translatable="false">com.mediatek.ims</string>
+</resources>

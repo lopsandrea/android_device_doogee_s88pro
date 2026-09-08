@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+
+<!--
+     Librerie condivise per ImsService di MediaTek (VoLTE).
+
+     ImsService.apk dichiara cinque uses-library, tutte con required="false": il
+     PackageManager le aggiunge al classpath dell app solo se qualcuno le ha
+     dichiarate, e non fa fallire l installazione se mancano. I nomi che l APK
+     chiede pero' non corrispondono ai jar che contengono davvero le classi che
+     usa, quindi qui i cinque nomi disponibili sono mappati sui jar giusti.
+
+     Cosa serve, e perche':
+
+       mediatek-ims-base.jar        le dieci interfacce com.mediatek.ims.internal.IMtkIms*
+       mediatek-common.jar          OperatorCustomizationFactoryLoader
+       mediatek-telephony-base.jar  MtkTelephonyManagerEx
+       mtk-ims-compat.jar           com.android.ims.ImsServiceBase, che AOSP ha rimosso
+                                    dopo Android 10 (e' l ims-common.jar della ROM di
+                                    fabbrica, installato con un altro nome)
+
+     I primi tre arrivano gia' con i blob: erano in /system/framework da sempre e
+     non li usava nessuno. Il quarto e' in proprietary-files.txt.
+
+     Restano fuori mediatek-ims-legacy.jar e mediatek-ims-common.jar, che con ogni
+     probabilita' contengono il provisioning che accende le capability MMTEL: gli
+     slot uses-library sono finiti, e per usarli va costruito un jar unione.
+     Vedi docs/bringup/volte-stato-esperimento.md
+-->
+<permissions>
+    <library name="com.mediatek.ims.legacy"
+             file="/system/framework/mediatek-ims-base.jar" />
+    <library name="com.mediatek.ims.plugin"
+             file="/system/framework/mediatek-common.jar" />
+    <library name="com.mediatek.ims.oemplugin"
+             file="/system/framework/mtk-ims-compat.jar" />
+    <library name="com.mediatek.op.ims.common"
+             file="/system/framework/mediatek-telephony-base.jar" />
+</permissions>

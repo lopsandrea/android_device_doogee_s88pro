@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+
+<!--
+     Allowlist dei permessi privilegiati per ImsService di MediaTek.
+
+     Questo device ha ro.control_privapp_permissions=enforce: un app in
+     /system/priv-app che chieda un permesso privilegiato non elencato qui
+     impedisce l avvio del sistema. Non un errore a runtime: proprio il boot
+     che non arriva in fondo.
+
+     Per non correre rischi sono elencati tutti e diciassette i permessi che
+     l APK dichiara, privilegiati e non: quelli che privilegiati non sono
+     vengono semplicemente ignorati, e cosi' l elenco resta valido anche se una
+     versione futura di Android cambia il livello di protezione di qualcuno.
+
+     Il primo e' scritto male nel manifest di MediaTek ("android.Manifest.
+     permission." invece di "android.permission.") ed e' quindi un permesso che
+     non esiste: elencarlo e' innocuo e tiene il file allineato all APK.
+-->
+<permissions>
+    <privapp-permissions package="com.mediatek.ims">
+        <permission name="android.Manifest.permission.READ_PRIVILEGED_PHONE_STATE"/>
+        <permission name="android.permission.ACCESS_COARSE_LOCATION"/>
+        <permission name="android.permission.ACCESS_FINE_LOCATION"/>
+        <permission name="android.permission.ACCESS_NETWORK_STATE"/>
+        <permission name="android.permission.ACCESS_WIFI_STATE"/>
+        <permission name="android.permission.CAMERA"/>
+        <permission name="android.permission.CHANGE_NETWORK_STATE"/>
+        <permission name="android.permission.CHANGE_WIFI_STATE"/>
+        <permission name="android.permission.NETWORK_SIGNAL_STRENGTH_WAKEUP"/>
+        <permission name="android.permission.PACKET_KEEPALIVE_OFFLOAD"/>
+        <permission name="android.permission.READ_NETWORK_USAGE_HISTORY"/>
+        <permission name="android.permission.READ_PHONE_STATE"/>
+        <permission name="android.permission.READ_PRECISE_PHONE_STATE"/>
+        <permission name="android.permission.WAKE_LOCK"/>
+        <permission name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+        <permission name="android.permission.WRITE_SETTINGS"/>
+        <permission name="com.mediatek.permission.START_WFO_SERVICE"/>
+    </privapp-permissions>
+</permissions>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+
+<!--
+     Registrazione delle chiamate.
+
+     Il Dialer di LineageOS ha gia' tutto il codice (java/com/android/dialer/callrecord/),
+     ma di serie e' spento e, quando lo si accende, registra dal microfono.
+
+     Qui la sorgente e' 4 (MediaRecorder.AudioSource.VOICE_CALL), cioe' uplink piu'
+     downlink presi direttamente dal percorso voce, perche' questo device li espone.
+     La prova sta in /vendor/etc/audio_policy_configuration.xml, dove "Voice Call In"
+     non e' solo instradato verso gli altoparlanti ma anche verso un mix di ingresso
+     dedicato:
+
+         <mixPort name="voice tx" role="sink" maxOpenCount="1" maxActiveCount="1">
+             <profile ... channelMasks="...,AUDIO_CHANNEL_IN_VOICE_UPLINK,
+                                            AUDIO_CHANNEL_IN_VOICE_DNLINK"/>
+         <route type="mix" sink="voice tx" sources="Voice Call In"/>
+
+     Se su qualche rete o in qualche modalita' (VoLTE, BT SCO) la registrazione uscisse
+     muta o con un solo interlocutore, si ripiega su 1 (MIC): registra l'audio in aria
+     dal microfono, quindi funziona sempre ma solo in vivavoce e con qualita' minore.
+
+     Nota: registrare una telefonata senza il consenso dell'interlocutore e' vietato in
+     diversi ordinamenti. La funzione resta a discrezione di chi la usa.
+-->
+<resources>
+    <bool name="call_recording_enabled">true</bool>
+    <integer name="call_recording_audio_source">4</integer>
+</resources>

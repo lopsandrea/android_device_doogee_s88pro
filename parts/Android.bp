@@ -1,0 +1,27 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+android_app {
+    name: "S88ProParts",
+
+    srcs: ["src/**/*.java"],
+    resource_dirs: ["res"],
+
+    // Serve l'utente system per scrivere i nodi del LED, che appartengono a
+    // system:system (vedi ls -lZ /sys/class/leds/aw22xxx_led/).
+    certificate: "platform",
+    privileged: true,
+    platform_apis: true,
+    system_ext_specific: true,
+
+    static_libs: [
+        "androidx.preference_preference",
+    ],
+
+    optimize: {
+        proguard_flags_files: ["proguard.flags"],
+    },
+}

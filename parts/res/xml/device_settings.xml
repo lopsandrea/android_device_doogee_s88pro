@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="@string/app_name">
+
+    <PreferenceCategory
+        android:key="category_led"
+        android:title="@string/led_category_title">
+
+        <SwitchPreferenceCompat
+            android:key="led_enabled"
+            android:title="@string/led_enabled_title"
+            android:summary="@string/led_enabled_summary"
+            android:defaultValue="true" />
+
+        <SwitchPreferenceCompat
+            android:key="led_charging"
+            android:title="@string/led_charging_title"
+            android:summary="@string/led_charging_summary"
+            android:dependency="led_enabled"
+            android:defaultValue="true" />
+
+        <SwitchPreferenceCompat
+            android:key="led_notifications"
+            android:title="@string/led_notifications_title"
+            android:summary="@string/led_notifications_summary"
+            android:dependency="led_enabled"
+            android:defaultValue="true" />
+
+        <SwitchPreferenceCompat
+            android:key="led_calls"
+            android:title="@string/led_calls_title"
+            android:summary="@string/led_calls_summary"
+            android:dependency="led_enabled"
+            android:defaultValue="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="category_keys"
+        android:title="@string/keys_category_title">
+
+        <ListPreference
+            android:key="key_f5_action"
+            android:title="@string/key_f5_title"
+            android:summary="%s"
+            android:entries="@array/key_action_entries"
+            android:entryValues="@array/key_action_values"
+            android:defaultValue="none" />
+
+        <ListPreference
+            android:key="key_f5_package"
+            android:title="@string/key_f5_app_title"
+            android:summary="%s"
+            android:dependency="key_f5_action" />
+
+        <ListPreference
+            android:key="key_camera_action"
+            android:title="@string/key_camera_title"
+            android:summary="%s"
+            android:entries="@array/key_action_entries"
+            android:entryValues="@array/key_action_values"
+            android:defaultValue="none" />
+
+        <ListPreference
+            android:key="key_camera_package"
+            android:title="@string/key_camera_app_title"
+            android:summary="%s"
+            android:dependency="key_camera_action" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="category_fingerprint"
+        android:title="@string/fp_category_title"
+        android:summary="@string/fp_category_summary">
+
+        <ListPreference
+            android:key="fp_tap_action"
+            android:title="@string/fp_tap_title"
+            android:summary="%s"
+            android:entries="@array/fp_action_entries"
+            android:entryValues="@array/fp_action_values"
+            android:defaultValue="none" />
+
+        <ListPreference
+            android:key="fp_tap_package"
+            android:title="@string/fp_tap_app_title"
+            android:summary="%s"
+            android:dependency="fp_tap_action" />
+
+        <ListPreference
+            android:key="fp_left_action"
+            android:title="@string/fp_left_title"
+            android:summary="%s"
+            android:entries="@array/fp_action_entries"
+            android:entryValues="@array/fp_action_values"
+            android:defaultValue="none" />
+
+        <ListPreference
+            android:key="fp_left_package"
+            android:title="@string/fp_left_app_title"
+            android:summary="%s"
+            android:dependency="fp_left_action" />
+
+        <ListPreference
+            android:key="fp_right_action"
+            android:title="@string/fp_right_title"
+            android:summary="%s"
+            android:entries="@array/fp_action_entries"
+            android:entryValues="@array/fp_action_values"
+            android:defaultValue="none" />
+
+        <ListPreference
+            android:key="fp_right_package"
+            android:title="@string/fp_right_app_title"
+            android:summary="%s"
+            android:dependency="fp_right_action" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="category_power"
+        android:title="@string/power_category_title">
+
+        <SwitchPreferenceCompat
+            android:key="reverse_charging"
+            android:title="@string/reverse_charging_title"
+            android:summary="@string/reverse_charging_summary"
+            android:defaultValue="false" />
+    </PreferenceCategory>
+</PreferenceScreen>

@@ -1,0 +1,67 @@
+# Blob proprietari MediaTek estratti da system.img stock.
+# Sono i componenti che alla GSI mancavano: mtkfusionrild girava ma
+# restava in loop sul socket rild-oem senza la controparte framework.
+# Generato dai file effettivamente presenti nell immagine stock.
+
+# Framework telephony e IMS
+system/framework/mediatek-common.jar
+system/framework/mediatek-framework-net.jar
+system/framework/mediatek-framework.jar
+system/framework/mediatek-ims-base.jar
+system/framework/mediatek-ims-common.jar
+system/framework/mediatek-ims-extension-plugin.jar
+system/framework/mediatek-ims-legacy.jar
+system/framework/mediatek-services.jar
+system/framework/mediatek-telecom-common.jar
+system/framework/mediatek-telephony-base.jar
+system/framework/mediatek-telephony-common.jar
+system/framework/mediatek-wfo-legacy.jar
+system/framework/mediatek-res.apk
+
+# Permessi
+system/etc/permissions/com.mediatek.wfo.legacy.xml
+system/etc/permissions/privapp-permissions-mediatek.xml
+
+# Librerie native
+system/lib64/libmediatek_exceptionlog.so
+system/lib64/libmtk_vt_wrapper.so
+system/lib64/libmtkperf_client.so
+
+# IMS (VoLTE) -- vedi docs/bringup/volte-stato-esperimento.md
+#
+# Librerie che la ROM di fabbrica teneva anche in /system/lib64 e che da noi
+# mancano: alcune stanno solo in /vendor (e il namespace di sistema non puo'
+# caricarle da li'), altre AOSP le ha proprio rimosse -- libhwbinder e
+# libhidltransport sono confluite in libhidlbase con Android 11.
+#
+# Senza queste, libmtk_vt_wrapper.so non si carica e ImsService muore con
+# UnsatisfiedLinkError appena tocca il provider di videochiamata.
+system/lib64/vendor.mediatek.hardware.videotelephony@1.0.so
+system/lib64/libvcodec_cap.so
+system/lib64/libvcodec_capenc.so
+
+# libhidltransport e libhwbinder NON vanno prese dallo stock: Android 12 le
+# costruisce ancora (deprecate, confluite in libhidlbase) e copiarle qui le
+# definirebbe due volte --
+#   error: overriding commands for target .../libhidltransport.so
+# Si aggiungono invece a PRODUCT_PACKAGES in device.mk, cosi' si usano le
+# versioni di sistema, coerenti con il resto della build.
+
+# com.android.ims.ImsServiceBase, che AOSP ha rimosso dopo Android 10 e che
+# ImsService.apk pretende ancora. Si installa con un nome diverso per non
+# sovrapporsi all'ims-common.jar che compiliamo noi, che invece serve.
+system/framework/ims-common.jar:system/framework/mtk-ims-compat.jar
+
+# Radio FM.
+#
+# L'app FMRadio di LineageOS e quella di fabbrica sono la stessa app: la
+# libreria registra i metodi nativi proprio per com/android/fmradio/FmNative,
+# quindi le due si incastrano senza adattamenti. Il driver e' gia' in funzione
+# (fmradio_drv.ko caricato, /dev/fm presente).
+#
+# Nella ROM di fabbrica la libreria sta in product/lib*, che da noi non esiste
+# come partizione separata: la si installa in system. La partizione product non
+# e' montata in /mnt/stock, ma extract-files.sh la legge dall'immagine con
+# debugfs, che non chiede privilegi.
+product/lib/libfmjni.so:system/lib/libfmjni.so
+product/lib64/libfmjni.so:system/lib64/libfmjni.so

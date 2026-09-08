@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <string name="app_name">Doogee S88 Pro</string>
+    <string name="app_summary">LED della scocca, tasti programmabili, ricarica inversa</string>
+
+    <string name="led_category_title">LED della scocca</string>
+    <string name="led_enabled_title">Usa i LED posteriori</string>
+    <string name="led_enabled_summary">La striscia luminosa sul retro segnala cosa sta succedendo</string>
+    <string name="led_charging_title">Ricarica</string>
+    <string name="led_charging_summary">Effetto durante la ricarica e a batteria carica</string>
+    <string name="led_notifications_title">Notifiche</string>
+    <string name="led_notifications_summary">Effetto quando ci sono notifiche da leggere</string>
+    <string name="led_calls_title">Chiamate</string>
+    <string name="led_calls_summary">Effetto quando il telefono squilla</string>
+
+    <string name="keys_category_title">Tasti programmabili</string>
+    <string name="key_f5_title">Tasto laterale</string>
+    <string name="key_f5_app_title">App da aprire con il tasto laterale</string>
+    <string name="key_camera_title">Tasto fotocamera</string>
+    <string name="key_camera_app_title">App da aprire con il tasto fotocamera</string>
+
+    <string name="fp_category_title">Gesti sul sensore di impronte</string>
+    <string name="fp_category_summary">Il lettore riconosce anche tocchi e scorrimenti. Funzionano solo se la navigazione è attiva nella configurazione del vendor.</string>
+    <string name="fp_tap_title">Tocco</string>
+    <string name="fp_tap_app_title">App da aprire con il tocco</string>
+    <string name="fp_left_title">Scorrimento in un verso</string>
+    <string name="fp_left_app_title">App da aprire con lo scorrimento</string>
+    <string name="fp_right_title">Scorrimento nell\'altro verso</string>
+    <string name="fp_right_app_title">App da aprire con lo scorrimento opposto</string>
+
+    <string name="power_category_title">Alimentazione</string>
+    <string name="reverse_charging_title">Ricarica inversa</string>
+    <string name="reverse_charging_summary">Alimenta un altro dispositivo appoggiandolo sul retro</string>
+
+    <string-array name="key_action_entries">
+        <item>Nessuna azione</item>
+        <item>Torcia</item>
+        <item>Apri un\'app</item>
+    </string-array>
+
+    <string-array name="key_action_values" translatable="false">
+        <item>none</item>
+        <item>torch</item>
+        <item>launch_app</item>
+    </string-array>
+
+    <!--
+         I gesti del sensore hanno due voci in più dei tasti della scocca.
+         "Nessuna azione" qui significa che il gesto viene scartato, non che
+         prosegue: lasciar passare le frecce direzionali sposterebbe il fuoco
+         nelle app a ogni sfioramento. Chi le vuole sceglie "Frecce direzionali".
+    -->
+    <string-array name="fp_action_entries">
+        <item>Nessuna azione</item>
+        <item>Indietro</item>
+        <item>Pannello notifiche</item>
+        <item>Frecce direzionali</item>
+        <item>Torcia</item>
+        <item>Apri un\'app</item>
+    </string-array>
+
+    <string-array name="fp_action_values" translatable="false">
+        <item>none</item>
+        <item>back</item>
+        <item>notification_shade</item>
+        <item>dpad</item>
+        <item>torch</item>
+        <item>launch_app</item>
+    </string-array>
+</resources>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <!--
+         Aggiunge il nostro gestore dei tasti a quello di LineageOS.
+
+         PhoneWindowManager carica queste classi all'avvio e passa loro ogni
+         tasto prima di consegnarlo all'app in primo piano. Le due liste vanno
+         in parallelo, quindi l'ordine conta: al primo percorso corrisponde la
+         prima classe.
+
+         La voce di LineageParts va ripetuta, perché un overlay sostituisce
+         l'array intero e toglierla disattiverebbe le gesture.
+    -->
+    <string-array name="config_deviceKeyHandlerLibs" translatable="false">
+        <item>/system_ext/priv-app/LineageParts/LineageParts.apk</item>
+        <item>/system_ext/priv-app/S88ProParts/S88ProParts.apk</item>
+    </string-array>
+
+    <string-array name="config_deviceKeyHandlerClasses" translatable="false">
+        <item>org.lineageos.lineageparts.gestures.KeyHandler</item>
+        <item>org.lineageos.settings.doogee.keys.KeyHandler</item>
+    </string-array>
+</resources>

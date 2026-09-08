@@ -1,0 +1,41 @@
+# Sensore di impronte Sunwave: keylayout dei gesti
+#
+# Il lettore di impronte non e' solo un lettore: il driver `sunwave-fp` (su
+# spi0.0, benche' il nodo del device tree si chiami `mediatek,goodix-fp` --
+# board a doppio fornitore) registra un input device `sf-keys` che riporta i
+# gesti fatti sul sensore.
+#
+# Senza questo file `sf-keys` ricade su Generic.kl, che mappa 105 e 106 come
+# DPAD_LEFT/RIGHT: gli scorrimenti finirebbero a spostare il fuoco nelle app,
+# in modo incomprensibile per chi non sa che il sensore fa anche questo. Le
+# azioni vere le decide KeyHandler, che riceve il tasto prima dell'app.
+#
+# I gesti NON sono attivi di serie: vanno accesi in /vendor/etc/sw_config.xml
+# con <navigation>true</navigation>, altrimenti la HAL riporta solo il tocco.
+# Vedi docs/bringup/hardware-riferimento.md.
+#
+# Cosa e' stato osservato davvero, con `getevent -lt` mentre si usava il
+# sensore (i conteggi sono di una sessione da 45 secondi):
+#
+#   HAL "nav Key" -> SF_KEY_F11   -> scancode  68  KEY_F10    162 eventi
+#   HAL "nav R"   -> SF_KEY_RIGHT -> scancode 106  KEY_RIGHT   34 eventi
+#   HAL "nav L"   -> SF_KEY_LEFT  -> scancode 105  KEY_LEFT    28 eventi
+#
+# Il sensore risolve un asse solo: gli scorrimenti lungo l'asse lungo del
+# telefono vengono classificati come tocco, non come direzione.
+
+key 68    F10
+key 105   DPAD_LEFT
+key 106   DPAD_RIGHT
+
+# Dichiarati dal driver nella bitmap di sf-keys ma mai osservati in uscita.
+# Si mappano lo stesso: se un aggiornamento della HAL o una diversa
+# configurazione li facesse comparire, arriverebbero gia' con un nome sensato
+# invece di ricadere su Generic.kl.
+key 103   DPAD_UP
+key 108   DPAD_DOWN
+key 102   HOME
+key 158   BACK
+key 139   MENU
+key 28    DPAD_CENTER
+key 143   WAKEUP    WAKE
