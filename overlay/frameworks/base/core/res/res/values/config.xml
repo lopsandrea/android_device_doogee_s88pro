@@ -53,7 +53,7 @@
          risposta arriva corretta (MMTEL ed EMERGENCY_MMTEL su tutti gli slot).
 
          Vale solo se ImsService e' stato preparato e installato: vedi
-         device/doogee/S88Pro/ims/ e docs/bringup/volte-stato-esperimento.md.
+         device/doogee/s88pro/ims/ e docs/bringup/volte-stato-esperimento.md.
          Se il pacchetto non c'e', ImsResolver non trova nulla e non cambia
          niente rispetto a prima.
 

@@ -7,7 +7,7 @@
 # non dedotti. Dove un valore ha una storia che ne spiega la scelta, il
 # commento la riporta: serve a non "correggerlo" per intuizione.
 
-DEVICE_PATH := device/doogee/S88Pro
+DEVICE_PATH := device/doogee/s88pro
 
 # Architettura
 TARGET_ARCH := arm64
@@ -143,6 +143,19 @@ BOARD_VNDK_VERSION := current
 PRODUCT_SEPOLICY_SPLIT := true
 
 BOARD_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
+
+# Le regole fra tipi di SISTEMA vanno qui, non in BOARD_SEPOLICY_DIRS
+# (BOARD_PLAT_PRIVATE_SEPOLICY_DIR e obsoleta).
+#
+# Chiudono due denial misurati sul telefono con SELinux Enforcing:
+#   system_app -> sysfs_leds       S88ProParts non arrivava ai LED di notifica
+#   nfc        -> system_data_file /data/nfc non e mappato in AOSP
+#
+# I 52 denial dell avvio (vold -> sysfs_mmcblk, aee_aedv -> proc_ppm) NON sono
+# chiudibili da qui: quei tipi li definisce la policy del vendor, che arriva
+# gia compilata nel blob (TARGET_USES_PREBUILT_VENDOR_SEPOLICY). Nessuno dei
+# due blocca qualcosa.
+SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/system_ext/private
 
 # La sepolicy del vendor e' quella di fabbrica, non la costruiamo.
 #

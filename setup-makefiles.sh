@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Genera i makefile di vendor/doogee/S88Pro a partire da proprietary-files.txt.
+# Genera i makefile di vendor/doogee/s88pro a partire da proprietary-files.txt.
 #
 # Perche' non basta un PRODUCT_COPY_FILES generico: ne' gli APK ne' i file ELF
 # possono essere copiati cosi'. Il build system rifiuta con
@@ -19,7 +19,7 @@
 # nome finale.
 set -euo pipefail
 
-DEVICE=S88Pro
+DEVICE=s88pro
 VENDOR=doogee
 HERE="$(cd "$(dirname "$0")" && pwd)"
 LIST="$HERE/proprietary-files.txt"
@@ -30,11 +30,11 @@ mkdir -p "$OUT"
 # --- Android.mk: moduli prebuilt per gli APK ---
 {
   cat << 'HEADER'
-# Generato da device/doogee/S88Pro/setup-makefiles.sh — non modificare a mano.
+# Generato da device/doogee/s88pro/setup-makefiles.sh — non modificare a mano.
 
 LOCAL_PATH := $(call my-dir)
 
-ifeq ($(TARGET_DEVICE),S88Pro)
+ifeq ($(TARGET_DEVICE),s88pro)
 
 HEADER
 
@@ -112,10 +112,10 @@ MODULE
   echo "endif"
 } > "$OUT/Android.mk"
 
-# --- S88Pro-vendor.mk: copia dei file non-APK + pacchetti ---
+# --- s88pro-vendor.mk: copia dei file non-APK + pacchetti ---
 {
   cat << 'HEADER'
-# Generato da device/doogee/S88Pro/setup-makefiles.sh — non modificare a mano.
+# Generato da device/doogee/s88pro/setup-makefiles.sh — non modificare a mano.
 #
 # Blob proprietari MediaTek estratti da system.img stock: sono i componenti
 # framework che alla GSI mancavano e senza i quali mtkfusionrild resta in

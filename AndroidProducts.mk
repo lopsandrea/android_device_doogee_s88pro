@@ -5,9 +5,9 @@
 #
 
 PRODUCT_MAKEFILES := \
-    $(LOCAL_DIR)/lineage_S88Pro.mk
+    $(LOCAL_DIR)/lineage_s88pro.mk
 
 COMMON_LUNCH_CHOICES := \
-    lineage_S88Pro-user \
-    lineage_S88Pro-userdebug \
-    lineage_S88Pro-eng
+    lineage_s88pro-user \
+    lineage_s88pro-userdebug \
+    lineage_s88pro-eng

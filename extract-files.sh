@@ -10,7 +10,7 @@
 # /mnt/stock/system/system/... mentre nel device tree il prefisso e' "system/".
 set -euo pipefail
 
-DEVICE=S88Pro
+DEVICE=s88pro
 VENDOR=doogee
 SRC_SYSTEM=/mnt/stock/system
 SRC_VENDOR=/mnt/stock/vendor

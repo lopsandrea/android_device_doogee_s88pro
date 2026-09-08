@@ -27,7 +27,7 @@ OUT="$DIR/ImsService.apk"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-: "${ANDROID_BUILD_TOP:?esegui prima: source build/envsetup.sh && lunch lineage_S88Pro-userdebug}"
+: "${ANDROID_BUILD_TOP:?esegui prima: source build/envsetup.sh && lunch lineage_s88pro-userdebug}"
 
 JAVA="$ANDROID_BUILD_TOP/prebuilts/jdk/jdk11/linux-x86/bin/java"
 SMALI_DIR="$ANDROID_BUILD_TOP/prebuilts/extract-tools/common/smali"

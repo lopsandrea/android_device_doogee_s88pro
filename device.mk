@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-LOCAL_PATH := device/doogee/S88Pro
+LOCAL_PATH := device/doogee/s88pro
 
 # Partizioni dinamiche: variabile di prodotto, non di board.
 PRODUCT_USE_DYNAMIC_PARTITIONS := true
@@ -202,6 +202,6 @@ PRODUCT_SYSTEM_PROPERTIES += \
     bluetooth.profile.sap.server.enabled=true
 
 # Blob proprietari estratti dalle immagini stock (Task 4).
-# La riga viene abilitata quando vendor/doogee/S88Pro esiste: prima di allora
+# La riga viene abilitata quando vendor/doogee/s88pro esiste: prima di allora
 # la build fallirebbe cercando un makefile inesistente.
-$(call inherit-product-if-exists, vendor/doogee/S88Pro/S88Pro-vendor.mk)
+$(call inherit-product-if-exists, vendor/doogee/s88pro/s88pro-vendor.mk)

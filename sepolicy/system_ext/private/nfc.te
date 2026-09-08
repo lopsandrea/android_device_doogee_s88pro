@@ -1,0 +1,16 @@
+# Il servizio NFC tiene il suo stato in /data/nfc, e quei file hanno contesto
+# system_data_file: AOSP non ha una regola file_contexts per quel percorso, e
+# /data/nfc eredita il tipo generico.  Verificato sul telefono:
+#
+#   $ ls -Z /data/nfc/
+#   u:object_r:system_data_file:s0 nfaStorage.bin1
+#   u:object_r:system_data_file:s0 param
+#
+#   avc: denied { write } name="nfaStorage.bin1"
+#        scontext=u:r:nfc:s0 tcontext=u:object_r:system_data_file:s0 tclass=file
+#
+# La correzione pulita e' etichettare /data/nfc come nfc_data_file (vedi
+# file_contexts qui accanto). Questa regola serve ai file GIA' creati con il
+# contesto vecchio, che un restorecon non tocca finche' il percorso non e'
+# noto: senza, l'NFC perde lo stato a ogni avvio.
+allow nfc system_data_file:file { open read write getattr };

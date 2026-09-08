@@ -1,0 +1,4 @@
+# AOSP non mappa /data/nfc, e i file dentro ereditano system_data_file. Con
+# questa riga prendono il tipo che gli spetta, e la regola di ripiego in nfc.te
+# si puo' togliere quando tutti i dispositivi sono stati ri-etichettati.
+/data/nfc(/.*)?    u:object_r:nfc_data_file:s0
