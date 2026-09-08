@@ -79,6 +79,24 @@ BOARD_DOOGEE_DYNAMIC_PARTITIONS_SIZE := 4827643904
 # (in vendor/etc/vintf il build crea la directory manifest/ per i frammenti,
 # ma il manifest principale deve fornirlo il device tree)
 DEVICE_MANIFEST_FILE := $(DEVICE_PATH)/manifest.xml
+# La matrice di compatibilita': gli HAL del framework che questo device
+# pretende. E' quella della ROM di fabbrica, presa da
+# /vendor/etc/vintf/compatibility_matrix.xml del telefono, SENZA le sezioni
+# vendor-ndk e system-sdk.
+#
+# Toglierle non e' una svista. La matrice di fabbrica chiedeva la versione 29
+# (Android 10), quella generata dal build chiede 33. Nessuna delle due va bene,
+# perche' qui sopra c'e' BOARD_VNDK_VERSION := current, e con "current" il
+# framework non elenca nessuna versione numerica nel suo manifest: qualunque
+# requisito resta senza riscontro e checkvintf si ferma con
+#   Vndk version 33 is not supported. Supported versions in framework
+#   manifest are: []
+# Che i blob di Android 10 girino sotto il framework di Android 13 e' un fatto
+# misurato: e' la ROM che sta sul telefono.
+#
+# Nel file NON ci sono commenti XML: assemble_vintf li rifiuta con
+#   Input file has unknown format. ... Not a valid XML
+# (verificato: lo stesso file senza commento passa).
 DEVICE_MATRIX_FILE := $(DEVICE_PATH)/compatibility_matrix.xml
 
 TARGET_COPY_OUT_VENDOR := vendor
