@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Manifest locale per compilare il Doogee S88 Pro prima che i repo stiano
+  sotto l'organizzazione LineageOS.
+
+  Si copia in .repo/local_manifests/ e poi si fa repo sync:
+
+      mkdir -p .repo/local_manifests
+      cp device/doogee/s88pro/s88pro.xml .repo/local_manifests/
+      repo sync
+
+  Perche' serve, e perche' non basta lineage.dependencies: roomservice.py
+  costruisce il nome del progetto come "LineageOS/<repository>" e lo
+  sovrascrive solo per i remote che cominciano con "aosp-", usati per i
+  prebuilt del kernel (vendor/lineage/build/tools/roomservice.py, riga 179).
+  Non c'e' modo di indicargli un altro proprietario. Il manifest locale
+  invece accetta il nome completo, perche' il remote "github" del manifest di
+  LineageOS ha fetch=".." e quindi punta alla radice di github.com.
+
+  Quando i repo passeranno sotto LineageOS questo file non servira' piu':
+  lineage.dependencies bastera' da solo, ed e' gia' scritto per quel caso.
+-->
+<manifest>
+  <project path="device/doogee/s88pro"
+           name="lopsandrea/android_device_doogee_s88pro"
+           remote="github"
+           revision="lineage-20" />
+
+  <project path="vendor/doogee/s88pro"
+           name="lopsandrea/android_vendor_doogee_s88pro"
+           remote="github"
+           revision="lineage-20" />
+
+  <!--
+    I sorgenti del kernel. Il BoardConfig usa TARGET_PREBUILT_KERNEL, quindi
+    per compilare non servono: stanno qui perche' il prebuilt in prebuilt/
+    esce da qui, e chi vuole rigenerarlo deve poterli prendere.
+  -->
+  <project path="kernel/doogee/s88pro"
+           name="lopsandrea/android_kernel_doogee_s88pro"
+           remote="github"
+           revision="lineage-20" />
+</manifest>
