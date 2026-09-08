@@ -230,6 +230,10 @@ KERNEL_WARN_OFF += -Wno-sometimes-uninitialized
 KERNEL_WARN_OFF += -Wno-misleading-indentation
 KERNEL_WARN_OFF += -Wno-bool-operation
 KERNEL_WARN_OFF += -Wno-gnu-variable-sized-type-not-at-end
+# -fuse-ld=lld (qui sotto, in KCFLAGS) serve al LINK del vdso, ma finisce
+# anche nelle compilazioni normali, dove clang lo segnala come argomento
+# inutilizzato -- e con -Werror sarebbe un errore.
+KERNEL_WARN_OFF += -Wno-unused-command-line-argument
 
 # LLVM_IAS=0: l'assembler integrato di clang non digerisce l'assembly di un
 # kernel 4.14 (arch/arm64/mm/fault.c, "junk at end of line"); si usa quello di
@@ -244,7 +248,7 @@ KERNEL_WARN_OFF += -Wno-gnu-variable-sized-type-not-at-end
 # senza passare HOSTLDFLAGS, e clang cerca "ld":
 #   clang-14: error: unable to execute command: Executable "ld" doesn't exist!
 # Con -fuse-ld=lld usa il linker che sta accanto al compilatore.
-TARGET_KERNEL_ADDITIONAL_FLAGS := LLVM_IAS=0 HOSTCFLAGS="-fuse-ld=lld" KCFLAGS="-gdwarf-4 $(KERNEL_WARN_OFF)"
+TARGET_KERNEL_ADDITIONAL_FLAGS := LLVM_IAS=0 HOSTCFLAGS="-fuse-ld=lld" KCFLAGS="-gdwarf-4 -fuse-ld=lld $(KERNEL_WARN_OFF)"
 
 # NIENTE "include vendor/lineage/config/BoardConfigLineage.mk" qui: lo fa gia'
 # build/core/config.mk:361, e includerlo una seconda volta rompe l'esportazione
