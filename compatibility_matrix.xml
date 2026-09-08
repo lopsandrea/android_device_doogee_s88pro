@@ -1,4 +1,4 @@
-<!--
+<!-
     Matrice di compatibilita' del dispositivo: gli HAL del framework che questo
     device pretende.  E' quella della ROM di fabbrica, presa da
     /vendor/etc/vintf/compatibility_matrix.xml del telefono.
@@ -7,7 +7,7 @@
 
     La matrice di fabbrica chiedeva la versione 29 (Android 10). Il BoardConfig
     pero' dichiara BOARD_VNDK_VERSION := current, e con "current" il framework
-    non elenca NESSUNA versione numerica di VNDK nel suo manifest -- quindi
+    non elenca NESSUNA versione numerica di VNDK nel suo manifest - quindi
     qualunque requisito, 29 o 33, non trova riscontro e checkvintf si ferma:
 
         ERROR: files are incompatible: Framework manifest and device
@@ -15,7 +15,7 @@
         supported. Supported versions in framework manifest are: []
 
     Che i blob di Android 10 girino sotto il framework di Android 13 e' un
-    fatto misurato -- e' la ROM che sta sul telefono -- non una compatibilita'
+    fatto misurato - e' la ROM che sta sul telefono - non una compatibilita'
     da dichiarare in una tabella.
 -->
 <compatibility-matrix version="1.0" type="device">
