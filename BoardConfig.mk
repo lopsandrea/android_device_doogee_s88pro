@@ -195,6 +195,14 @@ TARGET_HAS_FUSEBLK_SEPOLICY_ON_VENDOR := true
 #
 # prebuilt/kernel resta nel repo per chi vuole solo installare senza
 # ricompilare: LineageOS lo userebbe solo con TARGET_FORCE_PREBUILT_KERNEL.
+# Il fstab che usa il recovery. C'era, in rootdir/etc/, ma non era dichiarato,
+# e senza questa riga il build non produce NESSUNA ROM installabile:
+# build/make/core/Makefile spegne build_ota_package quando recovery_fstab e'
+# vuoto, INTERNAL_OTA_PACKAGE_TARGET resta vuota, e il target "bacon" finisce
+# per eseguire "ln -f" su un file che nessuno ha costruito:
+#   ln: cannot create hard link from '.../lineage-20.0-...-s88pro.zip'
+TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/etc/fstab.mt6771
+
 TARGET_KERNEL_SOURCE := kernel/doogee/s88pro
 TARGET_KERNEL_CONFIG := lineage_s88pro_defconfig
 
