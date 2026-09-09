@@ -1,0 +1,27 @@
+# S88ProParts, che gira come system_app.
+
+# I LED della scocca. I nodi in se' sono gia' suoi: la policy MediaTek dice
+#
+#   allow system_app_29_0 sys_leds_aw22xxx_led_hwen   (file (read write ...))
+#   allow system_app_29_0 sys_leds_aw22xxx_led_effect (file (ioctl read write ...))
+#   allow system_app_29_0 sys_leds_aw22xxx_led_cfg    (file (ioctl read write ...))
+#
+# e sono tipi suoi, non sysfs_leds. Quello che mancava era attraversare la
+# directory che li contiene, che invece e' di piattaforma:
+#
+#   denied { search } for comm="settings.doogee" name="leds"
+#     scontext=u:r:system_app:s0 tcontext=u:object_r:sysfs_leds:s0 tclass=dir
+#
+# Il neverallow di system/sepolicy/private/coredomain.te:32 vieta
+# sysfs_leds:file, non sysfs_leds:dir: la search si puo' concedere, ed e'
+# quanto basta perche' i LED tornino a funzionare in enforcing.
+allow system_app sysfs_leds:dir search;
+
+# La ricarica inversa. Il nodo che si scrive ha un tipo suo, vedi file.te e
+# genfs_contexts: come sysfs generico non lo avrebbe potuto toccare nessuno,
+# nemmeno init.
+allow system_app sysfs_rvs:file rw_file_perms;
+
+# Per arrivarci bisogna attraversare /sys/devices/platform/..., che resta
+# sysfs generico. I divieti su sysfs sono tutti su :file, mai su :dir.
+allow system_app sysfs:dir search;

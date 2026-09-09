@@ -1,0 +1,13 @@
+# Il nodo della ricarica inversa merita un tipo suo.
+#
+# Nasce come sysfs generico, e su quello nessuno puo' scrivere: e' vietato ai
+# domini di sistema (coredomain.te:141) e persino a init, con un commento che
+# dice come si fa invece --
+#
+#   # Init should not access sysfs node that are not explicitly labeled.
+#   neverallow init sysfs:file { open write };
+#
+# -- cioe' etichettandolo. Fatto questo, l'unico divieto che resta su
+# sysfs_type:file riguarda le app non fidate (app_neverallows.te:100), e
+# S88ProParts non e' fra quelle.
+type sysfs_rvs, fs_type, sysfs_type;

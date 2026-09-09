@@ -1,0 +1,1 @@
+genfscon sysfs /devices/platform/11005000.i2c/i2c-6/6-002b/mt5725group/reverse_charger u:object_r:sysfs_rvs:s0

@@ -6,3 +6,4 @@
 #
 # Gli altri sono volte_ut e vendor.bip.
 allow init socket_device:sock_file { create setattr unlink };
+
