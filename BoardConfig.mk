@@ -66,14 +66,26 @@ TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/kernel
 # make-dtb-target e le dipendenze giuste.
 BOARD_INCLUDE_DTB_IN_BOOTIMG := true
 
-# Non si costruisce la recovery.
+# La recovery si costruisce.
 #
-# Sul device usiamo la TWRP 3.5.2 di lopestom, l'unica che espone fastbootd
-# e senza la quale le partizioni logiche non si toccano. Costruirne una qui
-# non servirebbe, e comunque fallisce: mkbootimg con --header_version 2 e
-# nessun dtb muore con "ValueError: DTB image must not be empty", lo stesso
-# muro incontrato in Fase 1.
-TARGET_NO_RECOVERY := true
+# Prima non si faceva, per due motivi: sul device girava la TWRP 3.5.2 di
+# lopestom, l'unica che espone fastbootd, e il build moriva comunque con
+#   ValueError: DTB image must not be empty
+# perche' mkbootimg vuole un dtb con --header_version 2 e quello che gli
+# arrivava era di 0 byte.
+#
+# Il secondo motivo non c'e' piu': il dtb.img di 0 byte veniva da
+# BOARD_PREBUILT_DTBIMAGE_DIR, tolta da un pezzo (vedi il commento sopra), e
+# ora la recovery riceve lo stesso dtb del boot -- build/make/core/Makefile:
+#   ifdef BOARD_INCLUDE_DTB_IN_BOOTIMG
+#     INTERNAL_RECOVERYIMAGE_ARGS += --dtb $(INSTALLED_DTBIMAGE_TARGET)
+#
+# Il primo non e' piu' una scelta: il charter di LineageOS chiede di spedire
+# LineageOS Recovery come recovery predefinita (17.0+ per la compatibilita',
+# 18.1+ per il default), e con essa arrivano lo zip installabile e
+# l'aggiornamento dall'Updater. TWRP resta utile per il lavoro di bring-up,
+# ma va installata a mano da chi la vuole.
+TARGET_NO_RECOVERY := false
 BOARD_USES_RECOVERY_AS_BOOT := false
 
 # Partizioni. Dimensioni lette dal device con blockdev --getsize64:
@@ -84,6 +96,32 @@ BOARD_USES_RECOVERY_AS_BOOT := false
 BOARD_FLASH_BLOCK_SIZE := 131072
 BOARD_BOOTIMAGE_PARTITION_SIZE := 33554432
 BOARD_RECOVERYIMAGE_PARTITION_SIZE := 33554432
+
+# La cache serve al generatore dell'OTA, non a noi.
+#
+# Su un device non-A/B l'aggiornamento si applica passando per /cache, e
+# build/make/tools/releasetools/blockimgdiff.py dimensiona i trasferimenti in
+# base a quanto e' grande. Se non gliela si dice, "mka bacon" muore cosi':
+#
+#   non_ab_ota.py WARNING: --- can't determine the cache partition size ---
+#   blockimgdiff.py:1561  assert cache_size is not None -> AssertionError
+#
+# Il valore e' quello vero, letto dal telefono:
+#   blockdev --getsize64 /dev/block/by-name/cache
+BOARD_CACHEIMAGE_PARTITION_SIZE := 452984832
+BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
+
+# I blob del vendor si copiano, non si dichiarano uno per uno.
+#
+# Il build rifiuta i file ELF in PRODUCT_COPY_FILES:
+#   FAILED: ...check-non-elf-file-timestamps.../lib64/libXXX.so.timestamp
+# e la via ufficiale sarebbe un modulo BUILD_PREBUILT per libreria. Con le 947
+# del vendor MediaTek non regge: 361 hanno un basename che si ripete -- la
+# stessa libreria in lib e in lib64, oppure in hw/ e nella radice -- e due
+# moduli con lo stesso LOCAL_MODULE si sovrascrivono a vicenda, silenziosamente.
+#
+# AOSP ha l'interruttore apposta (build/make/core/board_config.mk:179).
+BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
 BOARD_SUPER_PARTITION_SIZE := 4831838208
 BOARD_SUPER_PARTITION_GROUPS := doogee_dynamic_partitions
 BOARD_DOOGEE_DYNAMIC_PARTITIONS_PARTITION_LIST := system vendor
@@ -101,7 +139,14 @@ BOARD_DOOGEE_DYNAMIC_PARTITIONS_SIZE := 4827643904
 #   ERROR: Cannot fetch vendor manifest.
 # (in vendor/etc/vintf il build crea la directory manifest/ per i frammenti,
 # ma il manifest principale deve fornirlo il device tree)
-DEVICE_MANIFEST_FILE := $(DEVICE_PATH)/manifest.xml
+# Al manifest del device si uniscono i due frammenti che il vendor di fabbrica
+# teneva separati in /vendor/etc/vintf/manifest/: senza, cas@1.1 e gpu@1.0 non
+# risultano dichiarate. Copiarli come file non si puo', il build li rifiuta:
+#   error: VINTF metadata found in PRODUCT_COPY_FILES: ... use DEVICE_MANIFEST_FILE
+DEVICE_MANIFEST_FILE := \
+    $(DEVICE_PATH)/manifest.xml \
+    vendor/doogee/s88pro/proprietary/vendor/etc/vintf/manifest/android.hardware.cas@1.1-service.xml \
+    vendor/doogee/s88pro/proprietary/vendor/etc/vintf/manifest/android.hardware.gpu@1.0-service.xml
 # La matrice di compatibilita': gli HAL del framework che questo device
 # pretende. E' quella della ROM di fabbrica, presa da
 # /vendor/etc/vintf/compatibility_matrix.xml del telefono, SENZA le sezioni

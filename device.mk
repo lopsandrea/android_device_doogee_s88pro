@@ -129,6 +129,11 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init/s88pro-console.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-console.rc
 
+# L'USB della recovery: senza, si vede sullo schermo ma non risponde ad adb.
+# Il perche' sta nel commento dentro il file.
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/recovery/root/init.recovery.mt6771.rc:$(TARGET_COPY_OUT_RECOVERY)/root/init.recovery.mt6771.rc
+
 # /cache e' un collegamento a /data/cache, quindi il file_contexts di AOSP non
 # prende e il contenuto resta senza etichetta: in enforcing system_server non
 # scrive piu' in /cache/recovery. Vedi il commento dentro il file.
@@ -233,3 +238,86 @@ PRODUCT_SYSTEM_PROPERTIES += \
 # La riga viene abilitata quando vendor/doogee/s88pro esiste: prima di allora
 # la build fallirebbe cercando un makefile inesistente.
 $(call inherit-product-if-exists, vendor/doogee/s88pro/s88pro-vendor.mk)
+
+# Le HAL che il vendor di fabbrica aveva e che qui vanno chieste.
+#
+# Il build sa costruirle -- sono AOSP -- ma non le installa se nessuno le
+# nomina, e infatti mancavano dalla vendor.img: senza, il telefono resta senza
+# impronte, vibrazione, health, gatekeeper e composizione grafica. Non si
+# possono nemmeno copiare come blob: il target esiste comunque e il build si
+# ferma con "overriding commands for target". Si dichiarano, e le loro
+# librerie -impl vengono dietro da sole.
+PRODUCT_PACKAGES += \
+    android.hardware.biometrics.fingerprint@2.1-service \
+    android.hardware.cas@1.1-service \
+    android.hardware.drm@1.0-service \
+    android.hardware.drm@1.2-service.clearkey \
+    android.hardware.gatekeeper@1.0-service \
+    android.hardware.graphics.allocator@2.0-service \
+    android.hardware.graphics.composer@2.1-service \
+    android.hardware.health@2.0-service \
+    android.hardware.memtrack@1.0-service \
+    android.hardware.thermal@1.0-service \
+    android.hardware.vibrator@1.0-service
+
+# Le librerie audio che il vendor caricava e che non sono dipendenze di
+# nessuna HAL: vanno chieste per nome.
+PRODUCT_PACKAGES += \
+    audio.bluetooth.default \
+    audio.r_submix.default \
+    audio.usb.default \
+    audio_policy.stub
+
+# Le librerie che il vendor di fabbrica portava e che qui non arrivano da sole.
+#
+# Sono di AOSP, ma nessun modulo le dichiara come dipendenza: le HAL MediaTek
+# che le usano sono blob, e un blob non porta con se' l'elenco di cio' che
+# carica. Il build quindi non le installa, la HAL non trova la libreria e non
+# parte -- senza un errore di compilazione che lo faccia sospettare.
+PRODUCT_PACKAGES += \
+    android.hardware.audio.common-util \
+    android.hardware.audio.common@5.0-util \
+    android.hardware.audio.effect@5.0-impl \
+    android.hardware.drm@1.0-impl \
+    android.hardware.gatekeeper@1.0-impl \
+    android.hardware.graphics.allocator@2.0-impl \
+    android.hardware.graphics.mapper@2.0-impl-2.1 \
+    android.hardware.memtrack@1.0-impl \
+    android.hardware.soundtrigger@2.2-impl \
+    android.hardware.thermal@1.0-impl \
+    android.hardware.vibrator@1.0-impl \
+    libavservices_minijail_vendor \
+    libchrome.vendor \
+    libext2_blkid.vendor \
+    libext2_uuid.vendor \
+    libhwc2on1adapter \
+    libhwc2onfbadapter \
+    libkeymaster4.vendor \
+    libkeymaster4support.vendor \
+    libkeystore-engine-wifi-hidl \
+    libkeystore-wifi-hidl \
+    libmockdrmcryptoplugin \
+    libsensorndkbridge \
+    libsparse.vendor \
+    libtextclassifier_hash.vendor \
+    libtinyxml \
+    libwifi-hal
+
+# libtinycompress no, e vale la pena sapere perche'.
+#
+# Il vendor di fabbrica la porta in lib e lib64; qui la variante a 32 bit non
+# compila:
+#   generated_kernel_includes/gen/usr/include/asm/sigcontext.h:74:2:
+#     error: unknown type name '__uint128_t'
+# Gli header UAPI vengono generati con ARCH=arm64 e finiscono anche nella
+# compilazione a 32 bit, dove quel tipo non esiste. Non e' un difetto del
+# nostro kernel: e' che gli stessi header servono due architetture.
+#
+# Serve all'audio compresso (offload playback). Se un giorno mancasse davvero,
+# la via e' generare gli header UAPI anche per ARCH=arm, non forzare questa.
+
+# Nota sulle librerie con il suffisso .vendor: in soong un modulo
+# "vendor_available" produce due varianti, e PRODUCT_PACKAGES senza suffisso
+# installa quella di sistema. Dichiarate senza, finivano in /system/lib64 e la
+# vendor restava senza -- si vede solo confrontando le due immagini, il build
+# non dice niente.
