@@ -36,7 +36,12 @@ BOARD_KERNEL_PAGESIZE := 2048
 BOARD_RAMDISK_OFFSET := 0x14f88000
 BOARD_KERNEL_TAGS_OFFSET := 0x13f88000
 BOARD_BOOTIMG_HEADER_VERSION := 2
-BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 androidboot.selinux=permissive
+# Niente "androidboot.selinux=permissive" qui dentro: il charter di LineageOS
+# vuole SELinux Enforcing, e da quando il boot.img lo costruiamo noi quella
+# riga fa davvero effetto (con il boot di fabbrica il bootloader la
+# sovrascriveva e il telefono restava Enforcing lo stesso, che e' il motivo
+# per cui il requisito sembrava soddisfatto quando non lo era).
+BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2
 BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOTIMG_HEADER_VERSION)
 BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
