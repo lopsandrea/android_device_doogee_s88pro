@@ -123,6 +123,12 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init/s88pro-schedtune.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-schedtune.rc \
     $(LOCAL_PATH)/rootdir/etc/s88pro-schedtune.sh:$(TARGET_COPY_OUT_SYSTEM)/etc/s88pro-schedtune.sh
 
+# La shell sulla console seriale, che AOSP avvia su ogni build userdebug, qui
+# non deve partire. Vedi il commento dentro il file: la console del kernel
+# resta, si spegne solo il prompt su UART.
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/rootdir/etc/init/s88pro-console.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-console.rc
+
 # Proprieta' di sistema del device
 PRODUCT_SYSTEM_PROPERTIES += \
     ro.hardware=mt6771

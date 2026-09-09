@@ -1,0 +1,31 @@
+# La shell sulla console seriale non deve partire da sola.
+#
+# AOSP la avvia su ogni build userdebug, in system/core/rootdir/init.rc:
+#
+#     on init && property:ro.debuggable=1
+#         start console
+#
+# e LineageOS costruisce userdebug, quindi ce la troviamo accesa. E' una shell
+# "user shell" (non root) su /dev/console, cioe' sulla UART: chi ha accesso
+# fisico ai pad di test si trova davanti un prompt senza dover sbloccare nulla.
+# Serve durante il bring-up, non su un telefono in mano a qualcuno.
+#
+# La console del kernel resta invece attiva -- i printk continuano a uscire su
+# ttyMT3, e sono l'unica traccia che si ha quando il sistema muore prima di
+# aprire logd. Quella e' identica al kernel di fabbrica (CONFIG_SERIAL_8250_CONSOLE=y
+# e "console=tty0 console=ttyMT3,921600n1" nella CONFIG_CMDLINE): qui non si
+# tocca, si spegne solo la shell.
+#
+# Perche' "on init" funziona da /system/etc/init: da Android 11 init parsa
+# quella directory subito dopo init.rc (init.cpp, ParseConfig("/system/etc/init")),
+# non piu' come late import. Gli action finiscono in coda nell'ordine in cui i
+# file sono stati letti, quindi questo "stop" viene eseguito subito dopo lo
+# "start" di AOSP, nello stesso trigger. Lo "stop" lascia il servizio marcato
+# SVC_DISABLED, cosi' non torna su con il "class_start core" di "on boot".
+#
+# Per riaccenderla quando serve, senza ricostruire nulla:
+#     adb root && adb shell start console
+# oppure, da init, un "setprop ctl.start console".
+
+on init
+    stop console
