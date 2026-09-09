@@ -50,17 +50,20 @@ non e' una distinzione accademica: tre quarti non dipendono da noi.
 |---|---|
 | `init -> socket_device : sock_file create` | `init.te`. Sono i socket `volte_imsa2`, `volte_ut`, `vendor.bip`, dichiarati nei `.rc` del vendor senza contesto esplicito |
 | `system_server -> unlabeled : dir write` | `restorecon_recursive` in `s88pro-cache.rc`. E' `/cache/recovery`, cioe' la strada dell'aggiornamento. Le etichette AOSP le ha gia' (`private/file_contexts:794`, che mappa `/data/cache` perche' qui `/cache` e' un collegamento): mancava solo di applicarle a quel che c'era gia' |
+| `system_app -> sysfs_leds : dir search` | `system_app.te`. I nodi LED non sono sysfs_leds ma tipi a se', gia' concessi dalla policy MediaTek: mancava solo attraversare la directory, e il neverallow di `coredomain.te:32` e' su `:file` |
+| `system_app -> sysfs_batteryinfo : dir r_dir_perms` | `system_app.te`. Serve solo a sapere se il device ha la ricarica inversa; lo stato si legge altrove, vedi sotto |
+| `system_app -> sysfs_rvs : file rw` | `file.te` e `genfs_contexts`. Il nodo della ricarica inversa aveva il tipo generico `sysfs`, che nessuno puo' scrivere -- nemmeno init, e AOSP spiega perche': *"Init should not access sysfs node that are not explicitly labeled"*. Etichettato, il problema sparisce |
 
 ### Vietate da un neverallow di AOSP
 
 Non e' una limitazione nostra: AOSP dichiara esplicitamente che quei domini
-non devono avere quell'accesso, e `secilc` rifiuta la regola.
+non devono avere quell'accesso, e `secilc` rifiuta la regola. Attenzione pero'
+a leggere *cosa* vieta: i divieti su sysfs sono quasi sempre sulla classe
+`file` e non su `dir`, e quella distinzione e' bastata a recuperare i LED.
 
 | denial | occorrenze | il divieto |
 |---|---|---|
 | `network_stack -> fs_bpf : file read` | 7 | `bpfloader.te:36`. AOSP vuole le mappe del tethering in `/sys/fs/bpf/tethering` (tipo `fs_bpf_tethering`, per cui la regola c'e' gia'); il bpfloader di questo kernel 4.14 le crea nella radice, dove il tipo e' `fs_bpf` generico. Sono `map_offload_tether_*`: senza, il tethering non ha l'offload, ma funziona lo stesso via software |
-| `system_app -> sysfs_leds : dir search` | 13 | `coredomain.te:32`. La via giusta e' una light HAL, non un accesso diretto |
-| `system_app -> sysfs_batteryinfo : dir search` | 9 | idem |
 | `kernel -> capability dac_override` | 6 | il worker `mtk_wmtd_worker` del driver Wi-Fi MediaTek |
 
 ### Non esprimibili: il tipo lo definisce il vendor
