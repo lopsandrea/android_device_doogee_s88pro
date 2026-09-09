@@ -93,3 +93,73 @@ blob MediaTek.
 **Nessuno di questi blocca una funzione misurata.** La batteria di
 `tools/prova-driver.sh` eseguita con `setenforce 0` e `setenforce 1` sullo
 stesso boot non mostra una sola differenza funzionale.
+
+## Perche' i denial del vendor non si chiudono, e come si e' verificato
+
+Le regole servirebbero a domini o tipi che definisce la policy MediaTek. Prima
+di lasciarli aperti sono state provate tutte le strade, e vale la pena
+scriverle: sembrano tutte praticabili finche' non le si prova.
+
+### Le regole erano pronte e valide
+
+Trentatre' `allow` che chiudono novantatre' delle centoventinove righe, fra cui
+tutte e quarantanove quelle di `vold` sul nodo `uevent`. Sono state validate
+sul serio: prese le policy dal telefono (`plat`, `mapping/29.0`,
+`plat_pub_versioned`, `vendor`, `system_ext`) e date a `secilc` con i
+neverallow **attivi**, contando le violazioni.
+
+| | violazioni |
+|---|---|
+| senza le nostre regole | 196 |
+| con le nostre regole | 196 |
+
+Le 196 sono preesistenti: sono conflitti fra la policy MediaTek di Android 10 e
+la piattaforma 13 (`llkd` contro `teeregistryd_app` e simili), ed e' il motivo
+per cui init compila con i neverallow disattivati. Il primo giro ne aggiungeva
+sette: quelle regole -- proprieta' riservate per `rild`, `mtk_hal_camera`,
+`stflashtool`, `mtk_hal_wifi`, e `dac_override` per `kernel` -- sono state
+tolte, perche' li' il divieto e' voluto.
+
+### Il muro: dove metterle
+
+init, quando ricompila la policy all'avvio, unisce cinque file. Nessuno dei
+tre che potrebbero ospitarle e' raggiungibile:
+
+**`/vendor/etc/selinux/vendor_sepolicy.cil`** e' il blob MediaTek. Modificarlo
+vorrebbe dire alterare una partizione di fabbrica: non lo fa il build, non e'
+riproducibile, e non e' una cosa da sottomettere.
+
+**`/odm/etc/selinux/odm_sepolicy.cil`** sembra la via giusta -- e' il posto che
+AOSP prevede per aggiungere regole senza toccare il vendor -- ma qui
+`/odm/etc` e' un collegamento a `/vendor/odm/etc`, quindi si torna nella
+partizione di fabbrica. Se ne accorge solo chi guarda:
+
+    lrw-r--r-- 1 root root 15 /odm/etc -> /vendor/odm/etc
+
+Prima di scoprirlo il file era stato messo nel ramdisk del boot.img, il che non
+serve a niente per un secondo motivo: la "/" del telefono acceso e' `dm-0`,
+cioe' la partizione system montata come radice, e il ramdisk sparisce dopo il
+first stage init.
+
+**`/product/etc/selinux/product_sepolicy.cil`** e' l'unico che sta dentro la
+system.img (`/product` e' un collegamento a `/system/product`), e infatti si
+puo' scrivere. Ma le regole non ci arrivano lo stesso: quel percorso e' gia' un
+target di soong (`overriding commands for target ...`), e usando il meccanismo
+previsto (`PRODUCT_PRIVATE_SEPOLICY_DIRS`) il compilatore si ferma sul primo
+tipo del vendor:
+
+    sepolicy/product/private/vendor_bridge.te:3:
+      ERROR 'unknown type sysfs_mmcblk'
+
+Dichiararlo in `sepolicy/vendor/` non aiuta: la conf della policy product non
+include le directory del vendor. **E' la separazione di Treble che funziona
+come previsto**: la policy del lato sistema non puo' nominare i tipi del
+vendor, per costruzione. Non e' un ostacolo da aggirare con piu' ingegno.
+
+### Cosa resterebbe da fare, se un giorno servisse
+
+Costruire la policy del vendor invece di prenderla dal blob, portando dentro le
+regole delle HAL MediaTek. E' il lavoro che
+`TARGET_USES_PREBUILT_VENDOR_SEPOLICY` evita, e il commento in `BoardConfig.mk`
+racconta com'e' andata l'ultima volta che la si e' sostituita: i servizi del
+vendor sono rimasti muti e `system_server` e' rimasto appeso ad aspettarli.
