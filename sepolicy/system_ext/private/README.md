@@ -36,3 +36,57 @@ nessuno deve scrivere su `system_data_file`, che e' il tipo generico.
 
 Finche' non si fa una delle due, i denial restano nel registro. Nessuno dei due
 impedisce l'avvio.
+
+## La mappa dei denial in enforcing (9 settembre)
+
+Misurati sul telefono con SELinux Enforcing, dopo un avvio e un giro d'uso
+vero (foto, video, torcia, LED, Bluetooth, NFC, radio FM, impostazioni):
+194 righe, 41 combinazioni distinte. Divise per **chi puo' chiuderle**, che
+non e' una distinzione accademica: tre quarti non dipendono da noi.
+
+### Chiuse qui
+
+| denial | come |
+|---|---|
+| `init -> socket_device : sock_file create` | `init.te`. Sono i socket `volte_imsa2`, `volte_ut`, `vendor.bip`, dichiarati nei `.rc` del vendor senza contesto esplicito |
+| `system_server -> unlabeled : dir write` | `restorecon_recursive` in `s88pro-cache.rc`. E' `/cache/recovery`, cioe' la strada dell'aggiornamento. Le etichette AOSP le ha gia' (`private/file_contexts:794`, che mappa `/data/cache` perche' qui `/cache` e' un collegamento): mancava solo di applicarle a quel che c'era gia' |
+
+### Vietate da un neverallow di AOSP
+
+Non e' una limitazione nostra: AOSP dichiara esplicitamente che quei domini
+non devono avere quell'accesso, e `secilc` rifiuta la regola.
+
+| denial | occorrenze | il divieto |
+|---|---|---|
+| `network_stack -> fs_bpf : file read` | 7 | `bpfloader.te:36`. AOSP vuole le mappe del tethering in `/sys/fs/bpf/tethering` (tipo `fs_bpf_tethering`, per cui la regola c'e' gia'); il bpfloader di questo kernel 4.14 le crea nella radice, dove il tipo e' `fs_bpf` generico. Sono `map_offload_tether_*`: senza, il tethering non ha l'offload, ma funziona lo stesso via software |
+| `system_app -> sysfs_leds : dir search` | 13 | `coredomain.te:32`. La via giusta e' una light HAL, non un accesso diretto |
+| `system_app -> sysfs_batteryinfo : dir search` | 9 | idem |
+| `kernel -> capability dac_override` | 6 | il worker `mtk_wmtd_worker` del driver Wi-Fi MediaTek |
+
+### Non esprimibili: il tipo lo definisce il vendor
+
+Con `TARGET_USES_PREBUILT_VENDOR_SEPOLICY` la policy del vendor arriva gia'
+compilata, e i suoi tipi non esistono nella policy di piattaforma: una
+`allow` che li nomina non compila. Il dominio invece e' nostro, quindi non
+si possono nemmeno mettere altrove.
+
+| denial | occorrenze |
+|---|---|
+| `vold -> sysfs_mmcblk : file write` | 49 |
+| `mediaswcodec -> proc_ged : file read` | 28 |
+| `cameraserver -> vendor_default_prop : file read` | 6 |
+| `mediacodec -> default_prop : file read` | 5 |
+| `mediaserver`, `nfc` -> `debugfs_ion : dir search` | 6 |
+| `system_server -> tkcore_systa_file : dir getattr` | 1 |
+
+### Del vendor, dominio compreso
+
+`ccci_mdinit` (8), `stflashtool` (6), `rild` (6), `mtk_hal_camera` (6),
+`aee_aedv` (4), `nvram_daemon` (4), `mnld` (4), `fuelgauged_nvram` (3),
+`mtk_hal_audio` (3), `mtk_hal_wifi` (2), `mtk_hal_sensors` (2),
+`mtk_hal_bluetooth` (1). Qui non si tocca niente: le regole starebbero nel
+blob MediaTek.
+
+**Nessuno di questi blocca una funzione misurata.** La batteria di
+`tools/prova-driver.sh` eseguita con `setenforce 0` e `setenforce 1` sullo
+stesso boot non mostra una sola differenza funzionale.

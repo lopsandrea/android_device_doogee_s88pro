@@ -1,0 +1,16 @@
+# Rietichetta /data/cache.
+#
+# Su questo device /cache e' un collegamento a /data/cache. AOSP le etichette
+# giuste ce le ha gia' -- system/sepolicy/private/file_contexts:794 mappa
+# /data/cache e /data/cache/recovery -- ma valgono per i file creati da li' in
+# avanti: quello che esisteva prima resta "unlabeled". In enforcing si vede
+# subito, perche' system_server non riesce piu' a scrivere in /cache/recovery,
+# la directory da cui passano i comandi per la recovery, cioe' la strada
+# dell'aggiornamento:
+#
+#   avc: denied { write } for comm="Thread-16" name="recovery" dev="mmcblk0p39"
+#     scontext=u:r:system_server:s0 tcontext=u:object_r:unlabeled:s0
+#
+# Da qui in poi le prendono anche quelli vecchi.
+on post-fs-data
+    restorecon_recursive /data/cache

@@ -129,6 +129,12 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init/s88pro-console.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-console.rc
 
+# /cache e' un collegamento a /data/cache, quindi il file_contexts di AOSP non
+# prende e il contenuto resta senza etichetta: in enforcing system_server non
+# scrive piu' in /cache/recovery. Vedi il commento dentro il file.
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/rootdir/etc/init/s88pro-cache.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-cache.rc
+
 # Proprieta' di sistema del device
 PRODUCT_SYSTEM_PROPERTIES += \
     ro.hardware=mt6771
