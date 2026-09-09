@@ -44,6 +44,28 @@ vero (foto, video, torcia, LED, Bluetooth, NFC, radio FM, impostazioni):
 194 righe, 41 combinazioni distinte. Divise per **chi puo' chiuderle**, che
 non e' una distinzione accademica: tre quarti non dipendono da noi.
 
+### Chiusa nel kernel, non qui
+
+`network_stack -> fs_bpf : file read`, quattordici occorrenze, era stata messa
+fra le "vietate da un neverallow" -- `bpfloader.te:36` vieta proprio a
+`network_stack` di leggere `fs_bpf`. Il divieto pero' era giusto e il difetto
+stava altrove: quelle mappe **non dovevano avere quel tipo**. Le mappe erano
+gia' al posto giusto (`/sys/fs/bpf/tethering/`), ma il kernel dava a tutto
+quello che sta in bpffs il tipo della radice, ignorando i `genfscon` per
+sotto-percorso che la policy ha da sempre:
+
+    policy   genfscon bpf /tethering u:object_r:fs_bpf_tethering:s0
+    device   /sys/fs/bpf/tethering -> u:object_r:fs_bpf:s0
+
+Manca una riga in `security/selinux/hooks.c`, ed e' upstream dal 2020:
+4ca54d3d3022, *"security: selinux: allow per-file labeling for bpffs"*. Con
+quella, le sei sottodirectory prendono il tipo che gli spetta, i quattordici
+denial spariscono e l'offload del tethering parte. Sta nel repo del kernel.
+
+**La lezione**: un denial vietato da un `neverallow` non significa "da
+lasciare aperto". Significa che AOSP si aspetta un'altra configurazione, e
+vale la pena chiedersi quale sia prima di rassegnarsi.
+
 ### Chiuse qui
 
 | denial | come |
@@ -63,7 +85,6 @@ a leggere *cosa* vieta: i divieti su sysfs sono quasi sempre sulla classe
 
 | denial | occorrenze | il divieto |
 |---|---|---|
-| `network_stack -> fs_bpf : file read` | 7 | `bpfloader.te:36`. AOSP vuole le mappe del tethering in `/sys/fs/bpf/tethering` (tipo `fs_bpf_tethering`, per cui la regola c'e' gia'); il bpfloader di questo kernel 4.14 le crea nella radice, dove il tipo e' `fs_bpf` generico. Sono `map_offload_tether_*`: senza, il tethering non ha l'offload, ma funziona lo stesso via software |
 | `kernel -> capability dac_override` | 6 | il worker `mtk_wmtd_worker` del driver Wi-Fi MediaTek |
 
 ### Non esprimibili: il tipo lo definisce il vendor
