@@ -9,6 +9,7 @@ LOCAL_PATH := device/doogee/s88pro
 # Partizioni dinamiche: variabile di prodotto, non di board.
 PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
+
 # fstab senza cifratura: nel ramdisk, con un suffisso tutto suo.
 #
 # Nel ramdisk serve perche' il first stage init lo cerca li': gira prima che il
@@ -30,10 +31,29 @@ PRODUCT_USE_DYNAMIC_PARTITIONS := true
 # boot_nocrypt.img aveva (il suo ramdisk ha .backup/ e overlay.d/, e init pesa
 # 199 KB invece di 2,9 MB): chi vuole il root deve ripatcharlo.
 #
-# E soprattutto: NON reintrodurre "fileencryption" in questo fstab. Il TEE
-# MediaTek (TrustKernel keymaster v4) rifiuta keystore2 con
-# Error::Km(ErrorCode(-64)), vold non riesce a creare la chiave e il sistema
-# non completa l'avvio. Vedi docs/bringup/fase2-risultato-gsi-funzionante.md
+# Sulla cifratura la nota qui sopra diceva il contrario, e va corretta.
+#
+# Diceva di non reintrodurre "fileencryption" perche' il TEE (TrustKernel
+# keymaster 4.0) rifiutava keystore2 con Error::Km(ErrorCode(-64)), cioe'
+# KEYMASTER_NOT_CONFIGURED. Su questa configurazione non succede piu', e non
+# e' una supposizione: con il sistema avviato, keystore_cli_v2 genera una
+# chiave nel TEE, la usa e la verifica --
+#
+#     keystore_cli_v2 generate --name=prova --seclevel=tee   -> success
+#     keystore_cli_v2 sign-verify --name=prova               -> Sign: 256 bytes
+#                                                               Verify: OK
+#
+# e get-chars elenca OS_VERSION e OS_PATCHLEVEL fra i parametri "Hardware":
+# il TEE i suoi dati di configurazione ce li ha. Da Keymaster 4.0 non e' piu'
+# keystore a chiamare configure(), sono os_version e os_patch_level
+# dell'header del boot.img che il bootloader passa al TEE, e il nostro
+# boot.img li dichiara (13.0.0 e 2026-02).
+#
+# Anche il kernel e' pronto: CONFIG_FS_ENCRYPTION=y, ext4 con la feature
+# "encryption", e la userdata ce l'ha gia' attiva.
+#
+# Percio' la riga /data e' di nuovo identica a quella di fabbrica, questa
+# compresa. Passare da non cifrato a cifrato richiede di cancellare /data.
 #
 # E il fstab lo legge anche vold, che parte molto dopo il first stage.
 #
@@ -186,6 +206,7 @@ PRODUCT_COPY_FILES += \
 # scrive piu' in /cache/recovery. Vedi il commento dentro il file.
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init/s88pro-cache.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-cache.rc
+
 
 # Proprieta' di sistema del device
 PRODUCT_SYSTEM_PROPERTIES += \

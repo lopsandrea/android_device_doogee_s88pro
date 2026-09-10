@@ -25,9 +25,37 @@ vendor /vendor ext4 ro wait,,avb,logical,first_stage_mount
 # chiamata metadata. Lo dice il fstab stock, verificato in Fase 1.
 /dev/block/platform/bootdevice/by-name/md_udc /metadata ext4 noatime,nosuid,nodev,discard wait,formattable,first_stage_mount
 
-/dev/block/platform/bootdevice/by-name/userdata /data ext4 noatime,nosuid,nodev,noauto_da_alloc,errors=panic wait,check,formattable,quota,resize,reservedsize=128m,checkpoint=block                           
+/dev/block/platform/bootdevice/by-name/userdata /data ext4 noatime,nosuid,nodev,noauto_da_alloc,errors=panic wait,check,formattable,quota,resize,reservedsize=128m,checkpoint=block,fileencryption=aes-256-xts                           
 
-/dev/block/platform/bootdevice/by-name/cache /cache ext4 noatime,nosuid,nodev,noauto_da_alloc,discard wait,check,formattable
+# nofail su /cache, e da questo dipende la cifratura di /data.
+#
+# Su questo device /cache non e' un mount point: e' un collegamento a
+# /data/cache, e il mount fallisce sempre --
+#
+#     init: [libfs_mgr]__mount(...cache, target=/cache(missing), ...)=-1
+#
+# Il guaio e' che fs_mgr_mount_all conta quel fallimento e alla fine ci
+# ripassa sopra il risultato buono:
+#
+#     if (error_count) return {FS_MGR_MNTALL_FAIL, ...};
+#
+# Cosi' init riceve FAIL invece di FS_MGR_MNTALL_DEV_FILE_ENCRYPTED, e in
+# queue_fs_event non chiama FscryptInstallKeyring(): il keyring "fscrypt" non
+# nasce. Poi vold, che sul kernel 4.14 usa il ramo legacy con il session
+# keyring, non lo trova e la cifratura muore --
+#
+#     vold: Kernel doesn't support FS_IOC_ADD_ENCRYPTION_KEY. Falling back...
+#     vold: Unable to find device keyring: Required key not available
+#     init: reason is [enablefilecrypto_failed]
+#
+# Il sintomo trae in inganno perche' set_type_property() viene chiamata
+# comunque, quindi ro.crypto.type resta "file" e installkey parte lo stesso:
+# sembra che manchi il keyring, non che sia fallito il mount di un'altra
+# partizione.
+#
+# Con nofail il fallimento viene ignorato senza incrementare error_count
+# (system/core/fs_mgr/fs_mgr.cpp:1555) e il risultato torna quello giusto.
+/dev/block/platform/bootdevice/by-name/cache /cache ext4 noatime,nosuid,nodev,noauto_da_alloc,discard wait,check,formattable,nofail
 
 /dev/block/platform/bootdevice/by-name/protect1 /mnt/vendor/protect_f ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
 /dev/block/platform/bootdevice/by-name/protect2 /mnt/vendor/protect_s ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
