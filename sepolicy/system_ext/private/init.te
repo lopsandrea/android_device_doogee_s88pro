@@ -1,3 +1,8 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 # init crea i socket dichiarati nei .rc del vendor. Quelli di VoLTE e di BIP
 # non portano un contesto esplicito, quindi ereditano socket_device:
 #

@@ -1,3 +1,8 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 # Boost EAS per le app in primo piano.
 #
 # Senza, l'interfaccia e' vistosamente a scatti. Misurato con dumpsys gfxinfo

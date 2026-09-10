@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 # Estrae i blob proprietari dalle immagini stock montate in /mnt/stock.
 #
 # Perche' da immagini e non da device via adb, come fa lo script standard di

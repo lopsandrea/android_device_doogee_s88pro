@@ -1,3 +1,8 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 # Da' il via al TEE TrustKernel, che altrimenti resta senza storage.
 #
 # /vendor/etc/init/trustkernel.rc prepara le directory del filesystem sicuro

@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
+     Copyright (C) 2026 The LineageOS Project
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+<!--
   Manifest locale per compilare il Doogee S88 Pro prima che i repo stiano
   sotto l'organizzazione LineageOS.
 

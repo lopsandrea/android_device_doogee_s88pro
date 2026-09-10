@@ -1,3 +1,8 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 # La shell sulla console seriale non deve partire da sola.
 #
 # AOSP la avvia su ogni build userdebug, in system/core/rootdir/init.rc:

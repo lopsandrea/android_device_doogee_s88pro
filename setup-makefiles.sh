@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 # Genera i makefile di vendor/doogee/s88pro a partire da proprietary-files.txt.
 #
 # LA DESTINAZIONE VIENE DAL PERCORSO. Prima questo script mandava tutto in

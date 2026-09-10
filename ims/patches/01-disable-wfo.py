@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 """Toglie l'avvio del servizio WFO (VoWiFi) dal costruttore di ImsService.
 
 Perche': ImsService.<init> chiama startWfoService(), che finisce in

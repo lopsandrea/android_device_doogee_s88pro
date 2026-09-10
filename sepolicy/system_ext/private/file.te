@@ -1,3 +1,8 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 # Il nodo della ricarica inversa merita un tipo suo.
 #
 # Nasce come sysfs generico, e su quello nessuno puo' scrivere: e' vietato ai

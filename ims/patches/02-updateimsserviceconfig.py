@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
 """Adatta la chiamata a ImsManager.updateImsServiceConfig() alla firma di Android 12.
 
 In Android 10 era statico e prendeva (Context, int phoneId, boolean force); in
