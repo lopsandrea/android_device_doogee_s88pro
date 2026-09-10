@@ -170,6 +170,59 @@ MODULE
 		esac
 	done < "$LIST"
 
+	# I blob che devono vincere sul modulo di AOSP con lo stesso nome.
+	# L'elenco e' in vendor-override-files.txt, che spiega anche perche'.
+	if [ -f "$HERE/vendor-override-files.txt" ]; then
+		while read -r line; do
+			case "$line" in ''|'#'*) continue ;; esac
+			f="$line"
+			nome="$(basename "$f")"
+			case "$f" in
+				*/bin/*)
+					classe="EXECUTABLES"; dest="\$(TARGET_OUT_VENDOR)/bin/hw"; stem="$nome" ;;
+				*/lib64/hw/*)
+					# La stessa libreria c'e' in lib e lib64: un modulo solo, con
+					# MULTILIB both. Due moduli con lo stesso LOCAL_MODULE danno
+					#   error: MODULE.TARGET.SHARED_LIBRARIES.x already defined
+					classe="SHARED_LIBRARIES"; dest=""; stem="$nome"
+					altra32="$(echo "$f" | sed 's#/lib64/#/lib/#')" ;;
+				*/lib/hw/*)
+					# la variante a 32 bit e' gia' compresa in quella a 64
+					continue ;;
+				*) continue ;;
+			esac
+			sovrascritto="${nome%.so}"
+			if [ "$classe" = "SHARED_LIBRARIES" ]; then
+				sorgenti="LOCAL_SRC_FILES_64 := proprietary/$f
+LOCAL_SRC_FILES_32 := proprietary/$altra32
+LOCAL_MULTILIB := both
+LOCAL_MODULE_RELATIVE_PATH := hw"
+				percorso=""
+			else
+				sorgenti="LOCAL_SRC_FILES := proprietary/$f"
+				percorso="LOCAL_MODULE_PATH := $dest"
+			fi
+			# Il modulo ha un nome diverso -- altrimenti collide con quello che
+			# vuole sostituire -- e LOCAL_MODULE_STEM rimette il nome vero al file.
+			cat << MODULE
+include \$(CLEAR_VARS)
+LOCAL_MODULE := s88pro_$sovrascritto
+LOCAL_MODULE_STEM := $stem
+LOCAL_MODULE_OWNER := $VENDOR
+$sorgenti
+LOCAL_MODULE_CLASS := $classe
+$percorso
+LOCAL_OVERRIDES_MODULES := $sovrascritto
+LOCAL_MODULE_TAGS := optional
+LOCAL_PROPRIETARY_MODULE := true
+LOCAL_STRIP_MODULE := false
+LOCAL_CHECK_ELF_FILES := false
+include \$(BUILD_PREBUILT)
+
+MODULE
+		done < "$HERE/vendor-override-files.txt"
+	fi
+
 	# I collegamenti simbolici del vendor di fabbrica. Un elenco di file non li
 	# esprime, e copiarne il contenuto due volte sprecherebbe spazio: vulkan
 	# punta a libGLES_mali.so, che da sola pesa piu' di venti megabyte.
@@ -263,6 +316,12 @@ HEADER
 				system/*.so) basename "$f" .so ;;
 			esac
 		done < "$LIST"
+		if [ -f "$HERE/vendor-override-files.txt" ]; then
+			while read -r line; do
+				case "$line" in ''|'#'*) continue ;; esac
+				nome="$(basename "$line")"; echo "s88pro_${nome%.so}"
+			done < "$HERE/vendor-override-files.txt"
+		fi
 	} | sort -u | sed 's/^/    /; s/$/ \\/'
 	echo ""
 } > "$OUT/$DEVICE-vendor.mk"

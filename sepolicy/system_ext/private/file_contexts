@@ -3,3 +3,17 @@
 # si puo' togliere quando tutti i dispositivi sono stati ri-etichettati.
 /data/nfc(/.*)?    u:object_r:nfc_data_file:s0
 
+
+# Il fstab nella radice della system, che legge vold.
+#
+# AOSP etichetta qualunque /fstab.* come rootfs
+# (system/sepolicy/private/file_contexts:9), e rootfs:file nessuno lo puo'
+# leggere se non e' esplicitamente autorizzato: modprobe, ueventd,
+# vendor_init, update_engine. vold no. Con quel tipo non riuscirebbe ad
+# aprirlo e ripiegherebbe sul fstab del vendor, che e' il problema da cui
+# siamo partiti (vedi device.mk, sopra PRODUCT_COPY_FILES).
+#
+# Questa riga e' piu' specifica di "/fstab\..*" e vince sul match generico.
+# system_file lo legge ogni dominio: system/sepolicy/public/domain.te dice
+# allow domain system_file_type:file { getattr open read map execute }.
+/fstab\.s88pro    u:object_r:system_file:s0

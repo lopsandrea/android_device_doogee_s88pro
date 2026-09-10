@@ -41,7 +41,15 @@ BOARD_BOOTIMG_HEADER_VERSION := 2
 # riga fa davvero effetto (con il boot di fabbrica il bootloader la
 # sovrascriveva e il telefono restava Enforcing lo stesso, che e' il motivo
 # per cui il requisito sembrava soddisfatto quando non lo era).
-BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2
+#
+# Il suffisso del fstab: serve a vold, non al kernel.
+#
+# fs_mgr cerca il fstab come "fstab.<suffisso>", dove il suffisso e'
+# ro.boot.fstab_suffix se c'e' e ro.hardware (qui "mt6771") altrimenti, e lo
+# cerca prima in /odm/etc, poi in /vendor/etc e infine nella radice. Con il
+# vendor prebuilt, /vendor/etc/fstab.mt6771 e' quello di fabbrica e vince sul
+# nostro: la spiegazione per esteso sta in device.mk, sopra PRODUCT_COPY_FILES.
+BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 androidboot.fstab_suffix=s88pro
 BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOTIMG_HEADER_VERSION)
 BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
@@ -108,6 +116,33 @@ BOARD_RECOVERYIMAGE_PARTITION_SIZE := 33554432
 #
 # Il valore e' quello vero, letto dal telefono:
 #   blockdev --getsize64 /dev/block/by-name/cache
+# La vendor non si costruisce: si prende quella di fabbrica.
+#
+# Il vendor di questo telefono e' Android 10 e non abbiamo i sorgenti di
+# niente di cio' che contiene. Ricostruirlo dai blob si puo' -- 1622 file
+# estratti, ci abbiamo passato un pomeriggio -- ma resta il fatto che il build
+# installa comunque i propri moduli in /vendor, e per ogni file su cui i due
+# si sovrappongono bisogna decidere chi vince. Per la vibrazione o memtrack la
+# risposta e' facile; per il composer grafico, per il gralloc, per la HAL
+# delle impronte no, e sbagliare non da' un errore: da' un telefono fermo sul
+# logo del bootloader, senza niente da leggere.
+#
+# Con BOARD_PREBUILT_VENDORIMAGE il build copia l'immagine invece di
+# costruirla (build/make/core/Makefile:3601) e BUILDING_VENDOR_IMAGE resta
+# vuota, quindi non installa piu' niente li' dentro. Il risultato e' identico
+# bit per bit a quello che gira sul telefono da sempre.
+#
+# Il prezzo e' che il vendor non e' ispezionabile file per file dal device
+# tree, e per una sottomissione a LineageOS e' un punto da discutere. Il
+# vantaggio e' che lo zip installabile funziona, che era il requisito.
+#
+# L'immagine non e' pero' quella di fabbrica tale e quale: dentro ci va il
+# nostro fstab, perche' i file init del vendor montano /data per nome e non
+# c'e' altro modo di farglielo leggere. La regola che la produce, con le
+# ragioni per esteso, sta in Android.mk.
+S88PRO_VENDOR_CON_FSTAB := $(PRODUCT_OUT)/vendor-con-il-nostro-fstab.img
+BOARD_PREBUILT_VENDORIMAGE := $(S88PRO_VENDOR_CON_FSTAB)
+
 BOARD_CACHEIMAGE_PARTITION_SIZE := 452984832
 BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
 
@@ -139,13 +174,18 @@ BOARD_DOOGEE_DYNAMIC_PARTITIONS_SIZE := 4827643904
 #   ERROR: Cannot fetch vendor manifest.
 # (in vendor/etc/vintf il build crea la directory manifest/ per i frammenti,
 # ma il manifest principale deve fornirlo il device tree)
-# Al manifest del device si uniscono i due frammenti che il vendor di fabbrica
-# teneva separati in /vendor/etc/vintf/manifest/: senza, cas@1.1 e gpu@1.0 non
-# risultano dichiarate. Copiarli come file non si puo', il build li rifiuta:
+# Al manifest del device si unisce il frammento gpu@1.0 che il vendor di
+# fabbrica teneva separato in /vendor/etc/vintf/manifest/. Copiarlo come file
+# non si puo', il build lo rifiuta:
 #   error: VINTF metadata found in PRODUCT_COPY_FILES: ... use DEVICE_MANIFEST_FILE
+#
+# Quello di cas invece NON va aggiunto: il vendor di fabbrica dichiarava
+# cas@1.1, ma la HAL qui la compila AOSP nella versione 1.2, che si porta il
+# proprio frammento. Dichiarandoli entrambi assemble_vintf si ferma con
+#   HAL "android.hardware.cas" has a conflict: Conflicting major version:
+#     1.1 (from manifest.xml) vs. 1.2 (from .../cas@1.2-service.xml)
 DEVICE_MANIFEST_FILE := \
     $(DEVICE_PATH)/manifest.xml \
-    vendor/doogee/s88pro/proprietary/vendor/etc/vintf/manifest/android.hardware.cas@1.1-service.xml \
     vendor/doogee/s88pro/proprietary/vendor/etc/vintf/manifest/android.hardware.gpu@1.0-service.xml
 # La matrice di compatibilita': gli HAL del framework che questo device
 # pretende. E' quella della ROM di fabbrica, presa da

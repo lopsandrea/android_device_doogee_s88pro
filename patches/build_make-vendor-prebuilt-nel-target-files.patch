@@ -1,0 +1,45 @@
+diff --git a/core/Makefile b/core/Makefile
+index fb655cd..3aacbe1 100644
+--- a/core/Makefile
++++ b/core/Makefile
+@@ -5915,7 +5915,11 @@ ifdef BUILDING_USERDATA_IMAGE
+ 	$(hide) $(call package_files-copy-root, \
+ 	    $(TARGET_OUT_DATA),$(zip_root)/DATA)
+ endif
+-ifdef BUILDING_VENDOR_IMAGE
++# La vendor entra nel target-files anche quando e' un'immagine gia' pronta:
++# senza la directory, il generatore dell'OTA non trova la partizione e si ferma
++# con "vendor is in target super_..._partition_list but no BlockDifference
++# object is provided".
++ifneq (,$(BUILDING_VENDOR_IMAGE)$(BOARD_PREBUILT_VENDORIMAGE))
+ 	@# Contents of the vendor image
+ 	$(hide) $(call package_files-copy-root, \
+ 	    $(TARGET_OUT_VENDOR),$(zip_root)/VENDOR)
+@@ -6044,6 +6048,27 @@ endif
+ ifdef BOARD_PREBUILT_VENDORIMAGE
+ 	$(hide) mkdir -p $(zip_root)/IMAGES
+ 	$(hide) cp $(INSTALLED_VENDORIMAGE_TARGET) $(zip_root)/IMAGES/
++	@# Un'immagine gia' pronta va trattata come non sparse.
++	@#
++	@# generate-image-prop-dictionary scrive "<part>_disable_sparse=true"
++	@# quando la partizione non ha una dimensione dichiarata, ma la chiama
++	@# solo per le partizioni che il build costruisce: con
++	@# BOARD_PREBUILT_VENDORIMAGE quel giro non avviene e il flag manca.
++	@#
++	@# Senza, GetUserImage prende il ramo sparse e pretende due cose che qui
++	@# non esistono -- la mappa dei blocchi accanto all'immagine e ogni file
++	@# della mappa presente nel target-files:
++	@#   assert os.path.exists(path) and os.path.exists(mappath)
++	@#   AssertionError: Failed to find the ZIP entry for ...
++	@# Con il flag legge l'immagine e basta, che e' quello che serve.
++	$(hide) echo "vendor_disable_sparse=true" >> $(zip_root)/META/misc_info.txt
++	@# Anche il ramo non sparse pretende che la mappa dei blocchi esista
++	@# accanto all'immagine, benche' poi non la legga:
++	@#   assert os.path.exists(path) and os.path.exists(mappath)
++	@#   return images.FileImage(path, ...)
++	@# e2fsdroid la ricava dall'immagine senza toccarla.
++	$(hide) $(HOST_OUT_EXECUTABLES)/e2fsdroid -e \
++	    -B $(zip_root)/IMAGES/vendor.map $(zip_root)/IMAGES/vendor.img
+ endif
+ ifdef BOARD_PREBUILT_PRODUCTIMAGE
+ 	$(hide) mkdir -p $(zip_root)/IMAGES

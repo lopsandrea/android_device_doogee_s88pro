@@ -9,7 +9,7 @@ LOCAL_PATH := device/doogee/s88pro
 # Partizioni dinamiche: variabile di prodotto, non di board.
 PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
-# fstab senza cifratura: nel vendor E NEL RAMDISK.
+# fstab senza cifratura: nel ramdisk, con un suffisso tutto suo.
 #
 # Nel ramdisk serve perche' il first stage init lo cerca li': gira prima che il
 # vendor sia montato, e senza si ferma subito --
@@ -34,9 +34,56 @@ PRODUCT_USE_DYNAMIC_PARTITIONS := true
 # MediaTek (TrustKernel keymaster v4) rifiuta keystore2 con
 # Error::Km(ErrorCode(-64)), vold non riesce a creare la chiave e il sistema
 # non completa l'avvio. Vedi docs/bringup/fase2-risultato-gsi-funzionante.md
+#
+# E il fstab lo legge anche vold, che parte molto dopo il first stage.
+#
+# Finche' il build costruiva la vendor, questo file ci finiva dentro come
+# /vendor/etc/fstab.mt6771 e copriva quello di fabbrica. Con
+# BOARD_PREBUILT_VENDORIMAGE non ci finisce piu' -- il build non installa piu'
+# niente in /vendor -- e a runtime torna a valere l'originale, che qui sbaglia
+# in due punti: elenca /product come partizione logica, e /product nel super
+# non c'e' piu'; e mette fileencryption su /data, che il TEE non regge.
+#
+# Il first stage non se ne accorge, perche' legge il nostro dal ramdisk e
+# l'assenza di /product la tollera. vold no: itera su tutte le voci "logical"
+# del fstab e su quella che manca chiama LOG(FATAL).
+#
+#     init:  DM_DEV_STATUS failed for product: No such device or address
+#     vold:  could not find logical partition product: No such device or address
+#     init:  Restarting system with command 'vold-failed'
+#
+# Letto in /sys/fs/pstore dopo il tentativo del 10 settembre 2026: il telefono
+# restava fermo sul logo per due minuti e il watchdog lo spegneva.
+#
+# La via d'uscita e' il suffisso. fs_mgr costruisce il nome del file da
+# ro.boot.fstab_suffix, e solo se quella manca ripiega su ro.hardware
+# (system/core/fs_mgr/fs_mgr_fstab.cpp, GetFstabPath):
+#
+#     /odm/etc/fstab.<suffisso>  ->  /vendor/etc/fstab.<suffisso>  ->  /fstab.<suffisso>
+#
+# Con androidboot.fstab_suffix=s88pro nel cmdline, fstab.s88pro non esiste in
+# /odm/etc ne' in /vendor/etc: niente lo copre, e vale il nostro.
+#
+# Ma va installato in due posti, perche' fra il first stage e vold la radice
+# cambia. Montata la system, il first stage ci si trasferisce sopra
+# (system/core/init/first_stage_mount.cpp:520, SwitchRoot("/system")) e il
+# ramdisk sparisce: un fstab che stesse solo li' verrebbe letto dal first
+# stage e non piu' da vold, che parte cinque secondi dopo. Percio' la copia
+# nella radice della system, che dopo lo switch e' proprio "/".
+#
+# Radice della system vuol dire TARGET_COPY_OUT_ROOT, non
+# TARGET_COPY_OUT_SYSTEM: questa e' una system-as-root, l'immagine contiene
+# l'albero intero e la sottodirectory "system" dentro di se'. Sbagliando
+# variabile il file finisce in /system/fstab.s88pro, dove fs_mgr non guarda.
+#
+# La copia col nome vecchio resta come rete di sicurezza. Se il bootloader non
+# passasse androidboot.fstab_suffix, fs_mgr ripiegherebbe su "mt6771" e senza
+# quella copia il first stage non troverebbe alcun fstab -- che non e' un
+# bootloop qualunque, e' il telefono che ripiega in recovery.
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/rootdir/etc/fstab.mt6771:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt6771 \
-    $(LOCAL_PATH)/rootdir/etc/fstab.mt6771:$(TARGET_COPY_OUT_RAMDISK)/fstab.mt6771
+    $(LOCAL_PATH)/rootdir/etc/fstab.mt6771:$(TARGET_COPY_OUT_RAMDISK)/fstab.s88pro \
+    $(LOCAL_PATH)/rootdir/etc/fstab.mt6771:$(TARGET_COPY_OUT_RAMDISK)/fstab.mt6771 \
+    $(LOCAL_PATH)/rootdir/etc/fstab.mt6771:$(TARGET_COPY_OUT_ROOT)/fstab.s88pro
 
 # Le due fotocamere in piu' -- senza questa, la HAL non le cerca nemmeno.
 #
@@ -239,69 +286,20 @@ PRODUCT_SYSTEM_PROPERTIES += \
 # la build fallirebbe cercando un makefile inesistente.
 $(call inherit-product-if-exists, vendor/doogee/s88pro/s88pro-vendor.mk)
 
-# Le HAL che il vendor di fabbrica aveva e che qui vanno chieste.
-#
-# Il build sa costruirle -- sono AOSP -- ma non le installa se nessuno le
-# nomina, e infatti mancavano dalla vendor.img: senza, il telefono resta senza
-# impronte, vibrazione, health, gatekeeper e composizione grafica. Non si
-# possono nemmeno copiare come blob: il target esiste comunque e il build si
-# ferma con "overriding commands for target". Si dichiarano, e le loro
-# librerie -impl vengono dietro da sole.
-PRODUCT_PACKAGES += \
-    android.hardware.biometrics.fingerprint@2.1-service \
-    android.hardware.cas@1.1-service \
-    android.hardware.drm@1.0-service \
-    android.hardware.drm@1.2-service.clearkey \
-    android.hardware.gatekeeper@1.0-service \
-    android.hardware.graphics.allocator@2.0-service \
-    android.hardware.graphics.composer@2.1-service \
-    android.hardware.health@2.0-service \
-    android.hardware.memtrack@1.0-service \
-    android.hardware.thermal@1.0-service \
-    android.hardware.vibrator@1.0-service
 
-# Le librerie audio che il vendor caricava e che non sono dipendenze di
-# nessuna HAL: vanno chieste per nome.
-PRODUCT_PACKAGES += \
-    audio.bluetooth.default \
-    audio.r_submix.default \
-    audio.usb.default \
-    audio_policy.stub
-
-# Le librerie che il vendor di fabbrica portava e che qui non arrivano da sole.
+# Nemmeno drm@1.2-service.clearkey: e' la DRM di prova per il CTS, e il suo
+# frammento dichiara android.hardware.drm 1.2/clearkey mentre il manifest del
+# device dichiara la 1.0/default di fabbrica. Due versioni della stessa HAL, e
+# assemble_vintf si ferma. La drm@1.0-service, quella vera, resta.
 #
-# Sono di AOSP, ma nessun modulo le dichiara come dipendenza: le HAL MediaTek
-# che le usano sono blob, e un blob non porta con se' l'elenco di cio' che
-# carica. Il build quindi non le installa, la HAL non trova la libreria e non
-# parte -- senza un errore di compilazione che lo faccia sospettare.
-PRODUCT_PACKAGES += \
-    android.hardware.audio.common-util \
-    android.hardware.audio.common@5.0-util \
-    android.hardware.audio.effect@5.0-impl \
-    android.hardware.drm@1.0-impl \
-    android.hardware.gatekeeper@1.0-impl \
-    android.hardware.graphics.allocator@2.0-impl \
-    android.hardware.graphics.mapper@2.0-impl-2.1 \
-    android.hardware.memtrack@1.0-impl \
-    android.hardware.soundtrigger@2.2-impl \
-    android.hardware.thermal@1.0-impl \
-    android.hardware.vibrator@1.0-impl \
-    libavservices_minijail_vendor \
-    libchrome.vendor \
-    libext2_blkid.vendor \
-    libext2_uuid.vendor \
-    libhwc2on1adapter \
-    libhwc2onfbadapter \
-    libkeymaster4.vendor \
-    libkeymaster4support.vendor \
-    libkeystore-engine-wifi-hidl \
-    libkeystore-wifi-hidl \
-    libmockdrmcryptoplugin \
-    libsensorndkbridge \
-    libsparse.vendor \
-    libtextclassifier_hash.vendor \
-    libtinyxml \
-    libwifi-hal
+# cas no: il vendor di fabbrica aveva android.hardware.cas@1.1-service, ma
+# qui la HAL la costruisce AOSP nella versione 1.2, che e' gia' installata e
+# porta il proprio frammento VINTF. Chiedendo anche la 1.1 si installano due
+# moduli per la stessa HAL, e assemble_vintf si ferma:
+#   HAL "android.hardware.cas" has a conflict: Conflicting major version:
+#     1.2 (from .../cas@1.2-service.xml) vs. 1.1 (from .../cas@1.1-service.xml)
+
+
 
 # libtinycompress no, e vale la pena sapere perche'.
 #
@@ -321,3 +319,58 @@ PRODUCT_PACKAGES += \
 # installa quella di sistema. Dichiarate senza, finivano in /system/lib64 e la
 # vendor restava senza -- si vede solo confrontando le due immagini, il build
 # non dice niente.
+
+# Le proprieta' che stavano in /vendor/default.prop di fabbrica.
+#
+# Il file non si copia: dichiara ro.vndk.version=29, cioe' la VNDK di
+# Android 10, mentre il build genera 33. Init legge prima l'uno e poi
+# l'altro, il linker si ritrova due versioni, e il primo a farne le spese e'
+# il self test di BoringSSL -- che non fallisce con un messaggio ma riavvia
+# il telefono:
+#   reboot: Restarting system with command 'boringssl-self-check-failed'
+# Due giri di bootloop prima di trovarlo, perche' nessuno dice che c'entra
+# una riga in un file di proprieta'.
+#
+# Qui restano solo quelle che il build non genera da se' e che servono
+# davvero: ro.zygote, ro.bionic.* e ro.vndk.version le fa lui, giustamente.
+# ro.apex.updatable: senza, il telefono non si avvia.
+#
+# BoardConfig imposta TARGET_FLATTEN_APEX := false, quindi gli APEX sono 26
+# file .apex che apexd deve montare. Ma apexd li monta solo se glielo si dice
+# con questa proprieta', che sta in build/make/target/product/updatable_apex.mk
+# insieme al flag:
+#
+#   PRODUCT_VENDOR_PROPERTIES := ro.apex.updatable=true
+#   TARGET_FLATTEN_APEX := false
+#
+# Il device tree aveva preso solo la seconda riga. La prima e' una proprieta'
+# del VENDOR, e finora arrivava dal vendor di fabbrica -- che ce l'ha -- senza
+# che nessuno se ne accorgesse. Dal momento in cui installiamo la nostra
+# vendor, sparisce, e la catena e' questa:
+#
+#   apexd: ActivateFlattenedApex        (cerca directory, trova file: 0 attivati)
+#   linkerconfig: Unable to access VNDK APEX at path: /apex/com.android.vndk.v33
+#   linkerconfig: terminated by exit(255)
+#   reboot: Restarting system with command 'boringssl-self-check-failed'
+#
+# L'ultimo messaggio e' fuorviante -- non c'entra la crittografia: senza
+# namespace configurati il self test non trova libcrypto, e quel servizio,
+# quando fallisce, riavvia il telefono invece di lamentarsi. Lo stesso
+# inganno e' gia' descritto nel commento di TARGET_FLATTEN_APEX in
+# BoardConfig.mk: la seconda meta' della stessa storia.
+PRODUCT_VENDOR_PROPERTIES += \
+    ro.apex.updatable=true \
+    ro.vendor.rc=/vendor/etc/init/hw/ \
+    ro.oem_unlock_supported=1 \
+    camera.disable_zsl_mode=1 \
+    ro.logd.size.stats=64K \
+    ro.logd.kernel=false \
+    log.tag.stats_log=I \
+    dalvik.vm.isa.arm64.variant=cortex-a53 \
+    dalvik.vm.isa.arm64.features=default \
+    dalvik.vm.isa.arm.variant=cortex-a53 \
+    dalvik.vm.isa.arm.features=default
+
+# Niente HAL o librerie da chiedere per il vendor: e' un'immagine prebuilt,
+# vedi BOARD_PREBUILT_VENDORIMAGE nel BoardConfig. Tutto quello che le serve
+# ce l'ha gia' dentro.
