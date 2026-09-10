@@ -208,6 +208,7 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init/s88pro-cache.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-cache.rc
 
 
+
 # Proprieta' di sistema del device
 PRODUCT_SYSTEM_PROPERTIES += \
     ro.hardware=mt6771

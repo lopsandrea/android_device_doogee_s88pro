@@ -27,45 +27,38 @@ vendor /vendor ext4 ro wait,,avb,logical,first_stage_mount
 
 /dev/block/platform/bootdevice/by-name/userdata /data ext4 noatime,nosuid,nodev,noauto_da_alloc,errors=panic wait,check,formattable,quota,resize,reservedsize=128m,checkpoint=block,fileencryption=aes-256-xts                           
 
-# nofail su /cache, e da questo dipende la cifratura di /data.
+# /cache: la partizione c'e', e va montata su una directory vera.
 #
-# Su questo device /cache non e' un mount point: e' un collegamento a
-# /data/cache, e il mount fallisce sempre --
+# Il guaio non era questa riga, era che /cache in out/ era rimasto un
+# collegamento a /data/cache. Il build sceglie fra le due cose cosi'
+# (system/core/rootdir/Android.mk:161):
 #
-#     init: [libfs_mgr]__mount(...cache, target=/cache(missing), ...)=-1
+#     ifdef BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE
+#         mkdir -p $(TARGET_ROOT_OUT)/cache
+#     else
+#         ln -sf /data/cache $(TARGET_ROOT_OUT)/cache
 #
-# Il guaio e' che fs_mgr_mount_all conta quel fallimento e alla fine ci
-# ripassa sopra il risultato buono:
+# e da quando BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE c'e' la scelta e' la prima.
+# Ma "mkdir -p" non sostituisce un collegamento gia' presente, e quello creato
+# dai build precedenti era sopravvissuto in out/ a ogni ricostruzione.
 #
-#     if (error_count) return {FS_MGR_MNTALL_FAIL, ...};
+# Con il collegamento, montare /cache significava montare la partizione dentro
+# /data/cache, e init non riesce ad applicare la policy fscrypt a una
+# directory occupata dal mount di un altro filesystem:
 #
-# Cosi' init riceve FAIL invece di FS_MGR_MNTALL_DEV_FILE_ENCRYPTED, e in
-# queue_fs_event non chiama FscryptInstallKeyring(): il keyring "fscrypt" non
-# nasce. Poi vold, che sul kernel 4.14 usa il ramo legacy con il session
-# keyring, non lo trova e la cifratura muore --
+#     init: Failed to set encryption policy of /data/cache ...:
+#           Operation not supported on transport endpoint
+#     init: Rebooting into recovery
 #
-#     vold: Kernel doesn't support FS_IOC_ADD_ENCRYPTION_KEY. Falling back...
-#     vold: Unable to find device keyring: Required key not available
-#     init: reason is [enablefilecrypto_failed]
+# Il primo avvio dopo un wipe funzionava lo stesso perche' /data non era
+# ancora montata, il collegamento non risolveva e il mount falliva -- lasciando
+# pero' un error_count che sporcava il risultato di fs_mgr_mount_all e faceva
+# saltare la creazione del keyring fscrypt. Due sintomi diversi, una causa.
 #
-# Il sintomo trae in inganno perche' set_type_property() viene chiamata
-# comunque, quindi ro.crypto.type resta "file" e installkey parte lo stesso:
-# sembra che manchi il keyring, non che sia fallito il mount di un'altra
-# partizione.
-#
-# Con nofail il fallimento viene ignorato senza incrementare error_count
-# (system/core/fs_mgr/fs_mgr.cpp:1555) e il risultato torna quello giusto.
+# nofail resta per prudenza: se la partizione fosse illeggibile, un mount
+# fallito non deve far ricadere fs_mgr_mount_all su FS_MGR_MNTALL_FAIL
+# (fs_mgr.cpp:1555).
 /dev/block/platform/bootdevice/by-name/cache /cache ext4 noatime,nosuid,nodev,noauto_da_alloc,discard wait,check,formattable,nofail
-
-/dev/block/platform/bootdevice/by-name/protect1 /mnt/vendor/protect_f ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-/dev/block/platform/bootdevice/by-name/protect2 /mnt/vendor/protect_s ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-/dev/block/platform/bootdevice/by-name/nvdata /mnt/vendor/nvdata ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-/dev/block/platform/bootdevice/by-name/nvcfg /mnt/vendor/nvcfg ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-
-
-/dev/block/platform/bootdevice/by-name/persist /mnt/vendor/persist ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable
-
-
 /devices/platform/externdevice* auto auto defaults voldmanaged=sdcard1:auto,encryptable=userdata
 /devices/platform/11200000.usb3_xhci* auto vfat defaults voldmanaged=usbotg:auto
 
