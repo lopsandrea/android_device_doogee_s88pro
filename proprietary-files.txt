@@ -16,7 +16,7 @@ system/framework/mediatek-telecom-common.jar
 system/framework/mediatek-telephony-base.jar
 system/framework/mediatek-telephony-common.jar
 system/framework/mediatek-wfo-legacy.jar
-system/framework/mediatek-res.apk
+system/framework/mediatek-res.apk:system/app/mediatek-res/mediatek-res.apk;PRESIGNED
 
 # Permissions
 system/etc/permissions/com.mediatek.wfo.legacy.xml
@@ -63,8 +63,8 @@ system/framework/ims-common.jar:system/framework/mtk-ims-compat.jar
 # exist as a separate partition: it is installed into system. The product
 # partition is not mounted under /mnt/stock, but extract-files.sh reads it from
 # the image with debugfs, which needs no privileges.
-product/lib/libfmjni.so:system/lib/libfmjni.so
-product/lib64/libfmjni.so:system/lib64/libfmjni.so
+-product/lib/libfmjni.so:system/lib/libfmjni.so
+-product/lib64/libfmjni.so:system/lib64/libfmjni.so
 
 # --------------------------------------------------------------------------
 # THE VENDOR PARTITION

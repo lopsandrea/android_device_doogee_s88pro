@@ -404,3 +404,20 @@ TARGET_KERNEL_ADDITIONAL_FLAGS := LLVM_IAS=0 HOSTCFLAGS="-fuse-ld=lld" KCFLAGS="
 # done by build/core/config.mk:361, and including it a second time breaks the
 # export to soong -- SOONG_CONFIG_NAMESPACES ends up with lineageVarsPlugin
 # twice and the list of exported variables stops halfway.
+
+# The device-specific OTA hooks, in releasetools.py next to this file.
+#
+# They exist because two things cannot be said in a makefile variable:
+#
+#   FullOTA_Assertions   refuses to install on a phone running a different
+#                        stock firmware. The charter asks a non-A/B device
+#                        relying on an OEM vendor partition to assert the
+#                        vendor image version at flash time, and this device
+#                        relies on one -- BOARD_PREBUILT_VENDORIMAGE above.
+#
+#   FullOTA_InstallEnd   writes recovery.img. non_ab_ota.py puts it in every
+#                        package but only writes it for two-step packages, and
+#                        the usual road -- install-recovery.sh in /vendor/bin --
+#                        is closed here, because with the prebuilt vendor image
+#                        the build installs nothing into /vendor.
+TARGET_RELEASETOOLS_EXTENSIONS := $(DEVICE_PATH)

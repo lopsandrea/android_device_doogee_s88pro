@@ -1,87 +1,76 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
-# Copyright (C) 2026 The LineageOS Project
+# Copyright (C) 2016 The CyanogenMod Project
+# Copyright (C) 2017-2026 The LineageOS Project
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# Extracts the proprietary blobs from the stock images mounted at /mnt/stock.
+# Extracts the proprietary blobs this tree needs.
 #
-# Why from images and not from the device over adb, as the standard LineageOS
-# script does: the images are the ones extracted from the phone's super in
-# Phase 2 and match the stock firmware, whereas the device has been modified
-# several times. The source is therefore more reliable and repeatable.
+# With no argument it reads them from a phone over adb, which is what the
+# charter asks for -- the script has to reproduce the blobs "from an existing
+# LineageOS installation", so that anyone with the phone can rebuild the tree
+# without our images. A directory or an image also works, and that is how it
+# gets run here:
 #
-# A note on paths: system.img is system-as-root, so the files live under
-# /mnt/stock/system/system/... while in the device tree the prefix is "system/".
-set -euo pipefail
+#   ./extract-files.sh                     from the phone over adb
+#   ./extract-files.sh /mnt/stock          from the stock images, mounted
+#
+# There are 24 blobs, all of them going into system: the MediaTek framework
+# .jars and the libraries that go with them, plus libfmjni, which in the stock
+# ROM lives in product. Everything the vendor partition holds is NOT here --
+# that image is shipped whole (BOARD_PREBUILT_VENDORIMAGE).
+
+set -e
 
 DEVICE=s88pro
 VENDOR=doogee
-SRC_SYSTEM=/mnt/stock/system
-SRC_VENDOR=/mnt/stock/vendor
-SRC_PRODUCT=/mnt/stock/product
 
-# The product partition is not mounted (mounting it needs root) but its image
-# is among the artefacts, and debugfs reads it without privileges. It is needed
-# for libfmjni.so, which in the stock ROM lives in product/lib* and not system.
-PRODUCT_IMG=/mnt/s88pro/gsi-work/product.img
-HERE="$(cd "$(dirname "$0")" && pwd)"
-DEST="$HERE/../../../vendor/$VENDOR/$DEVICE/proprietary"
+# Load extract_utils and do some sanity checks
+MY_DIR="${BASH_SOURCE%/*}"
+if [[ ! -d "${MY_DIR}" ]]; then MY_DIR="${PWD}"; fi
 
-[ -d "$SRC_SYSTEM/system" ] || { echo "system.img not mounted at $SRC_SYSTEM" >&2; exit 1; }
+ANDROID_ROOT="${MY_DIR}/../../.."
 
-mkdir -p "$DEST"
-copied=0
-missing=0
+HELPER="${ANDROID_ROOT}/tools/extract-utils/extract_utils.sh"
+if [ ! -f "${HELPER}" ]; then
+    echo "Unable to find helper script at ${HELPER}"
+    exit 1
+fi
+source "${HELPER}"
 
-while read -r line; do
-  case "$line" in ''|'#'*) continue ;; esac
-  f="${line#-}"
+# Default to sanitizing the vendor folder before extraction
+CLEAN_VENDOR=true
 
-  # "source:destination" syntax, as in LineageOS' extract_utils: it is needed
-  # when a blob has to be installed under a different name. That happens here for
-  # ims-common.jar, which becomes mtk-ims-compat.jar so as not to clash with the
-  # ims-common.jar we build ourselves and that the framework needs.
-  case "$f" in
-    *:*) dst="${f#*:}"; f="${f%%:*}" ;;
-    *)   dst="$f" ;;
-  esac
+KANG=
+SECTION=
 
-  # Files in product are taken from the image with debugfs when the partition is
-  # not mounted: inside the image the path has no "product/" prefix.
-  case "$f" in
-    product/*)
-      if [ -d "$SRC_PRODUCT" ]; then
-        src="$SRC_PRODUCT/${f#product/}"
-      elif [ -f "$PRODUCT_IMG" ]; then
-        mkdir -p "$DEST/$(dirname "$dst")"
-        if debugfs -R "dump /${f#product/} $DEST/$dst" "$PRODUCT_IMG" 2>/dev/null \
-             && [ -s "$DEST/$dst" ]; then
-          copied=$((copied+1))
-        else
-          echo "MISSING: $f  (not extracted from $PRODUCT_IMG)" >&2
-          missing=$((missing+1))
-        fi
-        continue
-      else
-        src=""
-      fi
-      ;;
-    system/*) src="$SRC_SYSTEM/$f" ;;
-    vendor/*) src="$SRC_VENDOR/${f#vendor/}" ;;
-    *)        src="$SRC_SYSTEM/$f" ;;
-  esac
+while [ "${#}" -gt 0 ]; do
+    case "${1}" in
+        -n | --no-cleanup )
+                CLEAN_VENDOR=false
+                ;;
+        -k | --kang )
+                KANG="--kang"
+                ;;
+        -s | --section )
+                SECTION="${2}"; shift
+                CLEAN_VENDOR=false
+                ;;
+        * )
+                SRC="${1}"
+                ;;
+    esac
+    shift
+done
 
-  if [ -n "$src" ] && [ -f "$src" ]; then
-    mkdir -p "$DEST/$(dirname "$dst")"
-    cp -a "$src" "$DEST/$dst"
-    copied=$((copied+1))
-  else
-    echo "MISSING: $f  (looked for in $src)" >&2
-    missing=$((missing+1))
-  fi
-done < "$HERE/proprietary-files.txt"
+if [ -z "${SRC}" ]; then
+    SRC="adb"
+fi
 
-echo "blobs copied: $copied, missing: $missing"
-echo "destination: $DEST"
-[ "$missing" -eq 0 ] || exit 1
+# Initialize the helper
+setup_vendor "${DEVICE}" "${VENDOR}" "${ANDROID_ROOT}" false "${CLEAN_VENDOR}"
+
+extract "${MY_DIR}/proprietary-files.txt" "${SRC}" "${KANG}" --section "${SECTION}"
+
+"${MY_DIR}/setup-makefiles.sh"
