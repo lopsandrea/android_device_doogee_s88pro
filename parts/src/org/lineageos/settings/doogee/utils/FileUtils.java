@@ -13,13 +13,13 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 /**
- * Lettura e scrittura dei nodi sysfs del device.
+ * Reading and writing the device's sysfs nodes.
  *
- * Nota importante sulla scrittura: i driver di questo telefono analizzano il
- * valore con sscanf e il "\n" finale li fa ricadere sul valore zero. Scrivendo
- * "1\n" nel nodo cfg del LED, per esempio, il driver carica comunque
- * aw22xxx_cfg_led_off.bin. Il framework di fabbrica scrive infatti senza
- * andare a capo, e qui si fa lo stesso.
+ * An important note about writing: this phone's drivers parse the value with
+ * sscanf and a trailing "\n" makes them fall back to zero. Writing "1\n" into
+ * the LED's cfg node, for instance, still makes the driver load
+ * aw22xxx_cfg_led_off.bin. The stock framework indeed writes without a
+ * newline, and we do the same here.
  */
 public final class FileUtils {
 
@@ -28,13 +28,13 @@ public final class FileUtils {
     private FileUtils() {
     }
 
-    /** Scrive il valore senza newline. Ritorna false se il nodo non è scrivibile. */
+    /** Writes the value without a newline. Returns false if the node is not writable. */
     public static boolean writeLine(String path, String value) {
         try (FileOutputStream out = new FileOutputStream(path)) {
             out.write(value.getBytes());
             return true;
         } catch (IOException e) {
-            Log.e(TAG, "Scrittura fallita su " + path, e);
+            Log.e(TAG, "Write failed on " + path, e);
             return false;
         }
     }

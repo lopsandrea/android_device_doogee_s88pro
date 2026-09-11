@@ -16,7 +16,7 @@ import android.text.TextUtils;
 import org.lineageos.settings.doogee.led.LedNotificationListener;
 import org.lineageos.settings.doogee.led.LedService;
 
-/** Avvia il servizio del LED a ogni accensione. */
+/** Starts the LED service on every boot. */
 public class BootCompletedReceiver extends BroadcastReceiver {
 
     private static final String SETTING_ENABLED_LISTENERS = "enabled_notification_listeners";
@@ -31,12 +31,12 @@ public class BootCompletedReceiver extends BroadcastReceiver {
     }
 
     /**
-     * Concede a sé stessi l'accesso alle notifiche.
+     * Grants itself access to notifications.
      *
-     * Serve al LED per sapere se c'è qualcosa da leggere. È un permesso che di
-     * norma concede l'utente dalle impostazioni, ma questa è un'app di sistema
-     * del device: chiederlo avrebbe il solo effetto di far apparire il LED
-     * "rotto" finché qualcuno non trova la voce giusta nel menù.
+     * The LED needs it to know whether there is anything to read. It is a
+     * permission the user normally grants from settings, but this is a device
+     * system app: asking would only make the LED look "broken" until someone
+     * finds the right entry in the menu.
      */
     private void enableNotificationListener(Context context) {
         final String component = new ComponentName(context, LedNotificationListener.class)

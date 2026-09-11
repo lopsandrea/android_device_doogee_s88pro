@@ -11,10 +11,10 @@ import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 
 /**
- * Dice al LedService se ci sono notifiche in sospeso.
+ * Tells LedService whether there are pending notifications.
  *
- * Le notifiche continuative (musica in riproduzione, VPN attiva, e simili) non
- * contano: il LED segnala quello che l'utente non ha ancora visto.
+ * Ongoing notifications (music playing, VPN active and the like) do not count:
+ * the LED signals what the user has not seen yet.
  */
 public class LedNotificationListener extends NotificationListenerService {
 

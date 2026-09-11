@@ -1,16 +1,16 @@
-# Regole SELinux fra tipi di sistema
+# SELinux rules between system types
 
-Qui c'e' solo `file_contexts`.
+There is only `file_contexts` here.
 
-## Perche' non ci sono le regole `allow`
+## Why there are no `allow` rules
 
-Ci avevo messo due regole, per due denial misurati sul telefono:
+Two rules used to be here, for two denials measured on the phone:
 
-    allow system_app sysfs_leds:dir search;          # i LED di S88ProParts
-    allow nfc system_data_file:file { ... };         # lo stato NFC
+    allow system_app sysfs_leds:dir search;          # S88ProParts' LEDs
+    allow nfc system_data_file:file { ... };         # the NFC state
 
-**Non compilano**: violano i `neverallow` di AOSP, e il build si ferma su
-`checkpolicy`:
+**They do not compile**: they violate AOSP `neverallow` rules, and the build
+stops at `checkpolicy`:
 
     neverallow check failed ... from system/sepolicy/private/coredomain.te:32
       (neverallow base_typeattr_636 sysfs_leds (file (... write ...)))
@@ -20,81 +20,83 @@ Ci avevo messo due regole, per due denial misurati sul telefono:
       (neverallow base_typeattr_293 system_data_file (file (write create ...)))
         allow (allow nfc system_data_file (file (read write getattr open)))
 
-Sono divieti voluti: un `coredomain` non deve toccare `sysfs_leds` da solo, e
-nessuno deve scrivere su `system_data_file`, che e' il tipo generico.
+These prohibitions are deliberate: a `coredomain` must not touch `sysfs_leds`
+on its own, and nobody may write to `system_data_file`, which is the generic
+type.
 
-## Come si chiudono davvero
+## How they are actually closed
 
-- **NFC**: la via corretta e' etichettare `/data/nfc` come `nfc_data_file`, che
-  e' proprio quello che fa il `file_contexts` qui accanto. I file gia' creati
-  col tipo vecchio si ri-etichettano con `restorecon -R /data/nfc`.
+- **NFC**: the correct way is to label `/data/nfc` as `nfc_data_file`, which is
+  exactly what the `file_contexts` next door does. Files already created with
+  the old type are relabelled with `restorecon -R /data/nfc`.
 
-- **LED**: `S88ProParts` non dovrebbe scrivere direttamente in
-  `/sys/class/leds`, ma passare per l'HAL delle luci. In alternativa si dichiara
-  un tipo proprio del device per quei file e si concede l'accesso a quello --
-  ma va fatto nella sepolicy del vendor, non fra i tipi di sistema.
+- **LEDs**: `S88ProParts` should not write directly into `/sys/class/leds`, but
+  go through the lights HAL. Alternatively one declares a device-specific type
+  for those files and grants access to that -- but that has to be done in the
+  vendor sepolicy, not among the system types.
 
-Finche' non si fa una delle due, i denial restano nel registro. Nessuno dei due
-impedisce l'avvio.
+Until one of the two is done, the denials stay in the log. Neither of them
+prevents boot.
 
-## La mappa dei denial in enforcing (9 settembre)
+## The map of denials in enforcing mode (9 September)
 
-Misurati sul telefono con SELinux Enforcing, dopo un avvio e un giro d'uso
-vero (foto, video, torcia, LED, Bluetooth, NFC, radio FM, impostazioni):
-194 righe, 41 combinazioni distinte. Divise per **chi puo' chiuderle**, che
-non e' una distinzione accademica: tre quarti non dipendono da noi.
+Measured on the phone with SELinux Enforcing, after one boot and a real round
+of use (photos, video, torch, LEDs, Bluetooth, NFC, FM radio, settings):
+194 lines, 41 distinct combinations. Split by **who can close them**, which is
+not an academic distinction: three quarters are not up to us.
 
-### Chiusa nel kernel, non qui
+### Closed in the kernel, not here
 
-`network_stack -> fs_bpf : file read`, quattordici occorrenze, era stata messa
-fra le "vietate da un neverallow" -- `bpfloader.te:36` vieta proprio a
-`network_stack` di leggere `fs_bpf`. Il divieto pero' era giusto e il difetto
-stava altrove: quelle mappe **non dovevano avere quel tipo**. Le mappe erano
-gia' al posto giusto (`/sys/fs/bpf/tethering/`), ma il kernel dava a tutto
-quello che sta in bpffs il tipo della radice, ignorando i `genfscon` per
-sotto-percorso che la policy ha da sempre:
+`network_stack -> fs_bpf : file read`, fourteen occurrences, had been filed
+under "forbidden by a neverallow" -- `bpfloader.te:36` forbids exactly
+`network_stack` from reading `fs_bpf`. The prohibition was right, though, and
+the defect was elsewhere: those maps **should not have had that type**. The
+maps were already in the right place (`/sys/fs/bpf/tethering/`), but the kernel
+gave everything under bpffs the root's type, ignoring the per-path `genfscon`
+entries the policy has always had:
 
     policy   genfscon bpf /tethering u:object_r:fs_bpf_tethering:s0
     device   /sys/fs/bpf/tethering -> u:object_r:fs_bpf:s0
 
-Manca una riga in `security/selinux/hooks.c`, ed e' upstream dal 2020:
-4ca54d3d3022, *"security: selinux: allow per-file labeling for bpffs"*. Con
-quella, le sei sottodirectory prendono il tipo che gli spetta, i quattordici
-denial spariscono e l'offload del tethering parte. Sta nel repo del kernel.
+One line is missing in `security/selinux/hooks.c`, and it has been upstream
+since 2020: 4ca54d3d3022, *"security: selinux: allow per-file labeling for
+bpffs"*. With it the six subdirectories get the type they deserve, the fourteen
+denials disappear and tethering offload works. It lives in the kernel repo.
 
-**La lezione**: un denial vietato da un `neverallow` non significa "da
-lasciare aperto". Significa che AOSP si aspetta un'altra configurazione, e
-vale la pena chiedersi quale sia prima di rassegnarsi.
+**The lesson**: a denial forbidden by a `neverallow` does not mean "leave it
+open". It means AOSP expects a different configuration, and it is worth asking
+which one before giving up.
 
-### Chiuse qui
+### Closed here
 
-| denial | come |
+| denial | how |
 |---|---|
-| `init -> socket_device : sock_file create` | `init.te`. Sono i socket `volte_imsa2`, `volte_ut`, `vendor.bip`, dichiarati nei `.rc` del vendor senza contesto esplicito |
-| `system_server -> unlabeled : dir write` | `restorecon_recursive` in `s88pro-cache.rc`. E' `/cache/recovery`, cioe' la strada dell'aggiornamento. Le etichette AOSP le ha gia' (`private/file_contexts:794`, che mappa `/data/cache` perche' qui `/cache` e' un collegamento): mancava solo di applicarle a quel che c'era gia' |
-| `system_app -> sysfs_leds : dir search` | `system_app.te`. I nodi LED non sono sysfs_leds ma tipi a se', gia' concessi dalla policy MediaTek: mancava solo attraversare la directory, e il neverallow di `coredomain.te:32` e' su `:file` |
-| `system_app -> sysfs_batteryinfo : dir r_dir_perms` | `system_app.te`. Serve solo a sapere se il device ha la ricarica inversa; lo stato si legge altrove, vedi sotto |
-| `system_app -> sysfs_rvs : file rw` | `file.te` e `genfs_contexts`. Il nodo della ricarica inversa aveva il tipo generico `sysfs`, che nessuno puo' scrivere -- nemmeno init, e AOSP spiega perche': *"Init should not access sysfs node that are not explicitly labeled"*. Etichettato, il problema sparisce |
+| `init -> socket_device : sock_file create` | `init.te`. These are the `volte_imsa2`, `volte_ut` and `vendor.bip` sockets, declared in the vendor `.rc` files without an explicit context |
+| `system_server -> unlabeled : dir write` | `restorecon_recursive` in `s88pro-cache.rc`. It is `/cache/recovery`, that is the update path. AOSP already has the labels (`private/file_contexts:794`, which maps `/data/cache` because `/cache` is a symlink here): all that was missing was applying them to what was already there |
+| `system_app -> sysfs_leds : dir search` | `system_app.te`. The LED nodes are not sysfs_leds but types of their own, already granted by the MediaTek policy: all that was missing was traversing the directory, and the neverallow in `coredomain.te:32` is on `:file` |
+| `system_app -> sysfs_batteryinfo : dir r_dir_perms` | `system_app.te`. It only serves to tell whether the device has reverse charging; the state is read elsewhere, see below |
+| `system_app -> sysfs_rvs : file rw` | `file.te` and `genfs_contexts`. The reverse charging node had the generic `sysfs` type, which nobody may write -- not even init, and AOSP explains why: *"Init should not access sysfs node that are not explicitly labeled"*. Once labelled, the problem is gone |
 
-### Vietate da un neverallow di AOSP
+### Forbidden by an AOSP neverallow
 
-Non e' una limitazione nostra: AOSP dichiara esplicitamente che quei domini
-non devono avere quell'accesso, e `secilc` rifiuta la regola. Attenzione pero'
-a leggere *cosa* vieta: i divieti su sysfs sono quasi sempre sulla classe
-`file` e non su `dir`, e quella distinzione e' bastata a recuperare i LED.
+This is not a limitation of ours: AOSP explicitly declares that those domains
+must not have that access, and `secilc` rejects the rule. Be careful to read
+*what* is forbidden, though: prohibitions on sysfs are nearly always on the
+`file` class and not on `dir`, and that distinction was enough to recover the
+LEDs.
 
-| denial | occorrenze | il divieto |
+| denial | occurrences | the prohibition |
 |---|---|---|
-| `kernel -> capability dac_override` | 6 | il worker `mtk_wmtd_worker` del driver Wi-Fi MediaTek |
+| `kernel -> capability dac_override` | 6 | the `mtk_wmtd_worker` worker of the MediaTek Wi-Fi driver |
 
-### Non esprimibili: il tipo lo definisce il vendor
+### Not expressible: the type is defined by the vendor
 
-Con `TARGET_USES_PREBUILT_VENDOR_SEPOLICY` la policy del vendor arriva gia'
-compilata, e i suoi tipi non esistono nella policy di piattaforma: una
-`allow` che li nomina non compila. Il dominio invece e' nostro, quindi non
-si possono nemmeno mettere altrove.
+With `TARGET_USES_PREBUILT_VENDOR_SEPOLICY` the vendor policy arrives already
+compiled, and its types do not exist in the platform policy: an `allow` naming
+them does not compile. The domain, on the other hand, is ours, so they cannot
+be put elsewhere either.
 
-| denial | occorrenze |
+| denial | occurrences |
 |---|---|
 | `vold -> sysfs_mmcblk : file write` | 49 |
 | `mediaswcodec -> proc_ged : file read` | 28 |
@@ -103,84 +105,83 @@ si possono nemmeno mettere altrove.
 | `mediaserver`, `nfc` -> `debugfs_ion : dir search` | 6 |
 | `system_server -> tkcore_systa_file : dir getattr` | 1 |
 
-### Del vendor, dominio compreso
+### The vendor's, domain included
 
 `ccci_mdinit` (8), `stflashtool` (6), `rild` (6), `mtk_hal_camera` (6),
 `aee_aedv` (4), `nvram_daemon` (4), `mnld` (4), `fuelgauged_nvram` (3),
 `mtk_hal_audio` (3), `mtk_hal_wifi` (2), `mtk_hal_sensors` (2),
-`mtk_hal_bluetooth` (1). Qui non si tocca niente: le regole starebbero nel
-blob MediaTek.
+`mtk_hal_bluetooth` (1). Nothing is touched here: the rules would belong in the
+MediaTek blob.
 
-**Nessuno di questi blocca una funzione misurata.** La batteria di
-`tools/prova-driver.sh` eseguita con `setenforce 0` e `setenforce 1` sullo
-stesso boot non mostra una sola differenza funzionale.
+**None of these blocks a measured function.** The `tools/prova-driver.sh` test
+battery, run with `setenforce 0` and `setenforce 1` on the same boot, shows not
+a single functional difference.
 
-## Perche' i denial del vendor non si chiudono, e come si e' verificato
+## Why the vendor denials are not closed, and how that was verified
 
-Le regole servirebbero a domini o tipi che definisce la policy MediaTek. Prima
-di lasciarli aperti sono state provate tutte le strade, e vale la pena
-scriverle: sembrano tutte praticabili finche' non le si prova.
+The rules would apply to domains or types defined by the MediaTek policy.
+Before leaving them open every avenue was tried, and it is worth writing them
+down: they all look viable until you try them.
 
-### Le regole erano pronte e valide
+### The rules were ready and valid
 
-Trentatre' `allow` che chiudono novantatre' delle centoventinove righe, fra cui
-tutte e quarantanove quelle di `vold` sul nodo `uevent`. Sono state validate
-sul serio: prese le policy dal telefono (`plat`, `mapping/29.0`,
-`plat_pub_versioned`, `vendor`, `system_ext`) e date a `secilc` con i
-neverallow **attivi**, contando le violazioni.
+Thirty-three `allow` rules closing ninety-three of the hundred and twenty-nine
+lines, among them all forty-nine `vold` ones on the `uevent` node. They were
+validated for real: the policies were taken from the phone (`plat`,
+`mapping/29.0`, `plat_pub_versioned`, `vendor`, `system_ext`) and fed to
+`secilc` with the neverallow checks **enabled**, counting the violations.
 
-| | violazioni |
+| | violations |
 |---|---|
-| senza le nostre regole | 196 |
-| con le nostre regole | 196 |
+| without our rules | 196 |
+| with our rules | 196 |
 
-Le 196 sono preesistenti: sono conflitti fra la policy MediaTek di Android 10 e
-la piattaforma 13 (`llkd` contro `teeregistryd_app` e simili), ed e' il motivo
-per cui init compila con i neverallow disattivati. Il primo giro ne aggiungeva
-sette: quelle regole -- proprieta' riservate per `rild`, `mtk_hal_camera`,
-`stflashtool`, `mtk_hal_wifi`, e `dac_override` per `kernel` -- sono state
-tolte, perche' li' il divieto e' voluto.
+The 196 are pre-existing: they are conflicts between the Android 10 MediaTek
+policy and platform 13 (`llkd` against `teeregistryd_app` and the like), and
+they are why init compiles with the neverallow checks disabled. The first round
+added seven: those rules -- reserved properties for `rild`, `mtk_hal_camera`,
+`stflashtool`, `mtk_hal_wifi`, and `dac_override` for `kernel` -- were dropped,
+because there the prohibition is deliberate.
 
-### Il muro: dove metterle
+### The wall: where to put them
 
-init, quando ricompila la policy all'avvio, unisce cinque file. Nessuno dei
-tre che potrebbero ospitarle e' raggiungibile:
+When init recompiles the policy at boot, it merges five files. None of the
+three that could host them is reachable:
 
-**`/vendor/etc/selinux/vendor_sepolicy.cil`** e' il blob MediaTek. Modificarlo
-vorrebbe dire alterare una partizione di fabbrica: non lo fa il build, non e'
-riproducibile, e non e' una cosa da sottomettere.
+**`/vendor/etc/selinux/vendor_sepolicy.cil`** is the MediaTek blob. Modifying
+it would mean altering a stock partition: the build does not do it, it is not
+reproducible, and it is not something to submit.
 
-**`/odm/etc/selinux/odm_sepolicy.cil`** sembra la via giusta -- e' il posto che
-AOSP prevede per aggiungere regole senza toccare il vendor -- ma qui
-`/odm/etc` e' un collegamento a `/vendor/odm/etc`, quindi si torna nella
-partizione di fabbrica. Se ne accorge solo chi guarda:
+**`/odm/etc/selinux/odm_sepolicy.cil`** looks like the right way -- it is where
+AOSP expects rules to be added without touching vendor -- but here `/odm/etc`
+is a symlink to `/vendor/odm/etc`, so we are back inside the stock partition.
+Only those who look notice:
 
     lrw-r--r-- 1 root root 15 /odm/etc -> /vendor/odm/etc
 
-Prima di scoprirlo il file era stato messo nel ramdisk del boot.img, il che non
-serve a niente per un secondo motivo: la "/" del telefono acceso e' `dm-0`,
-cioe' la partizione system montata come radice, e il ramdisk sparisce dopo il
-first stage init.
+Before finding that out, the file had been put in the boot.img ramdisk, which
+is useless for a second reason: the "/" of a running phone is `dm-0`, that is
+the system partition mounted as root, and the ramdisk disappears after first
+stage init.
 
-**`/product/etc/selinux/product_sepolicy.cil`** e' l'unico che sta dentro la
-system.img (`/product` e' un collegamento a `/system/product`), e infatti si
-puo' scrivere. Ma le regole non ci arrivano lo stesso: quel percorso e' gia' un
-target di soong (`overriding commands for target ...`), e usando il meccanismo
-previsto (`PRODUCT_PRIVATE_SEPOLICY_DIRS`) il compilatore si ferma sul primo
-tipo del vendor:
+**`/product/etc/selinux/product_sepolicy.cil`** is the only one living inside
+system.img (`/product` is a symlink to `/system/product`), and indeed it can be
+written. But the rules still do not get there: that path is already a soong
+target (`overriding commands for target ...`), and using the intended mechanism
+(`PRODUCT_PRIVATE_SEPOLICY_DIRS`) the compiler stops at the first vendor type:
 
     sepolicy/product/private/vendor_bridge.te:3:
       ERROR 'unknown type sysfs_mmcblk'
 
-Dichiararlo in `sepolicy/vendor/` non aiuta: la conf della policy product non
-include le directory del vendor. **E' la separazione di Treble che funziona
-come previsto**: la policy del lato sistema non puo' nominare i tipi del
-vendor, per costruzione. Non e' un ostacolo da aggirare con piu' ingegno.
+Declaring it in `sepolicy/vendor/` does not help: the product policy conf does
+not include the vendor directories. **This is Treble separation working as
+intended**: system-side policy cannot name vendor types, by construction. It is
+not an obstacle to be worked around with more cleverness.
 
-### Cosa resterebbe da fare, se un giorno servisse
+### What would remain to be done, if it were ever needed
 
-Costruire la policy del vendor invece di prenderla dal blob, portando dentro le
-regole delle HAL MediaTek. E' il lavoro che
-`TARGET_USES_PREBUILT_VENDOR_SEPOLICY` evita, e il commento in `BoardConfig.mk`
-racconta com'e' andata l'ultima volta che la si e' sostituita: i servizi del
-vendor sono rimasti muti e `system_server` e' rimasto appeso ad aspettarli.
+Build the vendor policy instead of taking it from the blob, bringing the
+MediaTek HAL rules in. That is the work
+`TARGET_USES_PREBUILT_VENDOR_SEPOLICY` avoids, and the comment in
+`BoardConfig.mk` recounts how it went the last time it was replaced: the vendor
+services fell silent and `system_server` hung waiting for them.

@@ -6,21 +6,22 @@
 -->
 
 <!--
-     Allowlist dei permessi privilegiati per ImsService di MediaTek.
+     Privileged permission allowlist for MediaTek's ImsService.
 
-     Questo device ha ro.control_privapp_permissions=enforce: un app in
-     /system/priv-app che chieda un permesso privilegiato non elencato qui
-     impedisce l avvio del sistema. Non un errore a runtime: proprio il boot
-     che non arriva in fondo.
+     This device has ro.control_privapp_permissions=enforce: an app in
+     /system/priv-app asking for a privileged permission not listed here stops
+     the system from booting. Not a runtime error: boot itself never reaches
+     the end.
 
-     Per non correre rischi sono elencati tutti e diciassette i permessi che
-     l APK dichiara, privilegiati e non: quelli che privilegiati non sono
-     vengono semplicemente ignorati, e cosi' l elenco resta valido anche se una
-     versione futura di Android cambia il livello di protezione di qualcuno.
+     To be safe, all seventeen permissions the APK declares are listed,
+     privileged or not: the ones that are not privileged are simply ignored,
+     and that way the list stays valid even if a future Android version changes
+     the protection level of one of them.
 
-     Il primo e' scritto male nel manifest di MediaTek ("android.Manifest.
-     permission." invece di "android.permission.") ed e' quindi un permesso che
-     non esiste: elencarlo e' innocuo e tiene il file allineato all APK.
+     The first is misspelt in MediaTek's manifest ("android.Manifest.
+     permission." instead of "android.permission.") and is therefore a
+     permission that does not exist: listing it is harmless and keeps the file
+     aligned with the APK.
 -->
 <permissions>
     <privapp-permissions package="com.mediatek.ims">

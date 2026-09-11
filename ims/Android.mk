@@ -6,12 +6,12 @@
 
 LOCAL_PATH := $(call my-dir)
 
-# ImsService di MediaTek, per VoLTE.
+# MediaTek's ImsService, for VoLTE.
 #
-# L'APK non sta in albero: e' derivato da quello della ROM di fabbrica e va
-# preparato una volta con ./prepare-imsservice.sh (vedi il commento la' dentro).
-# Il modulo esiste solo se il file c'e', cosi' chi non l'ha preparato compila
-# lo stesso, semplicemente senza VoLTE.
+# The APK is not in tree: it is derived from the stock ROM's and has to be
+# prepared once with ./prepare-imsservice.sh (see the comment in there). The
+# module exists only if the file is there, so whoever has not prepared it still
+# builds, simply without VoLTE.
 ifneq ($(wildcard $(LOCAL_PATH)/ImsService.apk),)
 
 include $(CLEAR_VARS)
@@ -21,29 +21,29 @@ LOCAL_MODULE_CLASS := APPS
 LOCAL_MODULE_TAGS := optional
 LOCAL_SRC_FILES := ImsService.apk
 
-# Obbligatoria: l'APK dichiara sharedUserId="android.uid.phone" e per condividere
-# lo UID con com.android.phone deve portare la nostra firma di piattaforma, non
-# quella di Doogee.
+# Mandatory: the APK declares sharedUserId="android.uid.phone" and to share the
+# UID with com.android.phone it has to carry our platform signature, not
+# Doogee's.
 LOCAL_CERTIFICATE := platform
 
-# Deve stare in priv-app: da /data il namespace del classloader non lascia
-# caricare le librerie native di /system/lib64, che a questo APK servono.
-# I permessi privilegiati sono in privapp-permissions-mtk-ims.xml.
+# It has to live in priv-app: from /data the classloader namespace does not
+# allow loading the native libraries in /system/lib64, which this APK needs.
+# The privileged permissions are in privapp-permissions-mtk-ims.xml.
 LOCAL_PRIVILEGED_MODULE := true
 
-# Il dex e' quello ricompilato da smali: lasciarlo com'e'.
+# The dex is the one recompiled by smali: leave it as it is.
 LOCAL_DEX_PREOPT := false
 LOCAL_MODULE_SUFFIX := $(COMMON_ANDROID_PACKAGE_SUFFIX)
 
-# Il manifest dichiara cinque <uses-library>, e il build system pretende di
-# ritrovarle fra i moduli:
+# The manifest declares five <uses-library> entries, and the build system
+# insists on finding them among the modules:
 #
 #   error: mismatch in the <uses-library> tags between the build system and the manifest
 #
-# Qui pero' non sono moduli: sono jar della ROM di fabbrica, dichiarati come
-# librerie condivise in mediatek-ims-libs.xml e risolti a runtime dal
-# PackageManager. Il controllo serve al dexpreopt, che per questo modulo e'
-# disattivato, quindi si spegne.
+# Here, though, they are not modules: they are stock ROM jars, declared as
+# shared libraries in mediatek-ims-libs.xml and resolved at runtime by
+# PackageManager. The check is there for dexpreopt, which is disabled for this
+# module, so it is turned off.
 LOCAL_ENFORCE_USES_LIBRARIES := false
 
 include $(BUILD_PREBUILT)

@@ -1,9 +1,9 @@
-# Blob proprietari MediaTek estratti da system.img stock.
-# Sono i componenti che alla GSI mancavano: mtkfusionrild girava ma
-# restava in loop sul socket rild-oem senza la controparte framework.
-# Generato dai file effettivamente presenti nell immagine stock.
+# MediaTek proprietary blobs extracted from the stock system.img.
+# These are the components the GSI was missing: mtkfusionrild ran but kept
+# looping on the rild-oem socket with no framework counterpart.
+# Generated from the files actually present in the stock image.
 
-# Framework telephony e IMS
+# Telephony and IMS framework
 system/framework/mediatek-common.jar
 system/framework/mediatek-framework-net.jar
 system/framework/mediatek-framework.jar
@@ -18,122 +18,122 @@ system/framework/mediatek-telephony-common.jar
 system/framework/mediatek-wfo-legacy.jar
 system/framework/mediatek-res.apk
 
-# Permessi
+# Permissions
 system/etc/permissions/com.mediatek.wfo.legacy.xml
 system/etc/permissions/privapp-permissions-mediatek.xml
 
-# Librerie native
+# Native libraries
 system/lib64/libmediatek_exceptionlog.so
 system/lib64/libmtk_vt_wrapper.so
 system/lib64/libmtkperf_client.so
 
-# IMS (VoLTE) -- vedi docs/bringup/volte-stato-esperimento.md
+# IMS (VoLTE) -- see docs/bringup/volte-stato-esperimento.md
 #
-# Librerie che la ROM di fabbrica teneva anche in /system/lib64 e che da noi
-# mancano: alcune stanno solo in /vendor (e il namespace di sistema non puo'
-# caricarle da li'), altre AOSP le ha proprio rimosse -- libhwbinder e
-# libhidltransport sono confluite in libhidlbase con Android 11.
+# Libraries that the stock ROM also kept in /system/lib64 and that we lack:
+# some live only in /vendor (and the system namespace cannot load them from
+# there), others AOSP has removed outright -- libhwbinder and libhidltransport
+# were folded into libhidlbase in Android 11.
 #
-# Senza queste, libmtk_vt_wrapper.so non si carica e ImsService muore con
-# UnsatisfiedLinkError appena tocca il provider di videochiamata.
+# Without these, libmtk_vt_wrapper.so does not load and ImsService dies with
+# UnsatisfiedLinkError as soon as it touches the video call provider.
 system/lib64/vendor.mediatek.hardware.videotelephony@1.0.so
 system/lib64/libvcodec_cap.so
 system/lib64/libvcodec_capenc.so
 
-# libhidltransport e libhwbinder NON vanno prese dallo stock: Android 12 le
-# costruisce ancora (deprecate, confluite in libhidlbase) e copiarle qui le
-# definirebbe due volte --
+# libhidltransport and libhwbinder must NOT be taken from stock: Android 12
+# still builds them (deprecated, folded into libhidlbase) and copying them here
+# would define them twice --
 #   error: overriding commands for target .../libhidltransport.so
-# Si aggiungono invece a PRODUCT_PACKAGES in device.mk, cosi' si usano le
-# versioni di sistema, coerenti con il resto della build.
+# They are added to PRODUCT_PACKAGES in device.mk instead, so the system
+# versions are used, consistent with the rest of the build.
 
-# com.android.ims.ImsServiceBase, che AOSP ha rimosso dopo Android 10 e che
-# ImsService.apk pretende ancora. Si installa con un nome diverso per non
-# sovrapporsi all'ims-common.jar che compiliamo noi, che invece serve.
+# com.android.ims.ImsServiceBase, which AOSP removed after Android 10 and which
+# ImsService.apk still requires. It is installed under a different name so as
+# not to clash with the ims-common.jar we build ourselves, which is needed.
 system/framework/ims-common.jar:system/framework/mtk-ims-compat.jar
 
-# Radio FM.
+# FM radio.
 #
-# L'app FMRadio di LineageOS e quella di fabbrica sono la stessa app: la
-# libreria registra i metodi nativi proprio per com/android/fmradio/FmNative,
-# quindi le due si incastrano senza adattamenti. Il driver e' gia' in funzione
-# (fmradio_drv.ko caricato, /dev/fm presente).
+# The LineageOS FMRadio app and the stock one are the same app: the library
+# registers its native methods for exactly com/android/fmradio/FmNative, so the
+# two fit together without adaptation. The driver is already running
+# (fmradio_drv.ko loaded, /dev/fm present).
 #
-# Nella ROM di fabbrica la libreria sta in product/lib*, che da noi non esiste
-# come partizione separata: la si installa in system. La partizione product non
-# e' montata in /mnt/stock, ma extract-files.sh la legge dall'immagine con
-# debugfs, che non chiede privilegi.
+# In the stock ROM the library lives in product/lib*, which for us does not
+# exist as a separate partition: it is installed into system. The product
+# partition is not mounted under /mnt/stock, but extract-files.sh reads it from
+# the image with debugfs, which needs no privileges.
 product/lib/libfmjni.so:system/lib/libfmjni.so
 product/lib64/libfmjni.so:system/lib64/libfmjni.so
 
 # --------------------------------------------------------------------------
-# LA PARTIZIONE VENDOR
+# THE VENDOR PARTITION
 #
-# Fino a settembre qui c'erano solo i dodici .jar del framework MediaTek: la
-# vendor.img che il build produceva pesava 24 MB contro i 378 di quella vera,
-# e non era un problema soltanto perche' non l'abbiamo mai installata -- il
-# telefono ha sempre girato sul vendor di fabbrica.
+# Until September there were only the twelve MediaTek framework .jars here: the
+# vendor.img the build produced weighed 24 MB against the 378 of the real one,
+# and that was not a problem only because we never installed it -- the phone
+# has always run on the stock vendor.
 #
-# Lo e' diventato quando abbiamo costruito lo zip installabile: quello porta
-# dentro tutte le partizioni, l'ha scritta, e il telefono e' rimasto senza le
-# HAL MediaTek e senza la vendor_sepolicy.cil da 826 KB. Bootloop.
+# It became one when we built the installable zip: that carries every partition
+# inside, it wrote that image, and the phone was left without the MediaTek HALs
+# and without the 826 KB vendor_sepolicy.cil. Bootloop.
 #
-# Questi sono i 1622 file estratti dal vendor di fabbrica (i 12 collegamenti
-# simbolici stanno in Android.mk, perche' un elenco di file non li esprime).
+# These are the 1622 files extracted from the stock vendor (the 12 symlinks
+# live in Android.mk, because a file list cannot express them).
 # --------------------------------------------------------------------------
 
-# Eseguibili e servizi del vendor (110)
+# Vendor executables and services (110)
 
-# Librerie a 64 bit (551)
+# 64-bit libraries (551)
 
-# Librerie a 32 bit (405)
+# 32-bit libraries (405)
 
-# Configurazione: init, audio, sensori, policy SELinux del vendor (484)
+# Configuration: init, audio, sensors, vendor SELinux policy (484)
 
-# Firmware dei chip (38)
+# Chip firmware (38)
 
-# Applicazioni del vendor (12)
+# Vendor applications (12)
 
-# Overlay delle risorse (2)
+# Resource overlays (2)
 
-# Risorse (6)
+# Resources (6)
 
-# Contenuto della odm, che qui vive dentro il vendor (9)
+# odm content, which here lives inside vendor (9)
 
-# Il resto
-#   vendor/default.prop   (no: vedi device.mk, le proprieta' utili sono dichiarate li')
+# The rest
+#   vendor/default.prop   (no: see device.mk, the useful properties are declared there)
 
 # --------------------------------------------------------------------------
-# QUESTI NO: li costruisce gia' il build
+# NOT THESE: the build already produces them
 #
-# Settantadue file del vendor di fabbrica sono HAL che AOSP compila dai
-# sorgenti -- fingerprint, drm, gatekeeper, memtrack, vibrator, graphics --
-# e dichiararli qui li farebbe copiare sopra, con l'errore
+# Seventy-two files in the stock vendor are HALs that AOSP compiles from
+# source -- fingerprint, drm, gatekeeper, memtrack, vibrator, graphics -- and
+# declaring them here would copy them over, with the error
 #   error: overriding commands for target .../vendor/bin/hw/android.hardware...
 #
-# Su quelli vince il build: le sue sono compilate contro Android 13, quelle di
-# fabbrica sono rimaste ad Android 10. Sono elencati qui sotto, commentati, per
-# sapere che esistono e che la scelta e' stata fatta apposta.
+# On those the build wins: its own are compiled against Android 13, the stock
+# ones stayed at Android 10. They are listed below, commented out, so that we
+# know they exist and that the choice was deliberate.
 # --------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
-# LA PARTIZIONE VENDOR NON STA PIU' QUI
+# THE VENDOR PARTITION IS NO LONGER HERE
 #
-# Per un po' ci sono stati i 1622 file estratti dal vendor di fabbrica, uno per
-# uno. Funzionava per costruire l'immagine, non per farla partire: il build
-# installa comunque i propri moduli in /vendor -- le HAL che AOSP compila -- e
-# ogni file su cui i due si sovrappongono va deciso a mano. Ne abbiamo decisi
-# ottantatre' prima di accorgerci che il criterio "vince il piu' recente" e'
-# sbagliato per tutto cio' che tocca il SoC, e che ogni scelta sbagliata si
-# manifesta come un telefono fermo sul logo, senza un errore da leggere.
+# For a while the 1622 files extracted from the stock vendor were listed here,
+# one by one. It worked for building the image, not for booting it: the build
+# installs its own modules into /vendor anyway -- the HALs AOSP compiles -- and
+# every file where the two overlap has to be decided by hand. We decided
+# eighty-three of them before realising that the "newest wins" criterion is
+# wrong for anything touching the SoC, and that every wrong choice shows up as
+# a phone stuck on the logo, with no error to read.
 #
-# Il vendor ora e' l'immagine di fabbrica, presa com'e':
+# Vendor is now the stock image, taken as it is:
 #   BOARD_PREBUILT_VENDORIMAGE := vendor/doogee/s88pro/vendor.img
-# Il build non la costruisce, la copia. E' identica bit per bit a quella che
-# gira sul telefono da sempre, il che toglie di mezzo un'intera categoria di
-# domande -- quali HAL, quali librerie, quali versioni -- a cui non serviva
-# rispondere.
+# The build does not construct it, it copies it. It is bit-for-bit identical to
+# the one that has always run on the phone, which removes an entire category of
+# questions -- which HALs, which libraries, which versions -- that did not need
+# answering.
 #
-# Restano qui i soli file di system: i .jar del framework MediaTek, senza i
-# quali mtkfusionrild resta in loop sul socket rild-oem.
+# Only the system files stay here: the MediaTek framework .jars, without which
+# mtkfusionrild keeps looping on the rild-oem socket.
 # ---------------------------------------------------------------------------

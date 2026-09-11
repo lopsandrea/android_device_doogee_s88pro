@@ -4,18 +4,19 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-"""Adatta la chiamata a ImsManager.updateImsServiceConfig() alla firma di Android 12.
+"""Adapts the ImsManager.updateImsServiceConfig() call to the Android 12 signature.
 
-In Android 10 era statico e prendeva (Context, int phoneId, boolean force); in
-Android 12 e' un metodo di istanza senza parametri. Il flag "force" non ha piu'
-un corrispondente: la nuova implementazione rivaluta comunque le capability.
+In Android 10 it was static and took (Context, int phoneId, boolean force); in
+Android 12 it is an instance method with no parameters. The "force" flag has no
+counterpart any more: the new implementation re-evaluates the capabilities
+regardless.
 
-Si patcha la chiamata dentro l'APK e NON il framework. ImsManager sta in
-ims-common.jar, che e' nel bootclasspath: sostituire quel jar rompe i checksum
-della boot image precompilata e il telefono non si avvia piu' (recupero solo da
-TWRP). Vedi docs/bringup/volte-stato-esperimento.md
+The call is patched inside the APK and NOT in the framework. ImsManager lives
+in ims-common.jar, which is on the bootclasspath: replacing that jar breaks the
+checksums of the precompiled boot image and the phone no longer boots (recovery
+only through TWRP). See docs/bringup/volte-stato-esperimento.md
 
-Uso: 02-updateimsserviceconfig.py <dir-smali>
+Usage: 02-updateimsserviceconfig.py <smali-dir>
 """
 import io, os, sys
 
@@ -36,15 +37,15 @@ old = """.method public updateImsServiceConfig(Landroid/content/Context;IZ)V
     return-void
 .end method"""
 
-# .registers passa da 4 a 5 per avere v0 come registro locale: i parametri
-# restano raggiungibili come pN, che smali rimappa da solo.
+# .registers goes from 4 to 5 to get v0 as a local register: the parameters
+# stay reachable as pN, which smali remaps by itself.
 new = """.method public updateImsServiceConfig(Landroid/content/Context;IZ)V
     .registers 5
     .param p1, "context"    # Landroid/content/Context;
     .param p2, "phoneId"    # I
     .param p3, "force"    # Z
 
-    # Android 12: updateImsServiceConfig() e' un metodo di istanza senza parametri.
+    # Android 12: updateImsServiceConfig() is an instance method with no parameters.
     .line 64
     invoke-static {p1, p2}, Lcom/android/ims/ImsManager;->getInstance(Landroid/content/Context;I)Lcom/android/ims/ImsManager;
 
@@ -60,8 +61,8 @@ new = """.method public updateImsServiceConfig(Landroid/content/Context;IZ)V
 .end method"""
 
 if s.count(old) != 1:
-    sys.exit("02-updateimsserviceconfig: atteso 1 riscontro, trovati %d -- l'APK non e' quello previsto"
+    sys.exit("02-updateimsserviceconfig: expected 1 match, found %d -- this is not the expected APK"
              % s.count(old))
 
 io.open(p, "w", encoding="utf-8").write(s.replace(old, new))
-print("02-updateimsserviceconfig: applicata")
+print("02-updateimsserviceconfig: applied")

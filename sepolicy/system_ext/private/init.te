@@ -3,12 +3,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# init crea i socket dichiarati nei .rc del vendor. Quelli di VoLTE e di BIP
-# non portano un contesto esplicito, quindi ereditano socket_device:
+# init creates the sockets declared in the vendor .rc files. The VoLTE and BIP
+# ones carry no explicit context, so they inherit socket_device:
 #
 #   denied { create } for name="volte_imsa2" scontext=u:r:init:s0
 #     tcontext=u:object_r:socket_device:s0 tclass=sock_file
 #
-# Gli altri sono volte_ut e vendor.bip.
+# The others are volte_ut and vendor.bip.
 allow init socket_device:sock_file { create setattr unlink };
 

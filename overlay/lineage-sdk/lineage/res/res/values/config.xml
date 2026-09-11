@@ -6,15 +6,14 @@
 -->
 <resources>
     <!--
-         Aggiunge il nostro gestore dei tasti a quello di LineageOS.
+         Adds our key handler alongside the LineageOS one.
 
-         PhoneWindowManager carica queste classi all'avvio e passa loro ogni
-         tasto prima di consegnarlo all'app in primo piano. Le due liste vanno
-         in parallelo, quindi l'ordine conta: al primo percorso corrisponde la
-         prima classe.
+         PhoneWindowManager loads these classes at boot and hands them every
+         key before delivering it to the foreground app. The two lists run in
+         parallel, so order matters: the first path goes with the first class.
 
-         La voce di LineageParts va ripetuta, perché un overlay sostituisce
-         l'array intero e toglierla disattiverebbe le gesture.
+         The LineageParts entry has to be repeated, because an overlay replaces
+         the whole array and dropping it would disable the gestures.
     -->
     <string-array name="config_deviceKeyHandlerLibs" translatable="false">
         <item>/system_ext/priv-app/LineageParts/LineageParts.apk</item>

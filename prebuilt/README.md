@@ -1,26 +1,32 @@
-# Il kernel precompilato
+# The prebuilt kernel
 
-`kernel` è l'`Image.gz-dtb` che `BoardConfig.mk` cerca in
-`TARGET_PREBUILT_KERNEL`.
+`kernel` is an `Image.gz-dtb` kept for anyone who wants to install without
+rebuilding. `BoardConfig.mk` points `TARGET_PREBUILT_KERNEL` at it, but the
+build only uses it with `TARGET_FORCE_PREBUILT_KERNEL`: by default the kernel
+is compiled from source, as the charter requires.
 
-**Non è un binario opaco**: i sorgenti sono in
+**It is not an opaque binary**: the sources are in
 [android_kernel_doogee_s88pro](https://github.com/lopsandrea/android_kernel_doogee_s88pro),
-e questo file si rigenera con la catena di LineageOS.
+and this file is regenerated with the LineageOS toolchain.
 
-## Come è stato costruito
+## How it was built
 
-    clang r487747c (17.0.2) + ld.lld + llvm-ar dai prebuilts di LineageOS
+    clang r487747c (17.0.2) + ld.lld + llvm-ar from the LineageOS prebuilts
     make ARCH=arm64 lineage_s88pro_defconfig
-    make ARCH=arm64 Image.gz-dtb LLVM_IAS=0 KCFLAGS="-gdwarf-4 <i -Wno- del BoardConfig>"
+    make ARCH=arm64 Image.gz-dtb LLVM_IAS=0 KCFLAGS="-gdwarf-4 <the -Wno- flags from BoardConfig>"
 
-    9.986.048 byte
+    9,986,048 bytes
     sha256 a75670c5cc5f8f42...
 
-## Verificato
+Note: the in-tree build uses clang r450784d (14.0.6), the version LineageOS 20
+ships — see `TARGET_KERNEL_CLANG_VERSION` in `BoardConfig.mk`. This binary
+predates that switch, which is why the versions differ.
 
-È byte per byte lo stesso kernel che gira sul telefono: estratto dalla
-partizione `boot` con `tools/bootimg.py unpack` e confrontato con `cmp`.
+## Verified
 
-Sul dispositivo: dieci cicli di spegnimento e riaccensione dello schermo senza
-riavvii, zero panici, zero WARNING, e `/proc/driver/camera_info` identico riga
-per riga a quello del kernel di fabbrica.
+It is byte for byte the same kernel that runs on the phone: extracted from the
+`boot` partition with `tools/bootimg.py unpack` and compared with `cmp`.
+
+On the device: ten screen off/on cycles without reboots, zero panics, zero
+WARNINGs, and `/proc/driver/camera_info` identical line by line to the stock
+kernel's.

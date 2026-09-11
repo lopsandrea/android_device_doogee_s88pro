@@ -6,23 +6,24 @@
 -->
 <resources>
     <!--
-         Fa riconoscere l'interfaccia dell'hotspot.
+         Makes the hotspot interface be recognised.
 
-         Il WiFi del vendor crea l'access point su "ap0", come dichiara
-         ro.vendor.wifi.sap.interface, ma l'elenco predefinito di AOSP contiene
-         solo wlan, softap e ap_br_*. Non corrispondendo a nessuno, il servizio
-         di tethering non prende in carico l'interfaccia: hostapd parte, il
-         dispositivo si associa e completa perfino l'handshake WPA, ma nessuno
-         assegna un indirizzo ad ap0
+         The vendor WiFi creates the access point on "ap0", as
+         ro.vendor.wifi.sap.interface declares, but the AOSP default list holds
+         only wlan, softap and ap_br_*. Matching none of them, the tethering
+         service does not take the interface on: hostapd starts, the device
+         associates and even completes the WPA handshake, but nobody assigns an
+         address to ap0
 
              netd: interfaceGetCfg(ap0) -> {... ipv4Addr: 0.0.0.0 ...}
 
-         e il client resta senza IP. Nei log si vede anche EthernetTracker
-         occuparsi di ap0, segno che l'interfaccia non è stata riconosciuta per
-         quello che è.
+         and the client is left without an IP. The logs also show
+         EthernetTracker taking care of ap0, a sign that the interface was not
+         recognised for what it is.
 
-         Le voci originali vanno ripetute: un overlay sostituisce l'array
-         intero, e toglierle romperebbe il tethering sugli altri nomi.
+         The original entries have to be repeated: an overlay replaces the
+         whole array, and dropping them would break tethering on the other
+         names.
     -->
     <string-array translatable="false" name="config_tether_wifi_regexs">
         <item>"wlan\\d"</item>

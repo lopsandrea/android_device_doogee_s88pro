@@ -11,40 +11,39 @@ ifeq ($(TARGET_DEVICE),s88pro)
 include $(call all-subdir-makefiles,$(LOCAL_PATH))
 endif
 
-# La vendor di fabbrica, meno una riga: il fstab.
+# The stock vendor image, minus one line: the fstab.
 #
-# Il vendor arriva come immagine gia' pronta (BOARD_PREBUILT_VENDORIMAGE), e
-# il build non ci installa piu' niente dentro. Va bene per tutto tranne che
-# per un file: /vendor/etc/fstab.mt6771. Quello di fabbrica descrive il
-# telefono com'era con Android 10 e qui sbaglia in due punti -- elenca
-# /product, che dal super e' stata tolta, e chiede fileencryption su /data,
-# che il TEE MediaTek (TrustKernel keymaster v4) non concede.
+# Vendor arrives as a ready-made image (BOARD_PREBUILT_VENDORIMAGE), and the
+# build no longer installs anything inside it. That is fine for everything but
+# one file: /vendor/etc/fstab.mt6771. The stock one describes the phone as it
+# was under Android 10 and is wrong here in two places -- it lists /product,
+# which has been removed from super, and it asks for fileencryption on /data,
+# which the MediaTek TEE (TrustKernel keymaster v4) does not grant.
 #
-# E non basta metterne una copia altrove sperando che vinca: i file init del
-# vendor lo montano per nome, senza passare dal suffisso di fs_mgr --
+# And putting a copy elsewhere in the hope that it wins is not enough: the
+# vendor init files mount it by name, bypassing the fs_mgr suffix --
 #
 #     init.mt6771.rc:107   mount_all /vendor/etc/fstab.mt6771
 #     factory_init.rc:297  mount_all /vendor/etc/fstab.mt6771 ...
 #     meta_init.rc:295     mount_all /vendor/etc/fstab.mt6771 ...
 #
-# Quel percorso e' l'unico che conta, quindi il nostro fstab deve stare li'.
-# Con l'immagine prebuilt l'unico modo e' scriverlo dentro, e debugfs lo fa
-# senza smontare niente e senza ricostruire l'immagine: stesso inode, stessa
-# dimensione complessiva, tutto il resto intatto. Permessi e contesto sono
-# quelli che aveva il file di fabbrica (0644 root:root vendor_configs_file):
-# se sbagliassero, init non riuscirebbe a leggerlo e il telefono si
-# fermerebbe prima di /data.
-S88PRO_VENDOR_FABBRICA := vendor/doogee/s88pro/vendor.img
-# Percorso esplicito, non $(LOCAL_PATH): qui sopra c'e' all-subdir-makefiles,
-# che lascia LOCAL_PATH puntato all'ultima sottodirectory inclusa (ims).
+# That path is the only one that counts, so our fstab has to live there. With a
+# prebuilt image the only way is to write it inside, and debugfs does that
+# without unmounting anything and without rebuilding the image: same inode,
+# same overall size, everything else untouched. Permissions and context are the
+# ones the stock file had (0644 root:root vendor_configs_file): were they
+# wrong, init could not read it and the phone would stop before /data.
+S88PRO_VENDOR_STOCK := vendor/doogee/s88pro/vendor.img
+# Explicit path, not $(LOCAL_PATH): above there is all-subdir-makefiles, which
+# leaves LOCAL_PATH pointing at the last subdirectory included (ims).
 S88PRO_VENDOR_FSTAB := device/doogee/s88pro/rootdir/etc/fstab.mt6771
 S88PRO_VENDOR_CTX := u:object_r:vendor_configs_file:s0
 
-$(S88PRO_VENDOR_CON_FSTAB): $(S88PRO_VENDOR_FABBRICA) $(S88PRO_VENDOR_FSTAB) \
+$(S88PRO_VENDOR_WITH_FSTAB): $(S88PRO_VENDOR_STOCK) $(S88PRO_VENDOR_FSTAB) \
         $(HOST_OUT_EXECUTABLES)/debugfs
-	@echo "vendor: il nostro fstab al posto di quello di fabbrica"
+	@echo "vendor: our fstab in place of the stock one"
 	$(hide) mkdir -p $(dir $@)
-	$(hide) cp -f $(S88PRO_VENDOR_FABBRICA) $@
+	$(hide) cp -f $(S88PRO_VENDOR_STOCK) $@
 	$(hide) printf '$(S88PRO_VENDOR_CTX)\0' > $@.ctx
 	$(hide) ( \
 	    echo "cd /etc"; \

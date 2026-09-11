@@ -4,17 +4,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-"""Toglie l'avvio del servizio WFO (VoWiFi) dal costruttore di ImsService.
+"""Removes the WFO (VoWiFi) service start-up from the ImsService constructor.
 
-Perche': ImsService.<init> chiama startWfoService(), che finisce in
-WifiPdnHandler, che usa WifiManager.registerStaStateCallback() -- un metodo che
-MediaTek ha aggiunto al framework e che AOSP non ha. Non basta fornire uno stub
-della classe StaStateCallback: mancherebbe comunque il metodo su WifiManager.
+Why: ImsService.<init> calls startWfoService(), which ends up in
+WifiPdnHandler, which uses WifiManager.registerStaStateCallback() -- a method
+MediaTek added to the framework and that AOSP does not have. Providing a stub
+for the StaStateCallback class is not enough: the method on WifiManager would
+still be missing.
 
-Il VoWiFi resta quindi fuori. Si conserva pero' l'inizializzazione di
-mTempDisableWFC, che viene usata altrove e la cui assenza darebbe NPE.
+VoWiFi is therefore left out. The initialisation of mTempDisableWFC is kept,
+though, since it is used elsewhere and its absence would cause an NPE.
 
-Uso: 01-disable-wfo.py <dir-smali>
+Usage: 01-disable-wfo.py <smali-dir>
 """
 import io, os, sys
 
@@ -34,14 +35,14 @@ old = """    .line 691
     .line 692
     return-void"""
 
-new = """    # WFO (VoWiFi) disattivato: WifiPdnHandler usa WifiManager.registerStaStateCallback(),
-    # un metodo che MediaTek ha aggiunto al framework e che AOSP non ha.
+new = """    # WFO (VoWiFi) disabled: WifiPdnHandler uses WifiManager.registerStaStateCallback(),
+    # a method MediaTek added to the framework and that AOSP does not have.
     .line 692
     return-void"""
 
 if s.count(old) != 1:
-    sys.exit("01-disable-wfo: atteso 1 riscontro, trovati %d -- l'APK non e' quello previsto"
+    sys.exit("01-disable-wfo: expected 1 match, found %d -- this is not the expected APK"
              % s.count(old))
 
 io.open(p, "w", encoding="utf-8").write(s.replace(old, new))
-print("01-disable-wfo: applicata")
+print("01-disable-wfo: applied")

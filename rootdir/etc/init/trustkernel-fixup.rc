@@ -3,63 +3,63 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# Da' il via al TEE TrustKernel, che altrimenti resta senza storage.
+# Kicks off the TrustKernel TEE, which otherwise is left without storage.
 #
-# /vendor/etc/init/trustkernel.rc prepara le directory del filesystem sicuro
-# solo su uno di tre trigger:
+# /vendor/etc/init/trustkernel.rc prepares the secure filesystem directories on
+# one of three triggers only:
 #
 #   on property:ro.crypto.state=unencrypted            -> fs.mode 1
 #   on property:vold.decrypt=trigger_restart_framework -> fs.mode 2
 #   on property:ro.crypto.type=file && ...=encrypted   -> fs.mode 3
 #
-# Da noi ro.crypto.state vale "unsupported": avendo tolto fileencryption dal
-# fstab (il TEE rifiutava keystore2 in Fase 2), vold non dichiara ne'
-# "encrypted" ne' "unencrypted". Nessuno dei tre trigger scatta, /data/vendor/t6
-# non nasce, teed resta senza area dati e ogni richiesta al keymaster non
-# torna piu' indietro:
+# Here ro.crypto.state was "unsupported": with fileencryption removed from the
+# fstab (the TEE rejected keystore2 in Phase 2), vold declared neither
+# "encrypted" nor "unencrypted". None of the three triggers fired,
+# /data/vendor/t6 was never created, teed was left without a data area and every
+# keymaster request stopped coming back:
 #
 #   keystore2: watchdog: IKeystoreSecurityLevel::generateKey Pending: 258.6s
 #
-# Chi paga il conto e' la telefonia. In Android 12 UiccController costruisce
-# PinStorage, che genera una chiave in keystore2 prima di poter leggere la SIM:
+# Telephony pays the price. In Android 12 UiccController builds PinStorage,
+# which generates a key in keystore2 before it can read the SIM:
 #
 #   PhoneFactory.makeDefaultPhone -> UiccController.<init> -> PinStorage.<init>
-#     -> initializeSecretKey -> KeyGenerator.generateKey -> [bloccato]
+#     -> initializeSecretKey -> KeyGenerator.generateKey -> [blocked]
 #
-# com.android.phone resta appeso, va in ANR sul broadcast BOOT_COMPLETED, viene
-# ucciso e riparte: un ciclo ogni 60 secondi, con la radio sempre spenta.
+# com.android.phone hangs, ANRs on the BOOT_COMPLETED broadcast, gets killed and
+# restarts: one cycle every 60 seconds, with the radio permanently off.
 #
-# Qui riproduciamo il ramo "non cifrato" che il vendor si aspetta.
+# Here we reproduce the "unencrypted" branch the vendor expects.
 on post-fs-data
     setprop vendor.trustkernel.fs.mode 1
     setprop vendor.trustkernel.fs.state ready
 
-# Da' al keymaster i dati di verified boot, che nessuno gli passa piu'.
+# Gives keymaster the verified boot data that nobody passes it any more.
 #
-# /vendor/bin/hw/android.hardware.keymaster@4.0-service.trustkernel legge tre
-# sole proprieta' (verificato con "strings" sul binario):
+# /vendor/bin/hw/android.hardware.keymaster@4.0-service.trustkernel reads three
+# properties only (verified with "strings" on the binary):
 #   ro.boot.vbmeta.device_state
 #   ro.boot.vbmeta.digest
 #   ro.boot.verifiedbootstate
-# e con quelle costruisce il root of trust da passare al TEE. Le prime due le
-# imposta il bootloader quando AVB e' attivo; avendolo disabilitato in Fase 1
-# per poter avviare immagini non firmate, restano vuote. Il TEE riceve un
-# buffer di lunghezza zero e rifiuta la configurazione, come si legge nel suo
-# log in /data/vendor/t6/tkcore.log:
+# and from those it builds the root of trust to hand to the TEE. The first two
+# are set by the bootloader when AVB is on; having disabled it in Phase 1 to be
+# able to boot unsigned images, they stay empty. The TEE receives a zero-length
+# buffer and refuses to configure, as its own log in
+# /data/vendor/t6/tkcore.log shows:
 #
 #   KEYMASTER:TA_InvokeCommandEntryPoint: configure
 #   ERR KEYMASTER:do_configure:35: Invalid length: 0x0
 #   ERR KEYMASTER:generate_key:129: Not configured
 #
-# Da li' in poi ogni operazione torna KEYMASTER_NOT_CONFIGURED (-64), e non
-# funziona nulla di quanto passa dal keystore: PIN e sequenza di sblocco
-# (SyntheticPasswordCrypto: Failed to create blob), e quindi nemmeno il
-# lettore di impronte, che senza credenziale non si puo' registrare.
+# From then on every operation returns KEYMASTER_NOT_CONFIGURED (-64), and
+# nothing that goes through keystore works: PIN and unlock pattern
+# (SyntheticPasswordCrypto: Failed to create blob), and hence not the
+# fingerprint reader either, which cannot be enrolled without a credential.
 #
-# Il digest e' a zero perche' con AVB disabilitato non c'e' nulla da
-# certificare: al TEE serve un valore di lunghezza corretta, non un valore
-# vero. Se un giorno si riattivasse Verified Boot, queste due righe vanno
-# tolte: le fornirebbe il bootloader, con i valori autentici.
+# The digest is zero because with AVB disabled there is nothing to certify: the
+# TEE needs a value of the right length, not a true value. Should Verified Boot
+# ever be turned back on, these two lines have to go: the bootloader would
+# provide them, with the genuine values.
 on early-init
     setprop ro.boot.vbmeta.device_state unlocked
     setprop ro.boot.vbmeta.digest 0000000000000000000000000000000000000000000000000000000000000000

@@ -5,25 +5,26 @@
      SPDX-License-Identifier: Apache-2.0
 -->
 <!--
-  Manifest locale per compilare il Doogee S88 Pro prima che i repo stiano
-  sotto l'organizzazione LineageOS.
+  Local manifest for building the Doogee S88 Pro before the repos live under
+  the LineageOS organisation.
 
-  Si copia in .repo/local_manifests/ e poi si fa repo sync:
+  Copy it into .repo/local_manifests/ and then run repo sync:
 
       mkdir -p .repo/local_manifests
       cp device/doogee/s88pro/s88pro.xml .repo/local_manifests/
       repo sync
 
-  Perche' serve, e perche' non basta lineage.dependencies: roomservice.py
-  costruisce il nome del progetto come "LineageOS/<repository>" e lo
-  sovrascrive solo per i remote che cominciano con "aosp-", usati per i
-  prebuilt del kernel (vendor/lineage/build/tools/roomservice.py, riga 179).
-  Non c'e' modo di indicargli un altro proprietario. Il manifest locale
-  invece accetta il nome completo, perche' il remote "github" del manifest di
-  LineageOS ha fetch=".." e quindi punta alla radice di github.com.
+  Why it is needed, and why lineage.dependencies is not enough: roomservice.py
+  builds the project name as "LineageOS/<repository>" and overrides that only
+  for remotes starting with "aosp-", used for the kernel prebuilts
+  (vendor/lineage/build/tools/roomservice.py, line 179). There is no way to
+  point it at another owner. The local manifest, on the other hand, accepts the
+  full name, because the "github" remote in the LineageOS manifest has
+  fetch=".." and therefore points at the root of github.com.
 
-  Quando i repo passeranno sotto LineageOS questo file non servira' piu':
-  lineage.dependencies bastera' da solo, ed e' gia' scritto per quel caso.
+  Once the repos move under LineageOS this file will no longer be needed:
+  lineage.dependencies will do on its own, and is already written for that
+  case.
 -->
 <manifest>
   <project path="device/doogee/s88pro"
@@ -37,9 +38,10 @@
            revision="lineage-20" />
 
   <!--
-    I sorgenti del kernel. Il BoardConfig usa TARGET_PREBUILT_KERNEL, quindi
-    per compilare non servono: stanno qui perche' il prebuilt in prebuilt/
-    esce da qui, e chi vuole rigenerarlo deve poterli prendere.
+    The kernel sources. BoardConfig builds the kernel from them, so they are
+    required: the charter forbids shipping a prebuilt kernel. The image in
+    prebuilt/ also comes from here, for anyone who wants to install without
+    rebuilding.
   -->
   <project path="kernel/doogee/s88pro"
            name="lopsandrea/android_kernel_doogee_s88pro"

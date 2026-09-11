@@ -1,14 +1,15 @@
-# Patch all'albero LineageOS
+# Patches to the LineageOS tree
 
-Modifiche che non stanno nel device tree perché toccano progetti comuni. Vanno riapplicate
-dopo ogni `repo sync`.
+Changes that do not belong in the device tree because they touch common
+projects. They have to be reapplied after every `repo sync`.
 
 ## frameworks_opt_telephony-baseband-version-length.patch
 
-**Progetto**: `frameworks/opt/telephony`
+**Project**: `frameworks/opt/telephony`
 
-**Sintomo**: `com.android.phone` va in crash appena il modem risponde, riparte, ricrasha, finché
-`ActivityManager` si arrende ("crashed too many times, killing"). Nessuna SIM utilizzabile.
+**Symptom**: `com.android.phone` crashes as soon as the modem answers,
+restarts, crashes again, until `ActivityManager` gives up ("crashed too many
+times, killing"). No usable SIM.
 
 ```
 java.lang.IllegalArgumentException: value of system property 'gsm.version.baseband'
@@ -18,22 +19,24 @@ java.lang.IllegalArgumentException: value of system property 'gsm.version.baseba
     at com.android.internal.telephony.GsmCdmaPhone.handleMessage(GsmCdmaPhone.java:3040)
 ```
 
-**Causa**: AOSP tronca la stringa di versione del baseband a `PROP_VALUE_MAX/2` (46 caratteri),
-ma lo fa **per ciascun telefono**; i valori vengono poi concatenati in un'unica proprietà, che
-non può superare i 91 caratteri. Questo device dichiara `ro.telephony.sim.count=3`, e il RIL
-MediaTek restituisce stringhe lunghe: 3 × 46 supera il limite e `SystemProperties.set` solleva
-l'eccezione. Con due sole SIM il conto sarebbe comunque 93 caratteri.
+**Cause**: AOSP truncates the baseband version string to `PROP_VALUE_MAX/2` (46
+characters), but does so **per phone**; the values are then concatenated into a
+single property, which cannot exceed 91 characters. This device declares
+`ro.telephony.sim.count=3`, and the MediaTek RIL returns long strings: 3 × 46
+goes past the limit and `SystemProperties.set` raises the exception. With only
+two SIMs the total would still be 93 characters.
 
-**Modifica**: quota per telefono da `PROP_VALUE_MAX/2` a `PROP_VALUE_MAX/4` (23 caratteri):
-3 × 23 più due virgole fanno 71, dentro il limite. Il troncamento tiene la **coda** della
-stringa, che è la parte che identifica la build del modem.
+**Change**: the per-phone budget goes from `PROP_VALUE_MAX/2` to
+`PROP_VALUE_MAX/4` (23 characters): 3 × 23 plus two commas makes 71, within the
+limit. The truncation keeps the **tail** of the string, which is the part
+identifying the modem build.
 
 ## packages_apps_Nfc-null-native-data.patch
 
-**Progetto**: `packages/apps/Nfc`
+**Project**: `packages/apps/Nfc`
 
-**Sintomo**: `com.android.nfc` muore e riparte circa ogni 0,8 secondi, all'infinito, con un crash
-nativo:
+**Symptom**: `com.android.nfc` dies and restarts roughly every 0.8 seconds,
+forever, with a native crash:
 
 ```
 signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x10
@@ -43,103 +46,118 @@ Cause: null pointer dereference
   #02 libnfc-nci.so (nfc_ncif_proc_rf_field_ntf(unsigned char))
 ```
 
-**Causa**: in `nfaDeviceManagementCallback` il codice chiama `getNative(NULL, NULL)` e usa subito
-il risultato con `ScopedAttach attach(nat->vm, &e)`, senza verificare che non sia `NULL`. La HAL
-ST invia la notifica di campo RF prima che il lato JNI sia inizializzato: `nat` è `NULL` e
-`nat->vm` dereferenzia l'offset `0x10` — l'indirizzo esatto riportato nel tombstone.
+**Cause**: in `nfaDeviceManagementCallback` the code calls
+`getNative(NULL, NULL)` and immediately uses the result with
+`ScopedAttach attach(nat->vm, &e)`, without checking it is not `NULL`. The ST
+HAL sends the RF field notification before the JNI side is initialised: `nat`
+is `NULL` and `nat->vm` dereferences offset `0x10` — the exact address reported
+in the tombstone.
 
-**Modifica**: controllo di `nat == NULL` prima dell'uso, nei due punti che hanno lo stesso difetto
-(`NFA_DM_RF_FIELD_EVT` e `NFA_DM_NFCC_TRANSPORT_ERR_EVT`/`TIMEOUT`). La notifica arrivata troppo
-presto viene ignorata invece di far cadere il processo.
+**Change**: a `nat == NULL` check before use, at the two places with the same
+defect (`NFA_DM_RF_FIELD_EVT` and `NFA_DM_NFCC_TRANSPORT_ERR_EVT`/`TIMEOUT`). A
+notification that arrives too early is ignored instead of taking the process
+down.
 
-## packages_apps_Nfc-mifare-classic-extras.patch — RIMOSSA, non serve piu'
+## packages_apps_Nfc-mifare-classic-extras.patch — REMOVED, no longer needed
 
-Aggiungeva a `NativeNfcTag.java` il `case TagTechnology.MIFARE_CLASSIC` che
-mancava: senza, il `Bundle` degli extras restava null e ogni app che apriva una
-carta Mifare moriva con `NullPointerException` dentro `NfcA.<init>`.
+It added to `NativeNfcTag.java` the missing `case
+TagTechnology.MIFARE_CLASSIC`: without it the extras `Bundle` stayed null and
+every app opening a Mifare card died with `NullPointerException` inside
+`NfcA.<init>`.
 
-**LineageOS 20 ora lo ha di suo.** Alla riga 756 di quel file c'e' lo stesso
-identico codice -- SAK preso da `mTechActBytes[i][0]`, ATQA da
-`mTechPollBytes[i]` -- e la patch non si applicava piu'. Verificato sull'albero
-sincronizzato l'8 settembre 2026.
+**LineageOS 20 now has it of its own.** At line 756 of that file there is the
+exact same code -- SAK taken from `mTechActBytes[i][0]`, ATQA from
+`mTechPollBytes[i]` -- and the patch no longer applied. Verified against the
+tree synced on 8 September 2026.
 
 
 ## packages_apps_FMRadio-antenna-selection.patch
 
-**Progetto**: `packages/apps/FMRadio`
+**Project**: `packages/apps/FMRadio`
 
-**A cosa serve**: scegliere quale percorso di antenna usa il tuner FM, su un telefono che non ha
-la presa per gli auricolari.
+**What it is for**: choosing which antenna path the FM tuner uses, on a phone
+that has no headphone jack.
 
-L'app seleziona l'antenna solo quando riceve il broadcast `HEADSET_PLUG`:
+The app selects the antenna only when it receives the `HEADSET_PLUG` broadcast:
 
 ```java
 mValueHeadSetPlug = (intent.getIntExtra("state", -1) == HEADSET_PLUG_IN) ? 0 : 1;
 switchAntennaAsync(mValueHeadSetPlug);
 ```
 
-Qui quel broadcast non arriva mai — non c'è una presa in cui infilare qualcosa — e il chip resta
-sul valore predefinito. La patch chiama `switchAntenna` all'accensione, quando il device dichiara
-l'antenna interna, leggendo il valore da una proprietà:
+Here that broadcast never arrives — there is no jack to plug anything into —
+and the chip stays on the default value. The patch calls `switchAntenna` at
+startup, when the device declares the internal antenna, reading the value from
+a property:
 
 ```bash
-setprop persist.vendor.fm.antenna 0    # antenna lunga: il cavo nel connettore
-setprop persist.vendor.fm.antenna 1    # antenna corta: quella interna (predefinita)
+setprop persist.vendor.fm.antenna 0    # long antenna: the cable in the connector
+setprop persist.vendor.fm.antenna 1    # short antenna: the internal one (default)
 ```
 
-È una proprietà e non una costante proprio per poter confrontare le due senza ricompilare.
+It is a property and not a constant precisely so the two can be compared
+without rebuilding.
 
-**Stato**: con la sola antenna interna la ricezione resta debole — si sente rumore. Il tuner però
-funziona: si accende, sintonizza e riconosce l'RDS. Serve un'antenna vera, cioè un cavo collegato.
+**Status**: with the internal antenna alone reception stays weak — you hear
+noise. The tuner does work, though: it powers up, tunes and recognises RDS. A
+real antenna is needed, that is, a connected cable.
 
 ## frameworks_base-screenrecord-encoder-limits.patch
 
-**Progetto**: `frameworks/base`
+**Project**: `frameworks/base`
 
-**Sintomo**: la registrazione dello schermo produce un video **nero**, senza un solo messaggio di
-errore.
+**Symptom**: screen recording produces a **black** video, without a single
+error message.
 
-**Causa**: un difetto di AOSP, che qui viene allo scoperto. `ScreenMediaRecorder.getSupportedSize()`
-chiede le dimensioni massime al **decoder**:
+**Cause**: an AOSP defect that surfaces here.
+`ScreenMediaRecorder.getSupportedSize()` asks the **decoder** for the maximum
+size:
 
 ```java
 // Get max size from the decoder, to ensure recordings will be playable on device
 MediaCodec decoder = MediaCodec.createDecoderByType(videoType);
 ```
 
-L'intenzione è assicurarsi che il video sia riproducibile, ma nessuno chiede all'**encoder** se sia
-in grado di produrlo. Su questo telefono il decoder arriva a 3840×2176 e l'encoder si ferma molto
-prima: la risoluzione nativa (1080×2340) risulta quindi "supportata", non viene ridimensionata, e
-la registrazione esce vuota. Dove i due limiti coincidono il difetto non si manifesta.
+The intent is to make sure the video is playable, but nobody asks the
+**encoder** whether it can produce it. On this phone the decoder reaches
+3840×2176 and the encoder stops well before: the native resolution
+(1080×2340) therefore counts as "supported", is not scaled down, and the
+recording comes out empty. Where the two limits coincide the defect does not
+show.
 
-**Modifica**: interroga anche l'encoder e usa il limite più stretto dei due, sia per le dimensioni
-massime sia per l'allineamento, e verifica `isSizeSupported` su entrambi.
+**Change**: query the encoder too and use the tighter of the two limits, both
+for the maximum size and for the alignment, and check `isSizeSupported` on
+both.
 
 ## frameworks_av-wfd-encoder-choice.patch
 
-**Progetto**: `frameworks/av`
+**Project**: `frameworks/av`
 
-**A cosa serve**: rendere scegliibile l'encoder del WiFi Display, che altrimenti non lo è.
-`Converter::initEncoder()` prende il primo encoder disponibile con `CreateByType` e, a differenza di
-`MediaCodecSource`, non ha alcun ripiego se quello fallisce. La patch legge prima la proprietà
+**What it is for**: making the WiFi Display encoder selectable, which it
+otherwise is not. `Converter::initEncoder()` takes the first available encoder
+with `CreateByType` and, unlike `MediaCodecSource`, has no fallback if that one
+fails. The patch first reads the property
 
 ```
 media.wfd.video-encoder
 ```
 
-e, se è impostata, usa quel codec.
+and, when set, uses that codec.
 
-**Serve ancora?** Non per far funzionare Miracast: da quando AFBC è spento
-(`debug.gpu.afbc.disable=1` nel device tree) l'encoder hardware codifica correttamente anche i
-buffer che arrivano da una Surface, e il WiFi Display va in accelerazione senza che gli si dica
-nulla. La proprietà nel device tree infatti non è più impostata.
+**Still needed?** Not to make Miracast work: since AFBC was turned off
+(`debug.gpu.afbc.disable=1` in the device tree) the hardware encoder correctly
+encodes buffers coming from a Surface too, and WiFi Display runs accelerated
+without being told anything. The property is in fact no longer set in the
+device tree.
 
-Resta in albero perché è la sola leva su quel percorso: se un domani un encoder desse problemi su
-una risoluzione particolare, è l'unico modo per ripiegare sul software senza ricompilare —
+It stays in tree because it is the only lever on that path: should an encoder
+one day misbehave at a particular resolution, it is the only way to fall back
+to software without rebuilding —
 
 ```bash
 setprop media.wfd.video-encoder c2.android.avc.encoder
 ```
 
-La storia completa del difetto AFBC, con il reverse engineering del blob e le ipotesi scartate, è in
+The full story of the AFBC defect, with the reverse engineering of the blob and
+the hypotheses that were ruled out, is in
 `docs/bringup/hardware-riferimento.md`.

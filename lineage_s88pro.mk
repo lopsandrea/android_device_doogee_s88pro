@@ -17,7 +17,7 @@ PRODUCT_MANUFACTURER := doogee
 
 PRODUCT_GMS_CLIENTID_BASE := android-doogee
 
-# Fingerprint stock verificato in Fase 1. Alcune app e il RIL lo leggono.
+# Stock fingerprint, verified in Phase 1. Some apps and the RIL read it.
 PRODUCT_BUILD_PROP_OVERRIDES += \
     PRIVATE_BUILD_DESC="S88Pro_EEA-user 10 QP1A.190711.020 1592876742 release-keys"
 

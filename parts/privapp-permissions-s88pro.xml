@@ -6,11 +6,11 @@
 -->
 <permissions>
     <!--
-         Le app privilegiate devono elencare qui le permission di livello
-         signature|privileged che chiedono nel manifest. Non è una formalità:
-         se manca la voce, PermissionManagerService solleva
-         IllegalStateException in systemReady() e system_server non parte,
-         lasciando il telefono in bootloop.
+         Privileged apps have to list here the signature|privileged level
+         permissions they request in their manifest. This is not a formality:
+         if the entry is missing, PermissionManagerService raises an
+         IllegalStateException in systemReady() and system_server does not
+         start, leaving the phone in a bootloop.
     -->
     <privapp-permissions package="org.lineageos.settings.doogee">
         <permission name="android.permission.WRITE_SECURE_SETTINGS" />

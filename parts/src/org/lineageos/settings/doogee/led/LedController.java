@@ -9,31 +9,31 @@ package org.lineageos.settings.doogee.led;
 import org.lineageos.settings.doogee.utils.FileUtils;
 
 /**
- * Comanda la striscia di LED RGB sul retro della scocca.
+ * Drives the RGB LED strip on the back of the case.
  *
- * Il controller è un Awinic aw22xxx, esposto in /sys/class/leds/aw22xxx_led/.
- * Gli effetti non si programmano colore per colore: il driver carica un file di
- * firmware dal vendor (/vendor/firmware/) e lo esegue. La sequenza è quella del
- * firmware di fabbrica, dove il LED è gestito dentro BatteryService (che lo
- * chiama "marquee"):
+ * The controller is an Awinic aw22xxx, exposed at /sys/class/leds/aw22xxx_led/.
+ * Effects are not programmed colour by colour: the driver loads a firmware file
+ * from the vendor (/vendor/firmware/) and runs it. The sequence is the one from
+ * the stock firmware, where the LED is handled inside BatteryService (which
+ * calls it "marquee"):
  *
- *   hwen   = 1                 alimenta il controller
- *   effect = numero effetto    sceglie quale firmware caricare
- *   cfg    = 1                 lo applica
+ *   hwen   = 1                 powers the controller
+ *   effect = effect number     picks which firmware to load
+ *   cfg    = 1                 applies it
  *
- * Due dettagli, entrambi verificati sul device, che è facile sbagliare:
+ * Two details, both verified on the device, that are easy to get wrong:
  *
- * 1. I valori vanno scritti senza andare a capo. Il "\n" di echo fa ricadere il
- *    driver sullo zero, cioè spegne.
+ * 1. Values must be written without a trailing newline. The "\n" from echo makes
+ *    the driver fall back to zero, that is, it turns the LED off.
  *
- * 2. Il nodo effect accetta **una sola cifra decimale**: gli indici da 10 in su
- *    vengono rifiutati e azzerati. Si può verificare rileggendo il nodo dopo la
- *    scrittura. Restano quindi fuori portata charging.bin (0xa),
- *    full_charged.bin (0xb) e short_message_notice.bin (0xd), che pure esistono
- *    in /vendor/firmware. Non è una nostra mancanza: il BatteryService di
- *    fabbrica scrive proprio "10" e "11" per la ricarica, valori che questo
- *    driver rifiuta, quindi quegli effetti non funzionavano neanche nella ROM
- *    originale. Qui si usano gli effetti raggiungibili.
+ * 2. The effect node accepts **a single decimal digit**: indexes from 10 upwards
+ *    are rejected and zeroed. This can be checked by reading the node back after
+ *    writing. So charging.bin (0xa), full_charged.bin (0xb) and
+ *    short_message_notice.bin (0xd) stay out of reach, even though they do exist
+ *    in /vendor/firmware. This is not a shortcoming of ours: the stock
+ *    BatteryService writes exactly "10" and "11" for charging, values this
+ *    driver rejects, so those effects did not work in the original ROM either.
+ *    Here we use the effects that can be reached.
  */
 public final class LedController {
 
@@ -42,7 +42,7 @@ public final class LedController {
     private static final String NODE_EFFECT = BASE + "effect";
     private static final String NODE_CFG = BASE + "cfg";
 
-    // Effetti raggiungibili, come li elenca il nodo cfg del driver.
+    // Reachable effects, as the driver's cfg node lists them.
     public static final int EFFECT_OFF = 0;
     public static final int EFFECT_ON = 1;
     public static final int EFFECT_BREATH = 2;
@@ -63,7 +63,7 @@ public final class LedController {
         return FileUtils.isAccessible(NODE_CFG);
     }
 
-    /** Esegue l'effetto indicato, se non è già quello in corso. */
+    /** Runs the given effect, unless it is already the one playing. */
     public static synchronized void setEffect(int effect) {
         if (effect == sCurrentEffect) {
             return;

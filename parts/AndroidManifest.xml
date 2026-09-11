@@ -11,9 +11,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- Serve a togglePanel(): uno dei gesti del sensore di impronte apre e
-         chiude il pannello delle notifiche. È di livello "normal", quindi non
-         va aggiunta anche a privapp-permissions-s88pro.xml. -->
+    <!-- Needed by togglePanel(): one of the fingerprint sensor gestures opens
+         and closes the notification shade. It is "normal" level, so it does
+         not also need adding to privapp-permissions-s88pro.xml. -->
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
 
     <application
@@ -42,12 +42,12 @@
         </service>
 
         <!--
-             La voce nelle Impostazioni.
+             The entry in Settings.
 
-             L'icona non è un vezzo: senza il meta-data com.android.settings.icon
-             la voce non viene mostrata affatto, pur essendo registrata.
-             La categoria "homepage" la mette nella pagina principale, dove si
-             trova senza doverla cercare in un sottomenù.
+             The icon is not a flourish: without the com.android.settings.icon
+             meta-data the entry is not shown at all, even though it is
+             registered. The "homepage" category puts it on the main page,
+             where it is found without hunting through a submenu.
         -->
         <activity
             android:name=".DeviceSettingsActivity"

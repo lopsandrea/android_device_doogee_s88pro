@@ -9,21 +9,21 @@ package org.lineageos.settings.doogee.power;
 import org.lineageos.settings.doogee.utils.FileUtils;
 
 /**
- * Ricarica inversa: il telefono alimenta un altro dispositivo appoggiato sul retro.
+ * Reverse charging: the phone powers another device resting on its back.
  *
- * Il comando sta nel gruppo sysfs del chip di ricarica wireless MT5725. Lo
- * stato si legge dallo stesso nodo, che risponde "reverse_charger en : 0"
- * oppure "... : 1".
+ * The control lives in the sysfs group of the MT5725 wireless charging chip.
+ * The state is read from the same node, which answers "reverse_charger en : 0"
+ * or "... : 1".
  *
- * Il nodo "online" sotto /sys/class/power_supply/rvs/ non si usa: e' di sola
- * lettura, e con SELinux in Enforcing e' anche irraggiungibile, perche'
- * domain.te:1316 vieta ai domini di piattaforma di leggere i file
- * sysfs_batteryinfo e rimanda alla health HAL -- che pero' espone i
- * power_supply standard, non un "rvs" del vendor.
+ * The "online" node under /sys/class/power_supply/rvs/ is not used: it is read
+ * only, and with SELinux in Enforcing it is also unreachable, because
+ * domain.te:1316 forbids platform domains from reading sysfs_batteryinfo files
+ * and points at the health HAL -- which, however, exposes the standard
+ * power_supply nodes, not a vendor "rvs".
  *
- * Il nodo di comando invece si scrive, ma solo da quando ha un tipo suo
- * (sysfs_rvs, vedi sepolicy/system_ext/private/genfs_contexts): come sysfs
- * generico non lo poteva toccare nessuno, nemmeno init.
+ * The control node, on the other hand, can be written, but only since it got a
+ * type of its own (sysfs_rvs, see sepolicy/system_ext/private/genfs_contexts):
+ * as generic sysfs nobody could touch it, not even init.
  */
 public final class ReverseChargingController {
 
@@ -42,7 +42,7 @@ public final class ReverseChargingController {
     }
 
     public static boolean isEnabled() {
-        final String stato = FileUtils.readLine(NODE);
-        return stato != null && stato.trim().endsWith("1");
+        final String state = FileUtils.readLine(NODE);
+        return state != null && state.trim().endsWith("1");
     }
 }

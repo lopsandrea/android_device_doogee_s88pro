@@ -1,28 +1,28 @@
-Albero di dispositivo per DOOGEE S88 Pro (s88pro)
-=================================================
+Device tree for DOOGEE S88 Pro (s88pro)
+=======================================
 
-Il DOOGEE S88 Pro e' uno smartphone rugged del 2020. Questo albero costruisce
+The DOOGEE S88 Pro is a rugged smartphone from 2020. This tree builds
 LineageOS 20.
 
-Caratteristiche, misurate sul dispositivo
------------------------------------------
+Specifications, measured on the device
+--------------------------------------
 
-| voce | valore | come e' stato letto |
-|------|--------|---------------------|
+| item | value | how it was read |
+|------|-------|-----------------|
 | SoC | MediaTek Helio P70 (MT6771) | `ro.board.platform` |
-| CPU | 8 core, fino a 2.106 GHz | `/proc/cpuinfo`, `cpufreq/cpuinfo_max_freq` |
+| CPU | 8 cores, up to 2.106 GHz | `/proc/cpuinfo`, `cpufreq/cpuinfo_max_freq` |
 | GPU | Mali-G72 MP3 | `glGetString(GL_RENDERER)` |
 | RAM | 6 GB | `MemTotal: 5900900 kB` |
-| Archiviazione | 128 GB | `df` su `/data`: 107 GiB utili |
-| Schermo | 1080x2340, densita' 480 | `wm size`, `wm density` |
-| Camera posteriore | Sony IMX230, cattura 5344x4016 | driver imgsensor |
-| Camera frontale | Samsung S5K3P3SX | driver imgsensor |
+| Storage | 128 GB | `df` on `/data`: 107 GiB usable |
+| Display | 1080x2340, density 480 | `wm size`, `wm density` |
+| Rear camera | Sony IMX230, 5344x4016 capture | imgsensor driver |
+| Front camera | Samsung S5K3P3SX | imgsensor driver |
 
-Compilare
----------
+Building
+--------
 
-Finche' i repo non stanno sotto l'organizzazione LineageOS serve il manifest
-locale (vedi il commento dentro `s88pro.xml` per il perche'):
+Until the repos live under the LineageOS organisation a local manifest is
+needed (see the comment inside `s88pro.xml` for why):
 
     mkdir -p .repo/local_manifests
     curl -o .repo/local_manifests/s88pro.xml \
@@ -33,29 +33,33 @@ locale (vedi il commento dentro `s88pro.xml` per il perche'):
     breakfast lineage_s88pro-userdebug
     mka bacon
 
-Prima di compilare, applicare le sei patch in [`patches/`](patches): toccano
-progetti comuni, quindi non possono stare nel device tree, e senza tre di esse
-il telefono non e' usabile -- SIM inutilizzabile e NFC in crash a ripetizione.
-Il README li' accanto spiega, per ciascuna, sintomo, causa e modifica.
+Before building, apply the six patches in [`patches/`](patches): they touch
+common projects, so they cannot live in the device tree, and without three of
+them the phone is unusable -- no working SIM and NFC crashing over and over.
+The README next to them explains, for each one, symptom, cause and change.
 
-Il kernel
----------
+The kernel
+----------
 
-`prebuilt/kernel` e' un `Image.gz-dtb` gia' compilato, ed e' quello che
-`BoardConfig.mk` usa. I sorgenti stanno in
+The kernel is built from source: the charter requires it, and
+`BoardConfig.mk` points at `kernel/doogee/s88pro`. The sources are in
 [android_kernel_doogee_s88pro](https://github.com/lopsandrea/android_kernel_doogee_s88pro):
-sono un albero ALPS 4.14.141 in cui i driver mancanti sono stati ricostruiti
-facendo reverse engineering del kernel di fabbrica, verificando ogni
-correzione contro il binario originale. `prebuilt/README.md` dice come
-rigenerarlo.
+an ALPS 4.14.141 tree in which the missing drivers were reconstructed by
+reverse engineering the stock kernel, checking every fix against the original
+binary.
 
-Cosa non funziona
------------------
+`prebuilt/kernel` is a pre-built `Image.gz-dtb` kept for anyone who only wants
+to install without rebuilding; it is used only with
+`TARGET_FORCE_PREBUILT_KERNEL`. `prebuilt/README.md` explains how to
+regenerate it.
 
-- **registrazione video con la camera posteriore**: il file esce con ogni
-  fotogramma di un colore uniforme. Non e' il kernel -- quello di fabbrica
-  sbaglia allo stesso modo -- e non e' l'HAL, perche' OpenCamera e Telegram
-  registrano bene sulla stessa camera.
-- **52 denial SELinux all'avvio**, fra tipi del vendor MediaTek: non chiudibili
-  dal device tree perche' la policy del vendor arriva precompilata. Nessuno
-  impedisce qualcosa. Vedi `sepolicy/`.
+What does not work
+------------------
+
+- **video recording with the rear camera**: the file comes out with every frame
+  a flat colour. It is not the kernel -- the stock one gets it wrong the same
+  way -- and it is not the HAL, because OpenCamera and Telegram record fine on
+  the same camera.
+- **52 SELinux denials at boot**, between MediaTek vendor types: not closable
+  from the device tree because the vendor policy arrives precompiled. None of
+  them prevents anything. See `sepolicy/`.

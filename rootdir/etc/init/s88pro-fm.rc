@@ -3,40 +3,40 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# Dichiara che l'antenna FM è interna.
+# Declares that the FM antenna is built in.
 #
-# Questo telefono non ha una presa per gli auricolari, che sugli altri fanno da
-# antenna. L'app FMRadio di LineageOS lo prevede: in FmService.isAntennaAvailable()
+# This phone has no headphone jack, which on other devices doubles as the
+# antenna. The LineageOS FMRadio app allows for that: in FmService.isAntennaAvailable()
 #
 #     if (FmUtils.hasBuiltInFmAntennaSupport()) return true;
 #     return mAudioManager.isWiredHeadsetOn();
 #
-# e hasBuiltInFmAntennaSupport() legge la proprietà impostata qui sotto. Senza,
-# l'app resta ferma a chiedere di collegare gli auricolari, che non si possono
-# collegare.
+# and hasBuiltInFmAntennaSupport() reads the property set below. Without it the
+# app just keeps asking for headphones to be plugged in, which cannot be
+# plugged in.
 #
-# Non si può mettere in build.prop: le proprietà ro.vendor.* dichiarate nei file
-# di system vengono rifiutate da init, e il vendor è quello di fabbrica, che non
-# ricostruiamo.
+# It cannot go in build.prop: ro.vendor.* properties declared in system files
+# are rejected by init, and the vendor image is the stock one, which we do not
+# rebuild.
 on early-init
     setprop ro.vendor.builtin_fm_antenna_support 1
 
-# Dà accesso al tuner all'app della radio.
+# Gives the radio app access to the tuner.
 #
-# Il kernel crea /dev/fm come media:media, ma l'app FMRadio gira come system e
-# resta fuori:
+# The kernel creates /dev/fm as media:media, but the FMRadio app runs as system
+# and is left out:
 #
 #     FMLIB_COM: Open /dev/fm failed, Permission denied
 #     FMLIB_CORE: FMR_pwr_up failed, [ret=-1]
 #
-# e l'unica cosa che si vede è "Al momento non disponibile", senza indizi. Nel
-# firmware di fabbrica l'app stava in product e girava con altri privilegi;
-# qui si sposta la proprietà del nodo.
+# and all the user sees is "Currently unavailable", with no clue why. In the
+# stock firmware the app lived in product and ran with different privileges;
+# here we change the ownership of the node instead.
 #
-# Il trigger non può essere "on boot": a quel punto /dev/fm non esiste ancora,
-# perché lo crea il modulo fmradio_drv.ko, che il vendor carica solo quando il
-# chip di connettività è pronto (vendor.connsys.driver.ready=yes). Il chown
-# fallirebbe in silenzio. A boot completato il nodo c'è di sicuro.
+# The trigger cannot be "on boot": at that point /dev/fm does not exist yet,
+# because it is created by the fmradio_drv.ko module, which the vendor loads
+# only once the connectivity chip is ready (vendor.connsys.driver.ready=yes).
+# The chown would fail silently. Once boot is complete the node is certainly there.
 on property:sys.boot_completed=1
     chown system system /dev/fm
     chmod 0660 /dev/fm

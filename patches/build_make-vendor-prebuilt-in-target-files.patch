@@ -7,9 +7,9 @@ index fb655cd..3aacbe1 100644
  	    $(TARGET_OUT_DATA),$(zip_root)/DATA)
  endif
 -ifdef BUILDING_VENDOR_IMAGE
-+# La vendor entra nel target-files anche quando e' un'immagine gia' pronta:
-+# senza la directory, il generatore dell'OTA non trova la partizione e si ferma
-+# con "vendor is in target super_..._partition_list but no BlockDifference
++# Vendor goes into the target-files even when it is a ready-made image:
++# without the directory, the OTA generator cannot find the partition and stops
++# with "vendor is in target super_..._partition_list but no BlockDifference
 +# object is provided".
 +ifneq (,$(BUILDING_VENDOR_IMAGE)$(BOARD_PREBUILT_VENDORIMAGE))
  	@# Contents of the vendor image
@@ -19,25 +19,25 @@ index fb655cd..3aacbe1 100644
  ifdef BOARD_PREBUILT_VENDORIMAGE
  	$(hide) mkdir -p $(zip_root)/IMAGES
  	$(hide) cp $(INSTALLED_VENDORIMAGE_TARGET) $(zip_root)/IMAGES/
-+	@# Un'immagine gia' pronta va trattata come non sparse.
++	@# A ready-made image has to be treated as non-sparse.
 +	@#
-+	@# generate-image-prop-dictionary scrive "<part>_disable_sparse=true"
-+	@# quando la partizione non ha una dimensione dichiarata, ma la chiama
-+	@# solo per le partizioni che il build costruisce: con
-+	@# BOARD_PREBUILT_VENDORIMAGE quel giro non avviene e il flag manca.
++	@# generate-image-prop-dictionary writes "<part>_disable_sparse=true"
++	@# when the partition has no declared size, but it is only called for
++	@# the partitions the build constructs: with
++	@# BOARD_PREBUILT_VENDORIMAGE that pass never happens and the flag is missing.
 +	@#
-+	@# Senza, GetUserImage prende il ramo sparse e pretende due cose che qui
-+	@# non esistono -- la mappa dei blocchi accanto all'immagine e ogni file
-+	@# della mappa presente nel target-files:
++	@# Without it, GetUserImage takes the sparse branch and demands two things
++	@# that do not exist here -- the block map next to the image and every file
++	@# of the map present in the target-files:
 +	@#   assert os.path.exists(path) and os.path.exists(mappath)
 +	@#   AssertionError: Failed to find the ZIP entry for ...
-+	@# Con il flag legge l'immagine e basta, che e' quello che serve.
++	@# With the flag it just reads the image, which is what we want.
 +	$(hide) echo "vendor_disable_sparse=true" >> $(zip_root)/META/misc_info.txt
-+	@# Anche il ramo non sparse pretende che la mappa dei blocchi esista
-+	@# accanto all'immagine, benche' poi non la legga:
++	@# The non-sparse branch too insists the block map exists next to the
++	@# image, even though it never reads it:
 +	@#   assert os.path.exists(path) and os.path.exists(mappath)
 +	@#   return images.FileImage(path, ...)
-+	@# e2fsdroid la ricava dall'immagine senza toccarla.
++	@# e2fsdroid derives it from the image without touching it.
 +	$(hide) $(HOST_OUT_EXECUTABLES)/e2fsdroid -e \
 +	    -B $(zip_root)/IMAGES/vendor.map $(zip_root)/IMAGES/vendor.img
  endif

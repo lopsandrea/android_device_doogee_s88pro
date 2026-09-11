@@ -4,15 +4,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# Estrae i blob proprietari dalle immagini stock montate in /mnt/stock.
+# Extracts the proprietary blobs from the stock images mounted at /mnt/stock.
 #
-# Perche' da immagini e non da device via adb, come fa lo script standard di
-# LineageOS: le immagini sono quelle estratte dalla super del telefono in
-# Fase 2 e corrispondono al firmware di fabbrica, mentre il device e' stato
-# modificato piu' volte. La sorgente e' quindi piu' affidabile e ripetibile.
+# Why from images and not from the device over adb, as the standard LineageOS
+# script does: the images are the ones extracted from the phone's super in
+# Phase 2 and match the stock firmware, whereas the device has been modified
+# several times. The source is therefore more reliable and repeatable.
 #
-# Nota sui percorsi: system.img e' system-as-root, quindi i file stanno in
-# /mnt/stock/system/system/... mentre nel device tree il prefisso e' "system/".
+# A note on paths: system.img is system-as-root, so the files live under
+# /mnt/stock/system/system/... while in the device tree the prefix is "system/".
 set -euo pipefail
 
 DEVICE=s88pro
@@ -21,14 +21,14 @@ SRC_SYSTEM=/mnt/stock/system
 SRC_VENDOR=/mnt/stock/vendor
 SRC_PRODUCT=/mnt/stock/product
 
-# La partizione product non e' montata (montarla vuole root) ma la sua immagine
-# c'e' fra gli artefatti, e debugfs la legge senza privilegi. Serve per
-# libfmjni.so, che nella ROM di fabbrica sta in product/lib* e non in system.
+# The product partition is not mounted (mounting it needs root) but its image
+# is among the artefacts, and debugfs reads it without privileges. It is needed
+# for libfmjni.so, which in the stock ROM lives in product/lib* and not system.
 PRODUCT_IMG=/mnt/s88pro/gsi-work/product.img
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DEST="$HERE/../../../vendor/$VENDOR/$DEVICE/proprietary"
 
-[ -d "$SRC_SYSTEM/system" ] || { echo "system.img non montata in $SRC_SYSTEM" >&2; exit 1; }
+[ -d "$SRC_SYSTEM/system" ] || { echo "system.img not mounted at $SRC_SYSTEM" >&2; exit 1; }
 
 mkdir -p "$DEST"
 copied=0
@@ -38,17 +38,17 @@ while read -r line; do
   case "$line" in ''|'#'*) continue ;; esac
   f="${line#-}"
 
-  # Sintassi "sorgente:destinazione", come nell'extract_utils di LineageOS:
-  # serve quando un blob va installato con un altro nome. Qui capita per
-  # ims-common.jar, che diventa mtk-ims-compat.jar per non sovrapporsi
-  # all'ims-common.jar che compiliamo noi e che serve al framework.
+  # "source:destination" syntax, as in LineageOS' extract_utils: it is needed
+  # when a blob has to be installed under a different name. That happens here for
+  # ims-common.jar, which becomes mtk-ims-compat.jar so as not to clash with the
+  # ims-common.jar we build ourselves and that the framework needs.
   case "$f" in
     *:*) dst="${f#*:}"; f="${f%%:*}" ;;
     *)   dst="$f" ;;
   esac
 
-  # I file di product si prendono dall'immagine con debugfs, se la partizione
-  # non e' montata: dentro l'immagine il percorso non ha il prefisso "product/".
+  # Files in product are taken from the image with debugfs when the partition is
+  # not mounted: inside the image the path has no "product/" prefix.
   case "$f" in
     product/*)
       if [ -d "$SRC_PRODUCT" ]; then
@@ -59,7 +59,7 @@ while read -r line; do
              && [ -s "$DEST/$dst" ]; then
           copied=$((copied+1))
         else
-          echo "MANCA: $f  (non estratto da $PRODUCT_IMG)" >&2
+          echo "MISSING: $f  (not extracted from $PRODUCT_IMG)" >&2
           missing=$((missing+1))
         fi
         continue
@@ -77,11 +77,11 @@ while read -r line; do
     cp -a "$src" "$DEST/$dst"
     copied=$((copied+1))
   else
-    echo "MANCA: $f  (cercato in $src)" >&2
+    echo "MISSING: $f  (looked for in $src)" >&2
     missing=$((missing+1))
   fi
 done < "$HERE/proprietary-files.txt"
 
-echo "blob copiati: $copied, mancanti: $missing"
-echo "destinazione: $DEST"
+echo "blobs copied: $copied, missing: $missing"
+echo "destination: $DEST"
 [ "$missing" -eq 0 ] || exit 1

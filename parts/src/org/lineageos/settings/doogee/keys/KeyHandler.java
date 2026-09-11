@@ -21,29 +21,28 @@ import android.view.KeyEvent;
 import com.android.internal.os.DeviceKeyHandler;
 
 /**
- * Dà una funzione ai tasti programmabili sulla scocca e ai gesti sul sensore
- * di impronte.
+ * Gives a function to the programmable keys on the case and to the gestures on
+ * the fingerprint sensor.
  *
- * I due tasti arrivano entrambi da mtk-kpd: quello arancione come KEY_F5
- * (scancode 63) e quello sotto come KEY_CAMERA (212). Nel firmware di fabbrica
- * era il framework a intercettarli, con le impostazioni custom_key_pkg_onepress
- * e custom_key_pkg_longpress; qui si usa invece il meccanismo previsto da
- * LineageOS, che chiama questa classe per ogni tasto prima di consegnarlo
- * all'app in primo piano.
+ * Both keys come from mtk-kpd: the orange one as KEY_F5 (scancode 63) and the
+ * one below it as KEY_CAMERA (212). In the stock firmware the framework caught
+ * them, through the custom_key_pkg_onepress and custom_key_pkg_longpress
+ * settings; here we use the mechanism LineageOS provides instead, which calls
+ * this class for every key before delivering it to the foreground app.
  *
- * I gesti del sensore di impronte arrivano invece da un secondo input device,
- * sf-keys, creato dal driver sunwave-fp. Verificato con getevent: il tocco
- * arriva come F10 e i due scorrimenti trasversali come DPAD_LEFT e DPAD_RIGHT
- * (il sensore risolve un asse solo; gli scorrimenti nell'altro verso vengono
- * classificati come tocco). Non sono attivi di serie: la HAL li riporta solo
- * con <navigation>true</navigation> in /vendor/etc/sw_config.xml.
+ * The fingerprint sensor gestures come from a second input device, sf-keys,
+ * created by the sunwave-fp driver. Verified with getevent: the tap arrives as
+ * F10 and the two crosswise swipes as DPAD_LEFT and DPAD_RIGHT (the sensor
+ * resolves one axis only; swipes along the other axis are classified as taps).
+ * They are not on by default: the HAL reports them only with
+ * <navigation>true</navigation> in /vendor/etc/sw_config.xml.
  *
- * Restituire null significa "tasto consumato". Per i due tasti della scocca
- * l'azione "nessuna" lascia proseguire l'evento, che mantiene il comportamento
- * predefinito di Android. Per il sensore di impronte vale il contrario:
- * "nessuna" **consuma**, perché lasciar passare DPAD_LEFT/RIGHT farebbe
- * spostare il fuoco nelle app a ogni sfioramento del sensore, cosa che nessuno
- * si aspetta. Chi quel comportamento lo vuole sceglie l'azione "dpad".
+ * Returning null means "key consumed". For the two case keys the "none"
+ * action lets the event through, which keeps Android's default behaviour. For
+ * the fingerprint sensor the opposite holds: "none" **consumes**, because
+ * letting DPAD_LEFT/RIGHT through would move focus inside apps every time the
+ * sensor is brushed, which nobody expects. Whoever wants that behaviour picks
+ * the "dpad" action.
  */
 public class KeyHandler implements DeviceKeyHandler {
 
@@ -85,8 +84,8 @@ public class KeyHandler implements DeviceKeyHandler {
             return handleFingerprintGesture(event);
         }
 
-        // Si agisce al rilascio, e una sola volta: i tasti tenuti premuti
-        // generano ripetizioni che altrimenti farebbero lampeggiare la torcia.
+        // We act on release, and only once: keys held down generate repeats that would
+        // otherwise make the torch flash.
         if (event.getAction() != KeyEvent.ACTION_UP || event.getRepeatCount() != 0) {
             return event;
         }
@@ -134,10 +133,9 @@ public class KeyHandler implements DeviceKeyHandler {
             case KeyEvent.KEYCODE_F10:
             case KeyEvent.KEYCODE_DPAD_LEFT:
             case KeyEvent.KEYCODE_DPAD_RIGHT:
-                // Il sensore e' l'unica sorgente di questi tre su questo
-                // telefono, ma una tastiera USB o Bluetooth no: senza il
-                // controllo sul device, collegarne una farebbe sparire le
-                // frecce direzionali.
+                // The sensor is the only source of these three on this phone, but a USB or
+                // Bluetooth keyboard is not: without the device check, plugging one in would
+                // make the arrow keys disappear.
                 return "sf-keys".equals(event.getDevice() != null
                         ? event.getDevice().getName() : null);
             default:
@@ -146,9 +144,9 @@ public class KeyHandler implements DeviceKeyHandler {
     }
 
     /**
-     * I gesti sul sensore, a differenza dei tasti della scocca, vanno gestiti
-     * su entrambe le metà dell'evento: consumare solo il rilascio lascerebbe
-     * passare la pressione, e l'app riceverebbe un DPAD spaiato.
+     * Sensor gestures, unlike the case keys, have to be handled on both halves of
+     * the event: consuming only the release would let the press through, and the
+     * app would receive an unpaired DPAD.
      */
     private KeyEvent handleFingerprintGesture(KeyEvent event) {
         final String actionPref;
@@ -172,21 +170,21 @@ public class KeyHandler implements DeviceKeyHandler {
                 PreferenceManager.getDefaultSharedPreferences(mContext);
         final String action = prefs.getString(actionPref, ACTION_NONE);
 
-        // "dpad" e' l'unica azione che lascia proseguire l'evento cosi' com'e':
-        // serve a chi vuole davvero le frecce direzionali dal sensore.
+        // "dpad" is the only action that lets the event through as it is: it is for
+        // those who genuinely want arrow keys from the sensor.
         if (ACTION_DPAD.equals(action)) {
             return event;
         }
 
-        // "indietro" si ottiene riscrivendo il keycode invece di iniettare un
-        // evento nuovo: PhoneWindowManager usa l'evento che restituiamo, quindi
-        // pressione e rilascio restano accoppiati e nell'ordine giusto.
+        // "back" is obtained by rewriting the keycode rather than injecting a new
+        // event: PhoneWindowManager uses the event we return, so press and release
+        // stay paired and in the right order.
         if (ACTION_BACK.equals(action)) {
             return remap(event, KeyEvent.KEYCODE_BACK);
         }
 
-        // Le azioni restanti scattano una sola volta, al rilascio; la pressione
-        // si consuma in silenzio.
+        // The remaining actions fire once, on release; the press is consumed
+        // silently.
         if (event.getAction() != KeyEvent.ACTION_UP || event.getRepeatCount() != 0) {
             return null;
         }
@@ -199,8 +197,8 @@ public class KeyHandler implements DeviceKeyHandler {
             launchApp(prefs.getString(packagePref, null));
         }
 
-        // Anche con "nessuna azione" l'evento si consuma: vedi il commento in
-        // testa alla classe.
+        // Even with "no action" the event is consumed: see the comment at the top of
+        // the class.
         return null;
     }
 
@@ -217,9 +215,9 @@ public class KeyHandler implements DeviceKeyHandler {
         if (statusBar == null) {
             return;
         }
-        // togglePanel() invece di expand/collapse con uno stato nostro: il
-        // pannello si chiude anche con uno scorrimento sullo schermo, e un
-        // booleano qui si desincronizzerebbe alla prima volta.
+        // togglePanel() rather than expand/collapse with state of our own: the shade
+        // also closes with a swipe on the screen, and a boolean here would fall out of
+        // sync the first time.
         statusBar.togglePanel();
     }
 
@@ -230,7 +228,7 @@ public class KeyHandler implements DeviceKeyHandler {
         final PackageManager pm = mContext.getPackageManager();
         final Intent intent = pm.getLaunchIntentForPackage(packageName);
         if (intent == null) {
-            Log.w(TAG, "Nessuna activity da avviare per " + packageName);
+            Log.w(TAG, "No activity to launch for " + packageName);
             return false;
         }
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -252,7 +250,7 @@ public class KeyHandler implements DeviceKeyHandler {
             mTorchEnabled = !mTorchEnabled;
             mCameraManager.setTorchMode(mTorchCameraId, mTorchEnabled);
         } catch (CameraAccessException | IllegalArgumentException e) {
-            Log.e(TAG, "Torcia non disponibile", e);
+            Log.e(TAG, "Torch unavailable", e);
             mTorchEnabled = false;
         }
     }

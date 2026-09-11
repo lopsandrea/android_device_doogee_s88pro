@@ -3,27 +3,27 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# L'USB della recovery.
+# USB in recovery.
 #
-# La recovery di AOSP parte dando per scontato l'USB "legacy": il suo init.rc
-# fa "setprop sys.usb.configfs 0" e poi scrive su /sys/class/android_usb/android0,
-# che questo kernel non ha. Qui l'USB passa da configfs, come in Android, dove
-# sys.usb.configfs vale 1 e il gadget si chiama musb-hdrc -- lo dice il driver:
+# AOSP recovery starts out assuming "legacy" USB: its init.rc does
+# "setprop sys.usb.configfs 0" and then writes to /sys/class/android_usb/android0,
+# which this kernel does not have. Here USB goes through configfs, as in
+# Android, where sys.usb.configfs is 1 and the gadget is called musb-hdrc -- the driver says so:
 #
 #   drivers/usb/mtu3/mtu3_plat_v2.c:564   dev_set_name(dev, "musb-hdrc");
 #
-# e lo conferma il telefono acceso, dove /sys/class/udc contiene una sola voce,
+# and the running phone confirms it: /sys/class/udc holds a single entry,
 # musb-hdrc.
 #
-# Senza questo file la recovery si vede benissimo sullo schermo ma non risponde
-# ad adb: niente sideload, quindi niente installazione dello zip.
+# Without this file recovery shows perfectly well on screen but does not answer
+# adb: no sideload, hence no way to install the zip.
 #
-# Il ramo configfs che bootable/recovery/etc/init.rc ha gia' prepara il gadget
-# -- idVendor, stringhe, ffs.adb, ffs.fastboot, la configurazione b.1 -- ma non
-# lo attacca mai al controller. La scrittura su UDC AOSP la lascia al device, ed
-# e' esattamente quello che manca. Il ramo legacy invece la fa
-# ("write /sys/class/android_usb/android0/enable 1"), il che spiega perche' sui
-# device vecchi funziona da solo e qui no.
+# The configfs branch that bootable/recovery/etc/init.rc already has prepares
+# the gadget -- idVendor, strings, ffs.adb, ffs.fastboot, configuration b.1 --
+# but never binds it to the controller. AOSP leaves the UDC write to the device,
+# and that is exactly what is missing. The legacy branch does do it
+# ("write /sys/class/android_usb/android0/enable 1"), which explains why it
+# works by itself on older devices and not here.
 
 on init
     setprop sys.usb.configfs 1
@@ -36,9 +36,9 @@ on property:sys.usb.config=adb && property:sys.usb.configfs=1
     write /config/usb_gadget/g1/UDC ${sys.usb.controller}
     setprop sys.usb.state ${sys.usb.config}
 
-# sideload usa la stessa funzione di adb, quindi il collegamento f1 e' gia' al
-# suo posto e il symlink qui sotto non fa nulla: si lascia perche' la recovery
-# puo' entrare in sideload senza passare da adb.
+# sideload uses the same function as adb, so the f1 symlink is already in place
+# and the one below does nothing: it stays because recovery can enter sideload
+# without going through adb.
 on property:sys.usb.config=sideload && property:sys.usb.configfs=1
     write /config/usb_gadget/g1/idProduct ${ro.recovery.usb.adb.pid}
     write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "sideload"
@@ -46,9 +46,9 @@ on property:sys.usb.config=sideload && property:sys.usb.configfs=1
     write /config/usb_gadget/g1/UDC ${sys.usb.controller}
     setprop sys.usb.state ${sys.usb.config}
 
-# fastboot cambia funzione, quindi il collegamento va staccato prima: si stacca
-# il gadget dal controller, si toglie f1 e si rifa. Nell'altro ordine il kernel
-# rifiuta la modifica, perche' un gadget attivo non si tocca.
+# fastboot changes function, so the link has to be detached first: unbind the
+# gadget from the controller, remove f1 and remake it. In the other order the
+# kernel refuses the change, because an active gadget must not be touched.
 on property:sys.usb.config=fastboot && property:sys.usb.configfs=1
     write /config/usb_gadget/g1/UDC "none"
     rm /config/usb_gadget/g1/configs/b.1/f1

@@ -27,8 +27,8 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Le impostazioni specifiche del Doogee S88 Pro: LED della scocca, tasti
- * programmabili e ricarica inversa.
+ * The Doogee S88 Pro specific settings: case LEDs, programmable keys and
+ * reverse charging.
  */
 public class DeviceSettingsFragment extends PreferenceFragmentCompat
         implements Preference.OnPreferenceChangeListener {
@@ -71,9 +71,9 @@ public class DeviceSettingsFragment extends PreferenceFragmentCompat
         setupAppList(KeyHandler.PREF_KEY_F5_PACKAGE);
         setupAppList(KeyHandler.PREF_KEY_CAMERA_PACKAGE);
 
-        // I gesti del sensore hanno senso solo se il lettore c'è: sulle
-        // varianti senza, la categoria sparisce invece di offrire impostazioni
-        // che non fanno niente.
+        // Sensor gestures only make sense when the reader is there: on variants
+        // without one the category disappears instead of offering settings that do
+        // nothing.
         final PreferenceCategory fpCategory = findPreference(CATEGORY_FINGERPRINT);
         if (fpCategory != null && !requireContext().getPackageManager()
                 .hasSystemFeature(PackageManager.FEATURE_FINGERPRINT)) {
@@ -85,7 +85,7 @@ public class DeviceSettingsFragment extends PreferenceFragmentCompat
         setupAppList(KeyHandler.PREF_FP_RIGHT_PACKAGE);
     }
 
-    /** Riempie l'elenco delle app avviabili, per i tasti impostati su "apri un'app". */
+    /** Fills the list of launchable apps, for keys set to "open an app". */
     private void setupAppList(String key) {
         final ListPreference pref = findPreference(key);
         if (pref == null) {
@@ -119,8 +119,8 @@ public class DeviceSettingsFragment extends PreferenceFragmentCompat
             return true;
         }
 
-        // Le preferenze del LED vengono lette dal servizio: basta svegliarlo
-        // perché rivaluti che cosa mostrare.
+        // The LED preferences are read by the service: waking it is enough for it to
+        // re-evaluate what to show.
         requireContext().startService(new Intent(requireContext(), LedService.class));
         return true;
     }

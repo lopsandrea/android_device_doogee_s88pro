@@ -20,11 +20,11 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 
 /**
- * Accende la striscia RGB posteriore in base a cosa sta facendo il telefono.
+ * Lights the rear RGB strip according to what the phone is doing.
  *
- * Le priorità sono quelle del firmware di fabbrica: una chiamata in arrivo
- * conta più dello stato della batteria, che a sua volta conta più delle
- * notifiche. Il LED torna spento quando non c'è nulla da segnalare.
+ * The priorities are those of the stock firmware: an incoming call outranks
+ * the battery state, which in turn outranks notifications. The LED goes back
+ * to off when there is nothing to signal.
  */
 public class LedService extends Service {
 
@@ -35,7 +35,7 @@ public class LedService extends Service {
     public static final String PREF_LED_NOTIFICATIONS = "led_notifications";
     public static final String PREF_LED_CALLS = "led_calls";
 
-    /** Inviata dal listener delle notifiche quando cambia il numero di notifiche attive. */
+    /** Sent by the notification listener when the number of active notifications changes. */
     public static final String ACTION_NOTIFICATIONS_CHANGED =
             "org.lineageos.settings.doogee.NOTIFICATIONS_CHANGED";
     public static final String EXTRA_HAS_NOTIFICATIONS = "has_notifications";
@@ -77,7 +77,7 @@ public class LedService extends Service {
         super.onCreate();
 
         if (!LedController.isSupported()) {
-            Log.w(TAG, "Nessun LED aw22xxx su questo device, il servizio si ferma");
+            Log.w(TAG, "No aw22xxx LED on this device, the service is stopping");
             stopSelf();
             return;
         }
@@ -101,7 +101,7 @@ public class LedService extends Service {
         try {
             unregisterReceiver(mReceiver);
         } catch (IllegalArgumentException ignored) {
-            // Il servizio può essersi fermato prima di registrarsi.
+            // The service may have stopped before registering.
         }
         if (mTelephonyManager != null) {
             mTelephonyManager.listen(mPhoneStateListener, PhoneStateListener.LISTEN_NONE);
@@ -126,9 +126,9 @@ public class LedService extends Service {
             return;
         }
 
-        // Gli effetti pensati per ricarica e SMS non sono raggiungibili su
-        // questo driver (vedi LedController): al loro posto si usano quelli
-        // disponibili che rendono meglio l'idea.
+        // The effects meant for charging and SMS cannot be reached on this driver
+        // (see LedController): the available ones that best convey the idea are used
+        // in their place.
         if (mRinging && mPrefs.getBoolean(PREF_LED_CALLS, true)) {
             LedController.setEffect(LedController.EFFECT_CALL_REMINDER);
         } else if (mPrefs.getBoolean(PREF_LED_CHARGING, true) && mFullyCharged) {

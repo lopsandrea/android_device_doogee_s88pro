@@ -3,34 +3,34 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# La shell sulla console seriale non deve partire da sola.
+# The serial console shell must not start by itself.
 #
-# AOSP la avvia su ogni build userdebug, in system/core/rootdir/init.rc:
+# AOSP starts it on every userdebug build, in system/core/rootdir/init.rc:
 #
 #     on init && property:ro.debuggable=1
 #         start console
 #
-# e LineageOS costruisce userdebug, quindi ce la troviamo accesa. E' una shell
-# "user shell" (non root) su /dev/console, cioe' sulla UART: chi ha accesso
-# fisico ai pad di test si trova davanti un prompt senza dover sbloccare nulla.
-# Serve durante il bring-up, non su un telefono in mano a qualcuno.
+# and LineageOS builds userdebug, so we get it running. It is a "user shell"
+# (not root) on /dev/console, that is on the UART: anyone with physical access
+# to the test pads gets a prompt without having to unlock anything. Useful
+# during bring-up, not on a phone in someone's hands.
 #
-# La console del kernel resta invece attiva -- i printk continuano a uscire su
-# ttyMT3, e sono l'unica traccia che si ha quando il sistema muore prima di
-# aprire logd. Quella e' identica al kernel di fabbrica (CONFIG_SERIAL_8250_CONSOLE=y
-# e "console=tty0 console=ttyMT3,921600n1" nella CONFIG_CMDLINE): qui non si
-# tocca, si spegne solo la shell.
+# The kernel console stays on, though -- printk still comes out on ttyMT3, and
+# it is the only trace available when the system dies before opening logd. That
+# is identical to the stock kernel (CONFIG_SERIAL_8250_CONSOLE=y and
+# "console=tty0 console=ttyMT3,921600n1" in CONFIG_CMDLINE): that is untouched
+# here, only the shell goes away.
 #
-# Perche' "on init" funziona da /system/etc/init: da Android 11 init parsa
-# quella directory subito dopo init.rc (init.cpp, ParseConfig("/system/etc/init")),
-# non piu' come late import. Gli action finiscono in coda nell'ordine in cui i
-# file sono stati letti, quindi questo "stop" viene eseguito subito dopo lo
-# "start" di AOSP, nello stesso trigger. Lo "stop" lascia il servizio marcato
-# SVC_DISABLED, cosi' non torna su con il "class_start core" di "on boot".
+# Why "on init" works from /system/etc/init: since Android 11 init parses that
+# directory right after init.rc (init.cpp, ParseConfig("/system/etc/init")), no
+# longer as a late import. Actions are queued in the order the files were read,
+# so this "stop" runs right after AOSP's "start", within the same trigger. The
+# "stop" leaves the service marked SVC_DISABLED, so it does not come back up
+# with the "class_start core" in "on boot".
 #
-# Per riaccenderla quando serve, senza ricostruire nulla:
+# To turn it back on when needed, without rebuilding anything:
 #     adb root && adb shell start console
-# oppure, da init, un "setprop ctl.start console".
+# or, from init, a "setprop ctl.start console".
 
 on init
     stop console

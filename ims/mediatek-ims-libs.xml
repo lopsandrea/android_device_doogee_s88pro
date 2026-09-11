@@ -6,30 +6,32 @@
 -->
 
 <!--
-     Librerie condivise per ImsService di MediaTek (VoLTE).
+     Shared libraries for MediaTek's ImsService (VoLTE).
 
-     ImsService.apk dichiara cinque uses-library, tutte con required="false": il
-     PackageManager le aggiunge al classpath dell app solo se qualcuno le ha
-     dichiarate, e non fa fallire l installazione se mancano. I nomi che l APK
-     chiede pero' non corrispondono ai jar che contengono davvero le classi che
-     usa, quindi qui i cinque nomi disponibili sono mappati sui jar giusti.
+     ImsService.apk declares five uses-library entries, all with
+     required="false": PackageManager adds them to the app classpath only if
+     someone has declared them, and does not fail installation when they are
+     missing. The names the APK asks for, however, do not match the jars that
+     actually hold the classes it uses, so here the five available names are
+     mapped onto the right jars.
 
-     Cosa serve, e perche':
+     What is needed, and why:
 
-       mediatek-ims-base.jar        le dieci interfacce com.mediatek.ims.internal.IMtkIms*
+       mediatek-ims-base.jar        the ten com.mediatek.ims.internal.IMtkIms* interfaces
        mediatek-common.jar          OperatorCustomizationFactoryLoader
        mediatek-telephony-base.jar  MtkTelephonyManagerEx
-       mtk-ims-compat.jar           com.android.ims.ImsServiceBase, che AOSP ha rimosso
-                                    dopo Android 10 (e' l ims-common.jar della ROM di
-                                    fabbrica, installato con un altro nome)
+       mtk-ims-compat.jar           com.android.ims.ImsServiceBase, which AOSP removed
+                                    after Android 10 (it is the stock ROM's
+                                    ims-common.jar, installed under another name)
 
-     I primi tre arrivano gia' con i blob: erano in /system/framework da sempre e
-     non li usava nessuno. Il quarto e' in proprietary-files.txt.
+     The first three already come with the blobs: they had always been in
+     /system/framework and nobody used them. The fourth is in
+     proprietary-files.txt.
 
-     Restano fuori mediatek-ims-legacy.jar e mediatek-ims-common.jar, che con ogni
-     probabilita' contengono il provisioning che accende le capability MMTEL: gli
-     slot uses-library sono finiti, e per usarli va costruito un jar unione.
-     Vedi docs/bringup/volte-stato-esperimento.md
+     mediatek-ims-legacy.jar and mediatek-ims-common.jar are left out; they most
+     likely hold the provisioning that turns on the MMTEL capabilities: the
+     uses-library slots have run out, and using them would mean building a
+     merged jar. See docs/bringup/volte-stato-esperimento.md
 -->
 <permissions>
     <library name="com.mediatek.ims.legacy"

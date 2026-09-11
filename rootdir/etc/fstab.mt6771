@@ -11,26 +11,26 @@ system /system ext4 ro wait,,avb=vbmeta_system,logical,first_stage_mount,avb_key
 vendor /vendor ext4 ro wait,,avb,logical,first_stage_mount
 
 
-# /product rimossa: init non riusciva a montarla (Device or resource busy)
-# e LineageOS include i suoi contenuti dentro system.
+# /product removed: init could not mount it (Device or resource busy) and
+# LineageOS includes its contents inside system.
 
 
 
 
 
-# /metadata: reintrodotta dopo aver aggiunto BOARD_USES_METADATA_PARTITION,
-# che fa creare la directory nella system. Serve ad apexd per la sua area
-# dati: senza, gli APEX non si montano e boringssl_self_test fa riavviare.
-# Nota: su questo device /metadata vive su md_udc, non sulla partizione
-# chiamata metadata. Lo dice il fstab stock, verificato in Fase 1.
+# /metadata: reintroduced after adding BOARD_USES_METADATA_PARTITION, which
+# makes the directory be created in system. apexd needs it for its data area:
+# without it the APEXes do not mount and boringssl_self_test reboots the phone.
+# Note: on this device /metadata lives on md_udc, not on the partition called
+# metadata. The stock fstab says so, verified in Phase 1.
 /dev/block/platform/bootdevice/by-name/md_udc /metadata ext4 noatime,nosuid,nodev,discard wait,formattable,first_stage_mount
 
 /dev/block/platform/bootdevice/by-name/userdata /data ext4 noatime,nosuid,nodev,noauto_da_alloc,errors=panic wait,check,formattable,quota,resize,reservedsize=128m,checkpoint=block,fileencryption=aes-256-xts                           
 
-# /cache: la partizione c'e', e va montata su una directory vera.
+# /cache: the partition exists, and has to be mounted on a real directory.
 #
-# Il guaio non era questa riga, era che /cache in out/ era rimasto un
-# collegamento a /data/cache. Il build sceglie fra le due cose cosi'
+# The trouble was not this line, it was that /cache in out/ had stayed a
+# symlink to /data/cache. The build chooses between the two like this
 # (system/core/rootdir/Android.mk:161):
 #
 #     ifdef BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE
@@ -38,25 +38,25 @@ vendor /vendor ext4 ro wait,,avb,logical,first_stage_mount
 #     else
 #         ln -sf /data/cache $(TARGET_ROOT_OUT)/cache
 #
-# e da quando BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE c'e' la scelta e' la prima.
-# Ma "mkdir -p" non sostituisce un collegamento gia' presente, e quello creato
-# dai build precedenti era sopravvissuto in out/ a ogni ricostruzione.
+# and since BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE exists the choice is the first.
+# But "mkdir -p" does not replace an existing symlink, and the one created by
+# earlier builds had survived every rebuild in out/.
 #
-# Con il collegamento, montare /cache significava montare la partizione dentro
-# /data/cache, e init non riesce ad applicare la policy fscrypt a una
-# directory occupata dal mount di un altro filesystem:
+# With the symlink, mounting /cache meant mounting the partition inside
+# /data/cache, and init cannot apply the fscrypt policy to a directory occupied
+# by another filesystem's mount:
 #
 #     init: Failed to set encryption policy of /data/cache ...:
 #           Operation not supported on transport endpoint
 #     init: Rebooting into recovery
 #
-# Il primo avvio dopo un wipe funzionava lo stesso perche' /data non era
-# ancora montata, il collegamento non risolveva e il mount falliva -- lasciando
-# pero' un error_count che sporcava il risultato di fs_mgr_mount_all e faceva
-# saltare la creazione del keyring fscrypt. Due sintomi diversi, una causa.
+# The first boot after a wipe worked anyway because /data was not mounted yet,
+# the symlink did not resolve and the mount failed -- leaving behind an
+# error_count that spoiled the result of fs_mgr_mount_all and skipped the
+# creation of the fscrypt keyring. Two different symptoms, one cause.
 #
-# nofail resta per prudenza: se la partizione fosse illeggibile, un mount
-# fallito non deve far ricadere fs_mgr_mount_all su FS_MGR_MNTALL_FAIL
+# nofail stays as a precaution: were the partition unreadable, a failed mount
+# must not make fs_mgr_mount_all fall back to FS_MGR_MNTALL_FAIL
 # (fs_mgr.cpp:1555).
 /dev/block/platform/bootdevice/by-name/cache /cache ext4 noatime,nosuid,nodev,noauto_da_alloc,discard wait,check,formattable,nofail
 /dev/block/platform/bootdevice/by-name/protect1 /mnt/vendor/protect_f ext4 noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc wait,check,formattable

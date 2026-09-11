@@ -3,30 +3,31 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# S88ProParts, che gira come system_app.
+# S88ProParts, which runs as system_app.
 
-# I LED della scocca. I nodi in se' sono gia' suoi: la policy MediaTek dice
+# The case LEDs. The nodes themselves are already its own: the MediaTek policy
+# says
 #
 #   allow system_app_29_0 sys_leds_aw22xxx_led_hwen   (file (read write ...))
 #   allow system_app_29_0 sys_leds_aw22xxx_led_effect (file (ioctl read write ...))
 #   allow system_app_29_0 sys_leds_aw22xxx_led_cfg    (file (ioctl read write ...))
 #
-# e sono tipi suoi, non sysfs_leds. Quello che mancava era attraversare la
-# directory che li contiene, che invece e' di piattaforma:
+# and those are its own types, not sysfs_leds. What was missing was traversing
+# the directory holding them, which is a platform one instead:
 #
 #   denied { search } for comm="settings.doogee" name="leds"
 #     scontext=u:r:system_app:s0 tcontext=u:object_r:sysfs_leds:s0 tclass=dir
 #
-# Il neverallow di system/sepolicy/private/coredomain.te:32 vieta
-# sysfs_leds:file, non sysfs_leds:dir: la search si puo' concedere, ed e'
-# quanto basta perche' i LED tornino a funzionare in enforcing.
+# The neverallow in system/sepolicy/private/coredomain.te:32 forbids
+# sysfs_leds:file, not sysfs_leds:dir: the search can be granted, and that is
+# all it takes for the LEDs to work again in enforcing mode.
 allow system_app sysfs_leds:dir search;
 
-# La ricarica inversa. Il nodo che si scrive ha un tipo suo, vedi file.te e
-# genfs_contexts: come sysfs generico non lo avrebbe potuto toccare nessuno,
-# nemmeno init.
+# Reverse charging. The node being written has a type of its own, see file.te
+# and genfs_contexts: as generic sysfs nobody could have touched it, not even
+# init.
 allow system_app sysfs_rvs:file rw_file_perms;
 
-# Per arrivarci bisogna attraversare /sys/devices/platform/..., che resta
-# sysfs generico. I divieti su sysfs sono tutti su :file, mai su :dir.
+# Getting there means traversing /sys/devices/platform/..., which stays generic
+# sysfs. The prohibitions on sysfs are all on :file, never on :dir.
 allow system_app sysfs:dir search;

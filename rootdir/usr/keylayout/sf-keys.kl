@@ -1,37 +1,37 @@
-# Sensore di impronte Sunwave: keylayout dei gesti
+# Sunwave fingerprint sensor: gesture key layout
 #
-# Il lettore di impronte non e' solo un lettore: il driver `sunwave-fp` (su
-# spi0.0, benche' il nodo del device tree si chiami `mediatek,goodix-fp` --
-# board a doppio fornitore) registra un input device `sf-keys` che riporta i
-# gesti fatti sul sensore.
+# The fingerprint reader is not just a reader: the `sunwave-fp` driver (on
+# spi0.0, even though the device tree node is called `mediatek,goodix-fp` --
+# a dual-vendor board) registers an `sf-keys` input device that reports the
+# gestures made on the sensor.
 #
-# Senza questo file `sf-keys` ricade su Generic.kl, che mappa 105 e 106 come
-# DPAD_LEFT/RIGHT: gli scorrimenti finirebbero a spostare il fuoco nelle app,
-# in modo incomprensibile per chi non sa che il sensore fa anche questo. Le
-# azioni vere le decide KeyHandler, che riceve il tasto prima dell'app.
+# Without this file `sf-keys` falls back to Generic.kl, which maps 105 and 106
+# as DPAD_LEFT/RIGHT: the swipes would end up moving focus inside apps, which
+# makes no sense to anyone unaware the sensor does this too. The real actions
+# are decided by KeyHandler, which gets the key before the app does.
 #
-# I gesti NON sono attivi di serie: vanno accesi in /vendor/etc/sw_config.xml
-# con <navigation>true</navigation>, altrimenti la HAL riporta solo il tocco.
-# Vedi docs/bringup/hardware-riferimento.md.
+# The gestures are NOT on by default: they are enabled in
+# /vendor/etc/sw_config.xml with <navigation>true</navigation>, otherwise the
+# HAL reports the tap only. See docs/bringup/hardware-riferimento.md.
 #
-# Cosa e' stato osservato davvero, con `getevent -lt` mentre si usava il
-# sensore (i conteggi sono di una sessione da 45 secondi):
+# What was actually observed, with `getevent -lt` while using the sensor (the
+# counts come from a 45-second session):
 #
 #   HAL "nav Key" -> SF_KEY_F11   -> scancode  68  KEY_F10    162 eventi
 #   HAL "nav R"   -> SF_KEY_RIGHT -> scancode 106  KEY_RIGHT   34 eventi
 #   HAL "nav L"   -> SF_KEY_LEFT  -> scancode 105  KEY_LEFT    28 eventi
 #
-# Il sensore risolve un asse solo: gli scorrimenti lungo l'asse lungo del
-# telefono vengono classificati come tocco, non come direzione.
+# The sensor resolves one axis only: swipes along the phone's long axis are
+# classified as taps, not as a direction.
 
 key 68    F10
 key 105   DPAD_LEFT
 key 106   DPAD_RIGHT
 
-# Dichiarati dal driver nella bitmap di sf-keys ma mai osservati in uscita.
-# Si mappano lo stesso: se un aggiornamento della HAL o una diversa
-# configurazione li facesse comparire, arriverebbero gia' con un nome sensato
-# invece di ricadere su Generic.kl.
+# Declared by the driver in the sf-keys bitmap but never observed coming out.
+# They are mapped anyway: should a HAL update or a different configuration make
+# them appear, they would already arrive under a sensible name instead of
+# falling back to Generic.kl.
 key 103   DPAD_UP
 key 108   DPAD_DOWN
 key 102   HOME

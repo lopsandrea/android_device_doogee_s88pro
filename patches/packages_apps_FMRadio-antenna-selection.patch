@@ -15,12 +15,12 @@ index 508f090..769c18f 100644
          }
          mPowerStatus = POWER_UP;
 +
-+        // Sceglie il percorso di antenna sui device che non hanno la presa per
-+        // gli auricolari. Altrove ci pensa il broadcast HEADSET_PLUG, che qui
-+        // non arriva mai: senza questa chiamata il chip resta sul valore
-+        // predefinito. 0 e' l'antenna lunga (il cavo collegato al connettore),
-+        // 1 quella corta interna; quale delle due riceva meglio dipende dal
-+        // telefono, per cui il valore si puo' cambiare a caldo con
++        // Picks the antenna path on devices with no headphone jack. Elsewhere
++        // the HEADSET_PLUG broadcast takes care of it; here it never arrives,
++        // and without this call the chip stays on the default value. 0 is the
++        // long antenna (the cable in the connector), 1 the short internal one;
++        // which of the two receives better depends on the phone, so the value
++        // can be changed on the fly with
 +        //   setprop persist.vendor.fm.antenna 0
 +        if (FmUtils.hasBuiltInFmAntennaSupport()) {
 +            int antenna = SystemProperties.getInt("persist.vendor.fm.antenna", 1);

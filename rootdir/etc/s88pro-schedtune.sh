@@ -4,23 +4,23 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# Boost EAS per le app in primo piano. Il perche' e i numeri stanno nel file
-# init che avvia questo script: rootdir/etc/init/s88pro-schedtune.rc
+# EAS boost for foreground apps. The why and the numbers are in the init file
+# that starts this script: rootdir/etc/init/s88pro-schedtune.rc
 #
-# L'attesa non e' un vezzo: applicati subito dopo sys.boot_completed i valori
-# non attecchiscono -- prefer_idle resta, boost torna a zero -- mentre piu'
-# tardi restano. Qualcosa nell'ultima fase dell'avvio li rimette a posto;
-# passata quella, nessuno li tocca piu'.
+# The wait is not a flourish: applied right after sys.boot_completed the values
+# do not stick -- prefer_idle stays, boost goes back to zero -- while later on
+# they do. Something in the last phase of boot resets them; once that is past,
+# nobody touches them again.
 #
-# Quanto piu' tardi pero' dipende dalla versione: su Android 12 bastavano
-# cinque secondi, su Android 13 no (il servizio scriveva 10 e qualcosa lo
-# riportava a zero). Invece di indovinare un'attesa piu' lunga, si riapplica
-# finche' il valore non tiene: si esce al primo giro in cui e' rimasto.
+# How much later depends on the version, though: on Android 12 five seconds was
+# enough, on Android 13 it is not (the service wrote 10 and something put it
+# back to zero). Rather than guessing a longer wait, we reapply until the value
+# holds: we exit on the first round where it stayed.
 
 sleep 5
 
-# Le app che l'utente sta guardando: frequenza piu' alta e preferenza per i
-# core liberi. Sono i valori che AOSP usava fino ad Android 11.
+# The apps the user is looking at: higher frequency and a preference for idle
+# cores. These are the values AOSP used up to Android 11.
 for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
     echo 10 > /dev/stune/top-app/schedtune.boost
     echo 1  > /dev/stune/top-app/schedtune.prefer_idle
@@ -28,8 +28,8 @@ for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
     [ "$(cat /dev/stune/top-app/schedtune.boost)" = "10" ] && break
 done
 
-# Il resto in primo piano: nessun boost, ma comunque core liberi. Alzare anche
-# questo non serve, SystemUI sta gia' in top-app.
+# The rest of the foreground: no boost, but idle cores all the same. Raising
+# this one too is pointless, SystemUI is already in top-app.
 echo 0 > /dev/stune/foreground/schedtune.boost
 echo 1 > /dev/stune/foreground/schedtune.prefer_idle
 

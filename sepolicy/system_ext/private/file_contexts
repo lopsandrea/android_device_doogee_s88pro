@@ -1,19 +1,19 @@
-# AOSP non mappa /data/nfc, e i file dentro ereditano system_data_file. Con
-# questa riga prendono il tipo che gli spetta, e la regola di ripiego in nfc.te
-# si puo' togliere quando tutti i dispositivi sono stati ri-etichettati.
+# AOSP does not map /data/nfc, and the files inside inherit system_data_file.
+# With this line they get the type they deserve, and the fallback rule in
+# nfc.te can go once every device has been relabelled.
 /data/nfc(/.*)?    u:object_r:nfc_data_file:s0
 
 
-# Il fstab nella radice della system, che legge vold.
+# The fstab at the root of system, the one vold reads.
 #
-# AOSP etichetta qualunque /fstab.* come rootfs
-# (system/sepolicy/private/file_contexts:9), e rootfs:file nessuno lo puo'
-# leggere se non e' esplicitamente autorizzato: modprobe, ueventd,
-# vendor_init, update_engine. vold no. Con quel tipo non riuscirebbe ad
-# aprirlo e ripiegherebbe sul fstab del vendor, che e' il problema da cui
-# siamo partiti (vedi device.mk, sopra PRODUCT_COPY_FILES).
+# AOSP labels any /fstab.* as rootfs
+# (system/sepolicy/private/file_contexts:9), and nobody may read rootfs:file
+# unless explicitly allowed: modprobe, ueventd, vendor_init, update_engine.
+# Not vold. With that type it could not open the file and would fall back to
+# the vendor fstab, which is the problem we started from (see device.mk, above
+# PRODUCT_COPY_FILES).
 #
-# Questa riga e' piu' specifica di "/fstab\..*" e vince sul match generico.
-# system_file lo legge ogni dominio: system/sepolicy/public/domain.te dice
+# This line is more specific than "/fstab\..*" and beats the generic match.
+# Every domain can read system_file: system/sepolicy/public/domain.te says
 # allow domain system_file_type:file { getattr open read map execute }.
 /fstab\.s88pro    u:object_r:system_file:s0

@@ -8,12 +8,12 @@ index 5502b06..10b8a93 100644
      if (!mIsPCMAudio) {
 -        mEncoder = MediaCodec::CreateByType(
 -                mCodecLooper, outputMIME.c_str(), true /* encoder */);
-+        // Su alcuni device l'encoder hardware non sa gestire i buffer che
-+        // arrivano da una Surface e produce immagini illeggibili: codifica
-+        // correttamente il video della fotocamera, ma non lo schermo. Dove
-+        // succede, questa proprieta' permette di indicare un encoder diverso
-+        // per il solo WiFi Display, senza toccare la scelta predefinita per
-+        // tutto il resto:
++        // On some devices the hardware encoder cannot handle the buffers that
++        // come from a Surface and produces unreadable pictures: it encodes
++        // camera video correctly, but not the screen. Where that happens,
++        // this property allows a different encoder to be named for WiFi
++        // Display alone, without touching the default choice made for
++        // everything else:
 +        //
 +        //   media.wfd.video-encoder=c2.android.avc.encoder
 +        //

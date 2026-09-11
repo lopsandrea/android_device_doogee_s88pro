@@ -1,0 +1,31 @@
+diff --git a/config/BoardConfigKernel.mk b/config/BoardConfigKernel.mk
+index 4c2a268..6ee0f91 100644
+--- a/config/BoardConfigKernel.mk
++++ b/config/BoardConfigKernel.mk
+@@ -189,6 +189,26 @@ else
+     TOOLS_PATH_OVERRIDE += PATH=$(BUILD_TOP)/prebuilts/tools-lineage/$(HOST_PREBUILT_TAG)/bin:$(TARGET_KERNEL_CLANG_PATH)/bin:$$PATH
+ endif
+ 
++# The device's extra flags apply here too.
++#
++# TARGET_KERNEL_ADDITIONAL_FLAGS was so far applied only in
++# vendor/lineage/build/tasks/kernel.mk, which make reads after the BoardConfigs.
++# That is fine for the kernel, which is built in that phase, but not for the
++# soong modules: lineage_generator (generated_kernel_includes, in
++# vendor/lineage/build/soong/Android.bp) uses $(KERNEL_MAKE_FLAGS) as it stands
++# at export time towards soong, that is, without them.
++#
++# On a 4.14 kernel the difference is fatal: without HOSTCFLAGS="-fuse-ld=lld"
++# clang links the host tools with "ld", which soong forbids on purpose
++# (build/soong/ui/build/paths/config.go: "ld": Forbidden), and headers_install
++# dies with
++#   clang-14: error: unable to execute command: Executable "ld" doesn't exist!
++# A 4.14 kernel cannot get by with HOSTLDFLAGS, which Kbuild only learned to
++# use from 4.18 onwards.
++ifneq ($(TARGET_KERNEL_ADDITIONAL_FLAGS),)
++    KERNEL_MAKE_FLAGS += $(TARGET_KERNEL_ADDITIONAL_FLAGS)
++endif
++
+ # Set DTBO image locations so the build system knows to build them
+ ifeq (true,$(filter true, $(TARGET_NEEDS_DTBOIMAGE) $(BOARD_KERNEL_SEPARATED_DTBO)))
+     TARGET_KERNEL_DTBO_PREFIX ?=
