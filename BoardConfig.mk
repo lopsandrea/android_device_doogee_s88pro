@@ -421,3 +421,41 @@ TARGET_KERNEL_ADDITIONAL_FLAGS := LLVM_IAS=0 HOSTCFLAGS="-fuse-ld=lld" KCFLAGS="
 #                        is closed here, because with the prebuilt vendor image
 #                        the build installs nothing into /vendor.
 TARGET_RELEASETOOLS_EXTENSIONS := $(DEVICE_PATH)
+
+# No AOT compilation for the MediaTek prebuilt .jars.
+#
+# They come from the stock Android 10 ROM and reference AOSP classes that
+# Android 13 no longer has. dex2oat verifies before compiling, and with
+# --abort-on-hard-verifier-error it stops the build:
+#
+#   Verification error in void com.mediatek.internal.telephony.gsm.
+#     MtkGsmCellBroadcastHandler.<init>(Context, Phone)
+#   'this' argument ... not instance of 'Unresolved Reference:
+#     com.android.internal.telephony.gsm.GsmCellBroadcastHandler'
+#
+# GsmCellBroadcastHandler left the framework after Android 10: cell broadcast
+# moved into the com.android.cellbroadcast APEX. The class cannot resolve, and
+# no amount of configuring will make it.
+#
+# This is not a regression, it is the previous behaviour made explicit. Until
+# extract-utils generated these makefiles the .jars travelled through
+# PRODUCT_COPY_FILES, and a copied file is never preopted -- nobody was
+# verifying them either. ART verifies at load time instead, and fails soft on
+# the single class that cannot resolve while the rest of the jar works, which
+# is why telephony has always worked on this phone.
+#
+# The cost is startup time on these jars, not correctness.
+DEXPREOPT_DISABLED_MODULES := \
+    mediatek-common \
+    mediatek-framework \
+    mediatek-framework-net \
+    mediatek-ims-base \
+    mediatek-ims-common \
+    mediatek-ims-extension-plugin \
+    mediatek-ims-legacy \
+    mediatek-services \
+    mediatek-telecom-common \
+    mediatek-telephony-base \
+    mediatek-telephony-common \
+    mediatek-wfo-legacy \
+    mtk-ims-compat
