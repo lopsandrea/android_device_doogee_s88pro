@@ -161,3 +161,55 @@ setprop media.wfd.video-encoder c2.android.avc.encoder
 The full story of the AFBC defect, with the reverse engineering of the blob and
 the hypotheses that were ruled out, is in
 `docs/bringup/hardware-riferimento.md`.
+
+## build_make-vendor-prebuilt-in-target-files.patch
+
+**Project**: `build/make`
+
+**Symptom**: the build completes but the OTA package cannot be generated:
+
+```
+vendor is in target super_..._partition_list but no BlockDifference object
+is provided
+```
+
+and, once past that, `blockimgdiff.py` stops on an `AssertionError` about a
+missing block map.
+
+**Cause**: this device ships the stock vendor image whole
+(`BOARD_PREBUILT_VENDORIMAGE`), and three passes of the build assume every
+partition is one it constructs. The `VENDOR/` directory never enters the
+target-files, so the OTA generator finds no partition to diff;
+`generate-image-prop-dictionary` is only called for constructed partitions, so
+`vendor_disable_sparse=true` never lands in the misc_info and a ready-made
+image is treated as sparse; and the non-sparse branch insists on a block map
+existing beside the image even though it never reads it.
+
+**Change**: three additions to `core/Makefile` that cover the prebuilt case
+alongside the constructed one.
+
+**Status**: needed. The vendor image is still prebuilt — that is what the
+charter asks for, since a maintainer must not require a *modified* one.
+
+## vendor_lineage-kernel-flags-for-soong.patch
+
+**Project**: `vendor/lineage`
+
+**Symptom**: the kernel builds, but the soong modules that read its headers
+are compiled without the device's extra flags — so `LLVM_IAS=0` and
+`KCFLAGS=-gdwarf-4` are missing exactly where they are needed, and the build
+fails on assembly that clang-17's integrated assembler rejects.
+
+**Cause**: `TARGET_KERNEL_ADDITIONAL_FLAGS` was applied only in
+`vendor/lineage/build/tasks/kernel.mk`, which make reads *after* the
+BoardConfigs. That is in time for the kernel, built in that phase, but not for
+soong: `lineage_generator` (`generated_kernel_includes`) captures
+`KERNEL_MAKE_FLAGS` as it stands when exported to soong, that is, without
+them.
+
+**Change**: apply the device's flags in `config/BoardConfigKernel.mk` too, so
+they are already there when the export happens.
+
+**Status**: needed as long as this device builds a 4.14 kernel with the
+toolchain LineageOS ships. The four obstacles that make that necessary are in
+`docs/bringup/` in the oracolo repository.

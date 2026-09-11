@@ -66,74 +66,36 @@ system/framework/ims-common.jar:system/framework/mtk-ims-compat.jar
 -product/lib/libfmjni.so:system/lib/libfmjni.so
 -product/lib64/libfmjni.so:system/lib64/libfmjni.so
 
-# --------------------------------------------------------------------------
-# THE VENDOR PARTITION
-#
-# Until September there were only the twelve MediaTek framework .jars here: the
-# vendor.img the build produced weighed 24 MB against the 378 of the real one,
-# and that was not a problem only because we never installed it -- the phone
-# has always run on the stock vendor.
-#
-# It became one when we built the installable zip: that carries every partition
-# inside, it wrote that image, and the phone was left without the MediaTek HALs
-# and without the 826 KB vendor_sepolicy.cil. Bootloop.
-#
-# These are the 1622 files extracted from the stock vendor (the 12 symlinks
-# live in Android.mk, because a file list cannot express them).
-# --------------------------------------------------------------------------
-
-# Vendor executables and services (110)
-
-# 64-bit libraries (551)
-
-# 32-bit libraries (405)
-
-# Configuration: init, audio, sensors, vendor SELinux policy (484)
-
-# Chip firmware (38)
-
-# Vendor applications (12)
-
-# Resource overlays (2)
-
-# Resources (6)
-
-# odm content, which here lives inside vendor (9)
-
-# The rest
-#   vendor/default.prop   (no: see device.mk, the useful properties are declared there)
-
-# --------------------------------------------------------------------------
-# NOT THESE: the build already produces them
-#
-# Seventy-two files in the stock vendor are HALs that AOSP compiles from
-# source -- fingerprint, drm, gatekeeper, memtrack, vibrator, graphics -- and
-# declaring them here would copy them over, with the error
-#   error: overriding commands for target .../vendor/bin/hw/android.hardware...
-#
-# On those the build wins: its own are compiled against Android 13, the stock
-# ones stayed at Android 10. They are listed below, commented out, so that we
-# know they exist and that the choice was deliberate.
-# --------------------------------------------------------------------------
-
 # ---------------------------------------------------------------------------
-# THE VENDOR PARTITION IS NO LONGER HERE
+# THE VENDOR PARTITION IS NOT HERE, AND THAT IS DELIBERATE
 #
-# For a while the 1622 files extracted from the stock vendor were listed here,
-# one by one. It worked for building the image, not for booting it: the build
-# installs its own modules into /vendor anyway -- the HALs AOSP compiles -- and
-# every file where the two overlap has to be decided by hand. We decided
-# eighty-three of them before realising that the "newest wins" criterion is
-# wrong for anything touching the SoC, and that every wrong choice shows up as
-# a phone stuck on the logo, with no error to read.
+# For a while the 1622 files of the stock vendor were listed below, one by one,
+# so that the build could construct the image. It does not any more: the stock
+# image ships whole and untouched,
 #
-# Vendor is now the stock image, taken as it is:
 #   BOARD_PREBUILT_VENDORIMAGE := vendor/doogee/s88pro/vendor.img
-# The build does not construct it, it copies it. It is bit-for-bit identical to
-# the one that has always run on the phone, which removes an entire category of
-# questions -- which HALs, which libraries, which versions -- that did not need
-# answering.
+#
+# which is what the charter asks -- a maintainer must not require a *modified*
+# prebuilt vendor image, and a non-A/B device may rely on an OEM one as long
+# as it asserts its version at flash time, which releasetools.py does.
+#
+# Constructing it is not a choice we postponed, it is one that cannot be made
+# in this tree, and the reason is measured: a vendor built against the blobs'
+# VNDK 29 needs BOARD_VNDK_VERSION := 29, and soong refuses that with
+#   error: bionic/libc/Android.bp: "libc" depends on undefined module
+#          "vendor_snapshot"
+# A vendor snapshot is generated only from a complete Android 10 tree with the
+# sources of the vendor modules. Those sources do not exist -- it is the same
+# wall this whole project was born against, the one that led to rebuilding the
+# kernel from the factory binary.
+#
+# What the blobs would have cost, measured and written down in case the
+# question ever comes back: 85 files overlap between the blobs and what the
+# build installs, which is 42 decisions and not 85, and 1537 of the 1622 need
+# no decision at all. The old list survives in git -- `git show
+# 9ef0088:proprietary-files.txt` -- with its 84 exclusions already made.
 #
 # Only the system files stay here: the MediaTek framework .jars, without which
-# mtkfusionrild keeps looping on the rild-oem socket.
+# mtkfusionrild keeps looping on the rild-oem socket, and the libraries that
+# go with them.
 # ---------------------------------------------------------------------------

@@ -33,7 +33,7 @@ needed (see the comment inside `s88pro.xml` for why):
     breakfast lineage_s88pro-userdebug
     mka bacon
 
-Before building, apply the six patches in [`patches/`](patches): they touch
+Before building, apply the seven patches in [`patches/`](patches): they touch
 common projects, so they cannot live in the device tree, and without three of
 them the phone is unusable -- no working SIM and NFC crashing over and over.
 The README next to them explains, for each one, symptom, cause and change.
