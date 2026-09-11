@@ -137,12 +137,31 @@ BOARD_RECOVERYIMAGE_PARTITION_SIZE := 33554432
 # tree, and for a LineageOS submission that is a point to discuss. The
 # advantage is that the installable zip works, which was the requirement.
 #
-# The image is not the stock one verbatim, though: our fstab goes inside it,
-# because the vendor init files mount /data by name and there is no other way
-# to make them read it. The rule that produces it, with the reasons in full,
-# is in Android.mk.
-S88PRO_VENDOR_WITH_FSTAB := $(PRODUCT_OUT)/vendor-with-our-fstab.img
-BOARD_PREBUILT_VENDORIMAGE := $(S88PRO_VENDOR_WITH_FSTAB)
+# The image is the stock one verbatim -- no longer "minus the fstab".
+#
+# Until today the build copied it and wrote our fstab.mt6771 inside with
+# debugfs, because the vendor init files mount by name
+# (init.mt6771.rc:107, meta_init.rc:295, factory_init.rc:297) and the stock
+# fstab has two lines ours does not: /product, removed from super, and no
+# nofail on /cache.
+#
+# Both reasons expired without anyone noticing, and the phone proves it --
+# it boots from this image untouched, encrypted and Enforcing, and reboots
+# in 49 seconds:
+#
+#   /product carries first_stage_mount, so init mounts it in the first
+#   stage from the ramdisk fstab -- fstab.s88pro, ours, which does not list
+#   it. androidboot.fstab_suffix=s88pro (see BOARD_KERNEL_CMDLINE) already
+#   covered the case; mount_all on the stock file never reaches that line.
+#
+#   nofail on /cache guarded the days when /cache was a symlink to
+#   /data/cache and its mount always failed. It is a real directory since
+#   BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE, the mount succeeds, and there is
+#   nothing left to guard.
+#
+# Shipping it untouched is also what the charter asks: a maintainer MUST NOT
+# require a modified prebuilt vendor image.
+BOARD_PREBUILT_VENDORIMAGE := vendor/doogee/s88pro/vendor.img
 
 BOARD_CACHEIMAGE_PARTITION_SIZE := 452984832
 BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
