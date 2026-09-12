@@ -135,6 +135,7 @@ PRODUCT_TARGET_VNDK_VERSION := 29
 PRODUCT_EXTRA_VNDK_VERSIONS := 29
 PRODUCT_SHIPPING_API_LEVEL := 29
 
+
 # Framework resource overlay: declares the fingerprint reader.
 # See the comment inside overlay/frameworks/base/core/res/res/values/config.xml
 DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay

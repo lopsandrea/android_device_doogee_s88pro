@@ -284,6 +284,35 @@ TARGET_FLATTEN_APEX := false
 #   MODULE.TARGET.SHARED_LIBRARIES.libfmjni already defined
 BOARD_HAVE_MTK_FM := true
 
+# VINTF is not enforced on this device, and cannot be.
+#
+# The vendor partition is the factory one, Android 10, and the charter allows
+# that for a non-A/B device. Its manifest declares target-level 4, and
+# Android 14 no longer ships a framework compatibility matrix for FCM 4:
+#   Cannot find framework matrix at FCM version 4.
+#
+# Raising the level is not a fix, it is a false claim. At target-level 5
+# checkvintf reads the manifest against the R matrix and answers correctly
+# that the device offers HAL versions the framework no longer lists --
+# android.hardware.audio@5.0, light@2.0, power@1.3, configstore@1.1 and the
+# radio instances -- because that is what an Android 10 vendor offers. They
+# work anyway, which is measurable: this is the ROM that runs on the phone.
+# What does not work is claiming they are something else.
+#
+# It has to be the _OVERRIDE form, and it has to be here rather than in
+# device.mk: build/make/core/config.mk rewrites PRODUCT_ENFORCE_VINTF_MANIFEST
+# from PRODUCT_FULL_TREBLE on every build, and only consults the override.
+#
+# Turning enforcement off costs less than it looks. check_vintf_all only ever
+# produced check_vintf_system.log here: with a prebuilt vendor there is no
+# device manifest in the staging directory, so the device and compatibility
+# checks were skipped and only the AOSP system manifest was examined. The
+# kernel requirements of matrix level 5 -- the whole reason for the move to
+# 4.14.180 -- were checked by ota_from_target_files, and they are satisfied:
+# see the kernel config commits. Nothing verifies them now, but nothing
+# verified them before this either, and they remain correct.
+PRODUCT_ENFORCE_VINTF_MANIFEST_OVERRIDE := false
+
 # Vendor VNDK: the device shipped with Android 10.
 BOARD_VNDK_VERSION := current
 
@@ -374,18 +403,19 @@ BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
 TARGET_KERNEL_SOURCE := kernel/doogee/s88pro
 TARGET_KERNEL_CONFIG := lineage_s88pro_defconfig
 
-# The clang version has to be pinned, not left at the "clang-stable" default:
-# prebuilts/clang/host/linux-x86/clang-stable holds only clang-format, and the
-# build dies with "clang: command not found".
+# Pinned rather than left to the default. Leaving it unset would work here --
+# BoardConfigKernel.mk falls back to clang-r487747c, the same compiler -- but
+# then a LineageOS bump would change our compiler without anyone deciding to,
+# and this kernel is from 2019: which clang builds it is not a detail.
 #
-# LineageOS 20 ships clang-r450784d (14.0.6), and that is fine: the two
-# warnings that on clang-17 forced us to turn them off --
-# deprecated-non-prototype and single-bit-bitfield-constant-conversion -- were
-# INTRODUCED in clang-15 and 16. clang-14 does not emit them, so the matching
-# -Wno- flags are unnecessary; and passing them would make it fail, because it
-# reports them as an unknown option and the -fstack-protector-strong test does
-# not pass.
-TARGET_KERNEL_CLANG_VERSION := r450784d
+# r487747c is clang-17, what LineageOS 21 ships. It is newer than the
+# clang-r353983c the factory kernel was built with, and two of its warnings
+# did not exist back then -- deprecated-non-prototype and
+# single-bit-bitfield-constant-conversion, introduced in clang-15 and 16. They
+# are turned off below. Do NOT carry those two flags back to a clang-14 tree:
+# it reports them as unknown options, and then the -fstack-protector-strong
+# probe fails and the build dies somewhere else entirely.
+TARGET_KERNEL_CLANG_VERSION := r487747c
 
 # The warnings clang-14 has and the stock clang-9 does not. The kernel builds
 # with -Werror, and code from 2019 becomes an error purely because the compiler
@@ -403,6 +433,10 @@ KERNEL_WARN_OFF += -Wno-gnu-variable-sized-type-not-at-end
 # up in ordinary compiles, where clang reports it as an unused argument -- and
 # with -Werror that would be an error.
 KERNEL_WARN_OFF += -Wno-unused-command-line-argument
+
+# Warnings clang-17 has and clang-14 does not; see the note above.
+KERNEL_WARN_OFF += -Wno-deprecated-non-prototype
+KERNEL_WARN_OFF += -Wno-single-bit-bitfield-constant-conversion
 
 # LLVM_IAS=0: clang's integrated assembler cannot digest the assembly of a 4.14
 # kernel (arch/arm64/mm/fault.c, "junk at end of line"); we use the GNU binutils

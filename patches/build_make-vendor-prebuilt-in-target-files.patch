@@ -1,8 +1,8 @@
 diff --git a/core/Makefile b/core/Makefile
-index fb655cd..3aacbe1 100644
+index 849dac7074..c05f0ce0c9 100644
 --- a/core/Makefile
 +++ b/core/Makefile
-@@ -5915,7 +5915,11 @@ ifdef BUILDING_USERDATA_IMAGE
+@@ -6581,7 +6581,11 @@ ifdef BUILDING_USERDATA_IMAGE
  	$(hide) $(call package_files-copy-root, \
  	    $(TARGET_OUT_DATA),$(zip_root)/DATA)
  endif
@@ -15,7 +15,7 @@ index fb655cd..3aacbe1 100644
  	@# Contents of the vendor image
  	$(hide) $(call package_files-copy-root, \
  	    $(TARGET_OUT_VENDOR),$(zip_root)/VENDOR)
-@@ -6044,6 +6048,27 @@ endif
+@@ -6714,6 +6718,52 @@ endif
  ifdef BOARD_PREBUILT_VENDORIMAGE
  	$(hide) mkdir -p $(zip_root)/IMAGES
  	$(hide) cp $(INSTALLED_VENDORIMAGE_TARGET) $(zip_root)/IMAGES/
@@ -40,6 +40,31 @@ index fb655cd..3aacbe1 100644
 +	@# e2fsdroid derives it from the image without touching it.
 +	$(hide) $(HOST_OUT_EXECUTABLES)/e2fsdroid -e \
 +	    -B $(zip_root)/IMAGES/vendor.map $(zip_root)/IMAGES/vendor.img
++	@# The VINTF metadata this ROM declares, not what the image happens to
++	@# carry. ota_from_target_files runs checkvintf over the package, and
++	@# without these it stops on
++	@#   No device manifest file from device or from update package
++	@#
++	@# Pulling them out of the prebuilt image instead looked more honest --
++	@# it is the vendor we actually ship -- but it is not: the image also
++	@# holds fragments this device deliberately leaves out, and its manifest
++	@# declares an FCM version whose framework matrix Android no longer
++	@# ships. DEVICE_MANIFEST_FILE and DEVICE_MATRIX_FILE are what the
++	@# device tree declares, and what check_vintf_all already checks the
++	@# tree against, so the package and the build agree.
++	$(hide) mkdir -p $(zip_root)/VENDOR/etc/vintf/manifest
++	$(hide) cp $(firstword $(DEVICE_MANIFEST_FILE)) \
++	    $(zip_root)/VENDOR/etc/vintf/manifest.xml
++	$(hide) $(foreach f,$(wordlist 2,999,$(DEVICE_MANIFEST_FILE)),\
++	    cp $(f) $(zip_root)/VENDOR/etc/vintf/manifest/;)
++	$(hide) cp $(DEVICE_MATRIX_FILE) \
++	    $(zip_root)/VENDOR/etc/vintf/compatibility_matrix.xml
++	@# The kernel FCM version, which the device manifest cannot state on its
++	@# own: see the comment in the device tree.
++	$(hide) if [ -f $(TARGET_DEVICE_DIR)/vintf/kernel_fcm.xml ]; then \
++	    cp $(TARGET_DEVICE_DIR)/vintf/kernel_fcm.xml \
++	       $(zip_root)/VENDOR/etc/vintf/manifest/; \
++	fi
  endif
  ifdef BOARD_PREBUILT_PRODUCTIMAGE
  	$(hide) mkdir -p $(zip_root)/IMAGES

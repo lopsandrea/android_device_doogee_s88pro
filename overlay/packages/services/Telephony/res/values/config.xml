@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <!--
+         The device's default ImsService, for VoLTE.
+
+         It is the package ImsResolver binds for the MMTEL feature. The APK
+         does not declare the android.telephony.ims.MMTEL_FEATURE metadata, but
+         that is not a problem: when the metadata is missing ImsResolver falls
+         back to the dynamic query, binding the service and asking which
+         features it supports. That is exactly what the name
+         MtkDynamicImsService suggests, and the answer comes back correct
+         (MMTEL and EMERGENCY_MMTEL on every slot).
+
+         It only applies if ImsService has been prepared and installed: see
+         device/doogee/s88pro/ims/ and docs/bringup/volte-stato-esperimento.md.
+         If the package is not there, ImsResolver finds nothing and nothing
+         changes compared with before.
+
+         To try it out without rebuilding the framework there is the runtime
+         override, which wants the feature as an integer (1 = MMTEL):
+           cmd phone ims set-ims-service -s 0 -c -f 1 com.mediatek.ims
+    -->
+    <string name="config_ims_mmtel_package" translatable="false">com.mediatek.ims</string>
+</resources>

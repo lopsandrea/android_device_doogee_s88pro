@@ -87,7 +87,13 @@ public class LedService extends Service {
         final IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_BATTERY_CHANGED);
         filter.addAction(ACTION_NOTIFICATIONS_CHANGED);
-        registerReceiver(mReceiver, filter);
+        // ACTION_NOTIFICATIONS_CHANGED is ours -- declared here, sent only by
+        // LedNotificationListener -- so nothing outside this app has any
+        // business reaching this receiver. Since SDK 34 that has to be said
+        // out loud: a filter carrying even one action that is not a protected
+        // system broadcast makes registerReceiver() throw SecurityException
+        // unless the receiver declares whether it is exported.
+        registerReceiver(mReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
 
         mTelephonyManager = getSystemService(TelephonyManager.class);
         if (mTelephonyManager != null) {

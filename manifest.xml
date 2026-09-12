@@ -681,4 +681,19 @@
         </interface>
         <fqname>@2.1::IBiometricsFingerprint/default</fqname>
     </hal>
+    <!--
+         The sepolicy this ROM runs, not the one the stock vendor shipped.
+
+         The stock manifest says 29.0, which described its own prebuilt
+         policy; that policy is removed here, so init falls back to the
+         system one and the version that counts is the platform's. The build
+         writes it into vendor/etc/selinux/plat_sepolicy_vers.txt, and the
+         framework compatibility matrix lists it among those it accepts.
+
+         Without this checkvintf reads no version at all and stops with
+           Sepolicy version 0 doesn't satisify the requirements.
+    -->
+    <sepolicy>
+        <version>202404</version>
+    </sepolicy>
 </manifest>

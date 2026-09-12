@@ -31,7 +31,7 @@ two SIMs the total would still be 93 characters.
 limit. The truncation keeps the **tail** of the string, which is the part
 identifying the modem build.
 
-## packages_apps_Nfc-null-native-data.patch
+## packages_apps_Nfc-null-native-data.patch — REMOVED, no longer needed
 
 **Project**: `packages/apps/Nfc`
 
@@ -57,6 +57,13 @@ in the tombstone.
 defect (`NFA_DM_RF_FIELD_EVT` and `NFA_DM_NFCC_TRANSPORT_ERR_EVT`/`TIMEOUT`). A
 notification that arrives too early is ignored instead of taking the process
 down.
+
+**LineageOS 21 now has it of its own**, and in three places rather than two:
+`NativeNfcManager.cpp` guards `getNative(NULL, NULL)` at lines 771, 800 and
+1030 of the tree synced on 11 September 2026. The wording differs -- `if
+(!nat)` with "cached nat is null", and at the second site the check folded
+into `if (recovery_option && nat != NULL)` -- but the defect is the same one,
+and the patch no longer applies.
 
 ## packages_apps_Nfc-mifare-classic-extras.patch — REMOVED, no longer needed
 
@@ -185,11 +192,36 @@ target-files, so the OTA generator finds no partition to diff;
 image is treated as sparse; and the non-sparse branch insists on a block map
 existing beside the image even though it never reads it.
 
-**Change**: three additions to `core/Makefile` that cover the prebuilt case
-alongside the constructed one.
+On LineageOS 21 a fourth one appeared. `ota_from_target_files` now runs
+`checkvintf --check-compat` over the target-files, and stops on:
+
+```
+No device manifest file from device or from update package
+ERROR: No such device
+common.ExternalError: Failed to run command 'checkvintf --check-compat ...'
+  (exit code 70)
+```
+
+The device manifest and the device compatibility matrix are read from
+`VENDOR/`, and the block above copies the *staging* directory there — which
+for a prebuilt vendor holds little more than the SELinux policy, 16 files in
+all. The real `manifest.xml` (24 kB) and `compatibility_matrix.xml` are inside
+the image.
+
+**Change**: four additions to `core/Makefile` that cover the prebuilt case
+alongside the constructed one. The fourth pulls `/etc/vintf` out of the image
+itself with `debugfs_static -R rdump`, rather than keeping a copy of those
+files in the device tree: a copy could drift from the image it is supposed to
+describe, and this cannot.
 
 **Status**: needed. The vendor image is still prebuilt — that is what the
 charter asks for, since a maintainer must not require a *modified* one.
+
+The note that once stood here, that this patch would have to be rewritten for
+LineageOS 21 around `map_file_generator` instead of `e2fsdroid`, turned out to
+be unfounded: `e2fsdroid -e -B` still produces the block map, `vendor.map`
+comes out at 110 kB and `vendor_disable_sparse=true` reaches the misc_info.
+Measured on the tree of 11 September 2026, not assumed.
 
 ## vendor_lineage-kernel-flags-for-soong.patch
 

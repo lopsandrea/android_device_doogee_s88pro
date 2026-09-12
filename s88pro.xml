@@ -30,12 +30,12 @@
   <project path="device/doogee/s88pro"
            name="lopsandrea/android_device_doogee_s88pro"
            remote="github"
-           revision="lineage-20" />
+           revision="lineage-21" />
 
   <project path="vendor/doogee/s88pro"
            name="lopsandrea/android_vendor_doogee_s88pro"
            remote="github"
-           revision="lineage-20" />
+           revision="lineage-21" />
 
   <!--
     The kernel sources. BoardConfig builds the kernel from them, so they are
@@ -46,5 +46,5 @@
   <project path="kernel/doogee/s88pro"
            name="lopsandrea/android_kernel_doogee_s88pro"
            remote="github"
-           revision="lineage-20" />
+           revision="lineage-21" />
 </manifest>
