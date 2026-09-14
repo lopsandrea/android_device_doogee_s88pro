@@ -96,6 +96,24 @@ BOARD_INCLUDE_DTB_IN_BOOTIMG := true
 TARGET_NO_RECOVERY := false
 BOARD_USES_RECOVERY_AS_BOOT := false
 
+# This phone has one copy of each partition and a recovery of its own, so it is
+# not an A/B device. Saying so used to be unnecessary; in Android 15 it is not,
+# because the default flipped (build/make/core/board_config.mk):
+#
+#   ifeq ($(AB_OTA_UPDATER),)
+#   AB_OTA_UPDATER := true
+#   endif
+#
+# Left unset, the build assumes two slots and gives the dynamic group half of
+# super to fit them, which our single group overflows on its own:
+#
+#   RuntimeError: sum of sizes of ['doogee_dynamic_partitions'] is greater
+#     than or equal to BOARD_SUPER_PARTITION_SIZE / 2:
+#     4827643904 >= 2415919104
+#
+# even though the images take 2.28 GB of the 4.83 GB there really are.
+AB_OTA_UPDATER := false
+
 # Partitions. Sizes read from the device with blockdev --getsize64:
 #   boot/recovery 33554432, super 4831838208.
 # The dynamic group holds only system and vendor: product was removed in
