@@ -245,3 +245,39 @@ they are already there when the export happens.
 **Status**: needed as long as this device builds a 4.14 kernel with the
 toolchain LineageOS ships. The four obstacles that make that necessary are in
 `docs/bringup/` in the oracolo repository.
+
+## packages_modules_Bluetooth-erroneous-data-reporting.patch
+
+**Project**: `packages/modules/Bluetooth`
+
+**Symptom**: Bluetooth never turns on. `com.android.bluetooth` dies and is
+restarted over and over, the adapter stays `OFF` with a null address, and
+`BluetoothManagerService` eventually gives up with `MESSAGE_TIMEOUT_BIND`:
+
+```
+check_complete: Error code UNSUPPORTED_LMP_OR_LL_PARAMETER, opcode 0x2001
+on_command_status: Received UNEXPECTED command status:UNKNOWN_HCI_COMMAND
+  opcode:0xc5a (READ_DEFAULT_ERRONEOUS_DATA_REPORTING)
+Fatal signal 6 (SIGABRT) in tid (bt_stack_manage), pid (droid.bluetooth)
+Abort message: 'assertion 'was_validated_' failed'
+  #04 libbluetooth_jni.so (bluetooth::hci::CommandCompleteView::GetCommandOpCode)
+  #05 libbluetooth_jni.so (bluetooth::hci::Controller::impl::read_default_...)
+```
+
+**Cause**: the controller announces `READ_DEFAULT_ERRONEOUS_DATA_REPORTING` in
+its supported-commands bitmap, so `Controller::impl` sends it — and then
+answers `UNKNOWN_HCI_COMMAND`, with a **command status** rather than a command
+complete. `hci_layer` hands that event to the handler registered for the
+command anyway; building a `CommandCompleteView` out of it yields an invalid
+view, and the first line of the handler reads `GetCommandOpCode()` from it.
+Reading any field of an unvalidated view aborts the process.
+
+AOSP already expects controllers that lie about supporting this command — the
+comment in the handler says so, bug b/277589118 — but the guard sits one line
+below the first read, so it never runs for a controller that lies this way.
+
+**Change**: check `view.IsValid()` at the top of
+`read_default_erroneous_data_reporting_handler`, before anything is read from
+the view. An invalid answer is logged and ignored, which is what the existing
+guard was meant to do. Erroneous data reporting is an optional audio-quality
+feature; nothing else depends on it.

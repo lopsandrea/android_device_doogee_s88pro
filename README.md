@@ -34,9 +34,10 @@ needed (see the comment inside `s88pro.xml` for why):
     mka bacon
 
 Before building, apply the seven patches in [`patches/`](patches): they touch
-common projects, so they cannot live in the device tree, and without three of
-them the phone is unusable -- no working SIM and NFC crashing over and over.
-The README next to them explains, for each one, symptom, cause and change.
+common projects, so they cannot live in the device tree. Without the telephony
+one there is no usable SIM, and without the Bluetooth one the stack aborts in a
+loop and the adapter never turns on. The README next to them explains, for each
+one, symptom, cause and change.
 
 The kernel
 ----------
