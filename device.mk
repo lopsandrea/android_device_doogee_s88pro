@@ -169,12 +169,11 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     S88ProParts
 
-# FM radio.
-#
-# The LineageOS app and the stock one are the same: the vendor's native library
-# (libfmjni, among the blobs) registers its methods for exactly
-# com/android/fmradio/FmNative. The driver is already loaded at boot by the
-# vendor, which insmods fmradio_drv.ko once the connectivity chip is ready.
+# FM radio. LineageOS 22 builds libfmjni itself and reads the tuner settings
+# from ro.fm.* properties, which rootdir/etc/init/s88pro-fm.rc sets: see the
+# comment there, and the one in proprietary-files.txt for why the MediaTek
+# library is no longer among the blobs. The driver is already loaded at boot by
+# the vendor, which insmods fmradio_drv.ko once the connectivity chip is ready.
 PRODUCT_PACKAGES += \
     FMRadio
 

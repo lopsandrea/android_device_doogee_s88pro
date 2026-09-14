@@ -21,6 +21,50 @@
 on early-init
     setprop ro.vendor.builtin_fm_antenna_support 1
 
+# The tuner configuration.
+#
+# Up to LineageOS 21 these values came from MediaTek's libfmjni, which had them
+# hardcoded and which we shipped as a blob. LineageOS 22 builds the library
+# itself and reads them from ro.fm.* instead (packages/apps/FMRadio commit
+# 168f373, "jni: Move customisation to properties"), which is what made the
+# library device independent.
+#
+# They belong here rather than in device.mk because two of them hold two
+# numbers each, and PRODUCT_SYSTEM_PROPERTIES splits its entries on whitespace.
+#
+# They are not guessed. chip, low_band, high_band, seek_space and max_scan_num
+# are what the stock library logs on this phone:
+#
+#   FMLIB_CORE: FMR_get_cfgs successfully. chip: 0x6631, lband: 8750,
+#     hband: 10800, seek_space: 1, max_scan_num: 40
+#
+# and 0x6631 agrees with persist.vendor.connsys.fm_chipid=mt6631. The rest were
+# read out of CUST_get_cfg in the blob, which fills the same struct: seek_lev
+# and scan_sort from its constant pool, rssi_th_l2 as the literal -102, and the
+# fake channel table from .rodata -- four entries of {freq, rssi_th} terminated
+# by a zero.
+#
+# Two of them the blob derived from properties that are unset on this phone, so
+# the branch not taken is the one that applies: seek_space is 1 rather than 5
+# (persist.vendor.connsys.fm_50khz_support) and short_ana_sup is 1
+# (persist.vendor.connsys.fm_short_antenna_support). noise_floor_detect has no
+# counterpart in the blob and is left at its default.
+    setprop ro.fm.chip 0x6631
+    setprop ro.fm.band 1
+    setprop ro.fm.low_band 8750
+    setprop ro.fm.high_band 10800
+    setprop ro.fm.seek_space 1
+    setprop ro.fm.max_scan_num 40
+    setprop ro.fm.seek_lev 4
+    setprop ro.fm.scan_sort 0
+    setprop ro.fm.short_ana_sup 1
+    setprop ro.fm.rssi_th_l2 -102
+    setprop ro.fm.fake_chans 4
+    setprop ro.fm.fake_chan_0 "9210 -205"
+    setprop ro.fm.fake_chan_1 "9600 -152"
+    setprop ro.fm.fake_chan_2 "10400 -152"
+    setprop ro.fm.fake_chan_3 "10750 -205"
+
 # Gives the radio app access to the tuner.
 #
 # The kernel creates /dev/fm as media:media, but the FMRadio app runs as system

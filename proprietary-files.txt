@@ -54,17 +54,26 @@ system/framework/ims-common.jar:system/framework/mtk-ims-compat.jar
 
 # FM radio.
 #
-# The LineageOS FMRadio app and the stock one are the same app: the library
-# registers its native methods for exactly com/android/fmradio/FmNative, so the
-# two fit together without adaptation. The driver is already running
-# (fmradio_drv.ko loaded, /dev/fm present).
+# libfmjni is NOT extracted, and that is deliberate.
 #
-# In the stock ROM the library lives in product/lib*, which for us does not
-# exist as a separate partition: it is installed into system. The product
-# partition is not mounted under /mnt/stock, but extract-files.sh reads it from
-# the image with debugfs, which needs no privileges.
--product/lib/libfmjni.so:system/lib/libfmjni.so
--product/lib64/libfmjni.so:system/lib64/libfmjni.so
+# Up to LineageOS 21 it was: the stock library registers its native methods for
+# exactly com/android/fmradio/FmNative, so the MediaTek fork and the LineageOS
+# app fitted together without adaptation.
+#
+# LineageOS 22 builds the library itself. packages/apps/FMRadio commit 168f373
+# ("jni: Move customisation to properties") took the config values MediaTek had
+# hardcoded into its fork and moved them to ro.fm.* properties, which made the
+# library device independent; commit f3eb07a dropped the soong_namespace that
+# used to keep the source module out of the way. Shipping the blob now collides
+# with the source module, and the build stops with
+#
+#   TARGET module FMRadio requires non-existent TARGET module: prebuilt_libfmjni:64
+#
+# because prefer:true renames the prebuilt to prebuilt_libfmjni while soong
+# still exports it as libfmjni.
+#
+# The config values that were inside the blob are in device.mk, read out of it
+# rather than guessed. See the comment there.
 
 # ---------------------------------------------------------------------------
 # THE VENDOR PARTITION IS NOT HERE, AND THAT IS DELIBERATE
