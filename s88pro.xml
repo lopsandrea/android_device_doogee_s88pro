@@ -30,12 +30,12 @@
   <project path="device/doogee/s88pro"
            name="lopsandrea/android_device_doogee_s88pro"
            remote="github"
-           revision="lineage-22.2" />
+           revision="lineage-23.2" />
 
   <project path="vendor/doogee/s88pro"
            name="lopsandrea/android_vendor_doogee_s88pro"
            remote="github"
-           revision="lineage-22.2" />
+           revision="lineage-23.2" />
 
   <!--
     The kernel sources. BoardConfig builds the kernel from them, so they are
@@ -46,7 +46,7 @@
   <project path="kernel/doogee/s88pro"
            name="lopsandrea/android_kernel_doogee_s88pro"
            remote="github"
-           revision="lineage-22.2" />
+           revision="lineage-23.2" />
 
   <!--
     The VNDK 29 snapshot, which the LineageOS 22.2 manifest no longer carries:
