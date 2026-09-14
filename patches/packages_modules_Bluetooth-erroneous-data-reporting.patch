@@ -1,8 +1,8 @@
 diff --git a/system/gd/hci/controller.cc b/system/gd/hci/controller.cc
-index 6facfef4c3..e8c2f6ce6e 100644
+index 925f1cc787c..e1de17ef42f 100644
 --- a/system/gd/hci/controller.cc
 +++ b/system/gd/hci/controller.cc
-@@ -427,6 +427,22 @@ struct Controller::impl {
+@@ -484,6 +484,22 @@ struct Controller::impl {
    }
  
    void read_default_erroneous_data_reporting_handler(CommandCompleteView view) {
@@ -18,7 +18,7 @@ index 6facfef4c3..e8c2f6ce6e 100644
 +    // about supporting the command (b/277589118); it is simply one line too
 +    // late for the ones that lie in this particular way.
 +    if (!view.IsValid()) {
-+      LOG_ERROR("invalid command complete view");
++      log::error("invalid command complete view");
 +      return;
 +    }
 +
