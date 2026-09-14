@@ -1,0 +1,31 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Keeps the stock configstore HAL from being started at all.
+#
+# It cannot run under Android 15. The vendor sandboxes it with a seccomp filter
+# written for Android 10, and the libraries it now links against call a syscall
+# that filter does not allow:
+#
+#     libminijail[701]: blocked syscall: gettid
+#     init: Service 'vendor.configstore-hal' (pid 701) received signal 31
+#
+# Signal 31 is SIGSYS. Left alone, init restarts it every five seconds for as
+# long as the phone is on -- seventy-nine errors in the first six minutes. The
+# filter lives in /vendor, which this device ships as a prebuilt image, so it
+# cannot be widened.
+#
+# Nothing needs the HAL any more: device.mk sets the thirteen
+# ro.surface_flinger.* properties that SurfaceFlinger, libEGL and
+# WindowManagerService consult before asking it, so they never do. See the
+# comment there.
+#
+# "stop" rather than anything else because init marks a stopped service
+# disabled, and a later class_start skips it. The trigger is "on init" and not
+# something later because the service is in class hal *and* animation, and the
+# animation class starts early; init parses every .rc file before running any
+# action, so the service is already known by then.
+on init
+    stop vendor.configstore-hal

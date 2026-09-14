@@ -387,3 +387,42 @@ the V5 client needs is still in the tree — `#if MAJOR_VERSION <= 5` and
 `#if MAJOR_VERSION < 5` are still in `impl/DeviceHalHidl.cpp` and
 `impl/StreamHalHidl.cpp`, and `hardware/interfaces/audio/5.0` still exists.
 Only the build target and the lookup entry were taken away.
+
+## packages_apps_FMRadio-frequency-units.patch
+
+**Project**: `packages/apps/FMRadio`
+
+**Symptom**: on LineageOS 22, where the app builds its own libfmjni, the tuner
+opens and then refuses to power up:
+
+```
+FMLIB_COM : COM_open_dev, [fd=105] [ret=0]
+FMLIB_CORE: FMR_open_dev, [fd=105] [chipid=0x6631] [ret=0]
+FMLIB_CORE: FMR_pwr_up,[freq=1000]
+FMLIB_CORE: FMR_pwr_up error freq: 1000
+```
+
+1000 is outside the 8750..10800 band, so `FMR_pwr_up` rejects it.
+
+**Why**: `libfm_jni.cpp` is not consistent with itself. The app always speaks
+in MHz, and the JNI converts:
+
+```c
+powerUp:  tmp_freq = (int)(freq * 10);    // 100.0 -> 1000
+tune:     tmp_freq = (int)(freq * 10);
+seek:     tmp_freq = (int)(freq * 100);   // 87.55 -> 8755
+          val = (float)ret_freq / 100;
+```
+
+`seek` works in tens of kHz, `powerUp` and `tune` in hundreds. The band this
+library is configured with -- and the units MediaTek's driver takes, which is
+what `COM_pwr_up` passes straight to `FM_IOCTL_POWERUP` without converting --
+are tens of kHz. So `seek` is right and the other two are wrong.
+
+The inconsistency is old: LineageOS 21 has it too. It never showed there
+because that release shipped MediaTek's own libfmjni, which was consistent at
+x100 throughout. It only bites once the app builds the library itself.
+
+**What it does**: makes `powerUp` and `tune` convert the way `seek` already
+does. Two lines. It is not an adaptation to this device: it is one file
+agreeing with itself.

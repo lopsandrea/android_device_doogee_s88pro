@@ -216,6 +216,9 @@ PRODUCT_PACKAGES += \
 # aborts if the two vsync offsets are set. It only runs on the WorkDuration
 # path, chosen by debug.sf.use_phase_offsets_as_durations, which is not set
 # here. Setting that debug property on this device would now be fatal.
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/rootdir/etc/init/s88pro-configstore.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-configstore.rc
+
 PRODUCT_SYSTEM_PROPERTIES += \
     ro.surface_flinger.vsync_event_phase_offset_ns=1000000 \
     ro.surface_flinger.vsync_sf_event_phase_offset_ns=1000000 \

@@ -1,0 +1,22 @@
+diff --git a/jni/fmr/libfm_jni.cpp b/jni/fmr/libfm_jni.cpp
+index 8e759e5..be48611 100644
+--- a/jni/fmr/libfm_jni.cpp
++++ b/jni/fmr/libfm_jni.cpp
+@@ -51,7 +51,7 @@ jboolean powerUp(JNIEnv *env __unused, jobject thiz __unused, jfloat freq)
+     int tmp_freq;
+ 
+     LOGI("%s, [freq=%d]\n", __func__, (int)freq);
+-    tmp_freq = (int)(freq * 10);        //Eg, 87.5 * 10 --> 875
++    tmp_freq = (int)(freq * 100);       //Eg, 87.55 * 100 --> 8755
+     ret = FMR_pwr_up(g_idx, tmp_freq);
+ 
+     LOGD("%s, [ret=%d]\n", __func__, ret);
+@@ -73,7 +73,7 @@ jboolean tune(JNIEnv *env __unused, jobject thiz __unused, jfloat freq)
+     int ret = 0;
+     int tmp_freq;
+ 
+-    tmp_freq = (int)(freq * 10);        //Eg, 87.5 * 10 --> 875
++    tmp_freq = (int)(freq * 100);       //Eg, 87.55 * 100 --> 8755
+     ret = FMR_tune(g_idx, tmp_freq);
+ 
+     LOGD("%s, [ret=%d]\n", __func__, ret);
