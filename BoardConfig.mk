@@ -245,6 +245,31 @@ DEVICE_MANIFEST_FILE := \
 # (verified: the same file without the comment passes).
 DEVICE_MATRIX_FILE := $(DEVICE_PATH)/compatibility_matrix.xml
 
+# The framework compatibility matrix extension: the device-specific HALs the
+# framework may encounter here.
+#
+# From Android 16 checkvintf requires every instance the device manifest
+# declares to be named by some framework matrix, and vendor.mediatek.* HALs
+# appear in no AOSP matrix by definition. Without this file the build stops
+# while packaging the target files:
+#
+#   ERROR: files are incompatible: The following instances are in the device
+#   manifest but not specified in framework compatibility matrix:
+#     vendor.mediatek.hardware.atci@1.0::IAtcid/default
+#     ... and eighteen more
+#
+# checkvintf suggests this very file, as point 4 of its own error message.
+#
+# Every entry is optional="true", which is the point: the framework may use
+# these if the vendor offers them, and must not require them. The list is
+# generated from manifest.xml plus the gpu fragment, so it says exactly what
+# the stock vendor declares and nothing else. Regenerate it if that changes.
+#
+# Like the file above it carries NO XML comments, for the same reason: this one
+# goes through assemble_vintf too.
+DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE := \
+    $(DEVICE_PATH)/vintf/compatibility_matrix.device.xml
+
 TARGET_COPY_OUT_VENDOR := vendor
 
 # Makes the /metadata directory be created in system.
