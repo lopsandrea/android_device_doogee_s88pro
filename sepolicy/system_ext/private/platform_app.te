@@ -1,0 +1,18 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# The FM radio app is moved into this domain by seapp_contexts, for the reason
+# written there. It keeps the system UID, so its data directory keeps the
+# system_app_data_file label, and platform_app needs what system_app already
+# had over it (system/sepolicy/private/system_app.te):
+#
+#   allow system_app system_app_data_file:dir create_dir_perms;
+#   allow system_app system_app_data_file:{ file lnk_file } create_file_perms;
+#
+# Nothing forbids it: the only neverallow on system_app_data_file in the whole
+# policy is on traced_perf, and AOSP already grants the same to a platform
+# domain of its own (private/device_as_webcam.te).
+allow platform_app system_app_data_file:dir create_dir_perms;
+allow platform_app system_app_data_file:{ file lnk_file } create_file_perms;
