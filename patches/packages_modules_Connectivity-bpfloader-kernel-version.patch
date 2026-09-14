@@ -1,0 +1,34 @@
+diff --git a/bpf/loader/NetBpfLoad.cpp b/bpf/loader/NetBpfLoad.cpp
+index 238864798b7..bcb9790f3fd 100644
+--- a/bpf/loader/NetBpfLoad.cpp
++++ b/bpf/loader/NetBpfLoad.cpp
+@@ -1619,16 +1619,25 @@ static int doLoad(char** argv, char * const envp[]) {
+ 
+     // V bumps the kernel requirement up to 4.19
+     // see also: //system/netd/tests/kernel_test.cpp TestKernel419
++    //
++    // Warn rather than refuse to run. This device is a 2019 MediaTek phone on
++    // kernel 4.14.180, which cannot be moved: the factory Wi-Fi, Bluetooth and
++    // GPS modules are binaries built against that kABI. Android 15 logged this
++    // same condition with ALOGW and carried on, and the phone worked; 16 turned
++    // it into a fatal error, and init reboots with bpfloader-failed before
++    // any service starts.
++    //
++    // Whether the eBPF programs themselves load on 4.14 is a separate question
++    // and the one that matters. This restores the chance to answer it.
+     if (isAtLeastV && !isAtLeastKernelVersion(4, 19)) {
+-        ALOGE("Android V requires kernel 4.19.");
+-        return 5;
++        ALOGW("Android V requires kernel 4.19.");
+     }
+ 
+     // 25Q2 bumps the kernel requirement up to 5.4
+     // see also: //system/netd/tests/kernel_test.cpp TestKernel54
++    // Warned rather than enforced, for the reason above.
+     if (isAtLeast25Q2 && !isAtLeastKernelVersion(5, 4)) {
+-        ALOGE("Android 25Q2 requires kernel 5.4.");
+-        return 6;
++        ALOGW("Android 25Q2 requires kernel 5.4.");
+     }
+ 
+     // 25Q4 bumps the kernel requirement up to 5.10
