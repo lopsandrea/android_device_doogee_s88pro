@@ -1,0 +1,7 @@
+cc_binary {
+    name: "initlog",
+    srcs: ["initlog.c"],
+    static_executable: true,
+    stl: "none",
+    cflags: ["-Wall", "-Werror", "-O2"],
+}
