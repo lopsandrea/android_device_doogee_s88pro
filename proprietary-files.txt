@@ -22,10 +22,22 @@ system/framework/mediatek-res.apk:system/app/mediatek-res/mediatek-res.apk;PRESI
 system/etc/permissions/com.mediatek.wfo.legacy.xml
 system/etc/permissions/privapp-permissions-mediatek.xml
 
-# Native libraries
-system/lib64/libmediatek_exceptionlog.so
-system/lib64/libmtk_vt_wrapper.so
-system/lib64/libmtkperf_client.so
+# Native libraries.
+#
+# DISABLE_DEPS on every one of them. extract-utils reads the ELF's DT_NEEDED
+# and writes a shared_libs list, which soong then insists on resolving to
+# modules:
+#
+#   error: vendor/doogee/s88pro/Android.bp:42:1: "libmtkperf_client" depends
+#     on undefined module "vendor.mediatek.hardware.mtkpower@1.0".
+#
+# Those dependencies are MediaTek HIDL interfaces that exist only as libraries
+# inside the stock vendor image, which this device ships whole rather than
+# building. There is no module to point at, and none is needed: the linker
+# finds them at runtime through the vendor namespace.
+system/lib64/libmediatek_exceptionlog.so;DISABLE_DEPS
+system/lib64/libmtk_vt_wrapper.so;DISABLE_DEPS
+system/lib64/libmtkperf_client.so;DISABLE_DEPS
 
 # IMS (VoLTE) -- see docs/bringup/volte-stato-esperimento.md
 #
@@ -36,9 +48,9 @@ system/lib64/libmtkperf_client.so
 #
 # Without these, libmtk_vt_wrapper.so does not load and ImsService dies with
 # UnsatisfiedLinkError as soon as it touches the video call provider.
-system/lib64/vendor.mediatek.hardware.videotelephony@1.0.so
-system/lib64/libvcodec_cap.so
-system/lib64/libvcodec_capenc.so
+system/lib64/vendor.mediatek.hardware.videotelephony@1.0.so;DISABLE_DEPS
+system/lib64/libvcodec_cap.so;DISABLE_DEPS
+system/lib64/libvcodec_capenc.so;DISABLE_DEPS
 
 # libhidltransport and libhwbinder must NOT be taken from stock: Android 12
 # still builds them (deprecated, folded into libhidlbase) and copying them here
