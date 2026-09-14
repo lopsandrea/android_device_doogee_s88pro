@@ -200,12 +200,18 @@ PRODUCT_PACKAGES += \
 #   if (temp.has_value()) return *temp;
 #   return getInt64<ISurfaceFlingerConfigs, ...>(defaultValue);   // configstore
 #
-# so a property that is set short-circuits the call. Thirteen functions in that
-# file fall back to configstore; these are exactly those thirteen, which is why
-# the list looks arbitrary and is not. Count the call sites before trusting a
-# list of them: the first attempt here set twelve, and the one it missed,
-# has_HDR_display, is the one libEGL calls while SurfaceFlinger initialises
-# graphics -- so the phone hung in exactly the same way, one property short.
+# so a property that is set short-circuits the call. Fourteen call sites in that
+# file fall back to configstore, reading thirteen distinct properties --
+# primaryDisplayOrientation is read twice -- and these are exactly those
+# thirteen, which is why the list looks arbitrary and is not.
+#
+# Count the call sites on the tree in front of you, every release, and check
+# the count against the length of this list. Twice now the two have disagreed
+# and the list was the one that was wrong. On 22.2 it was has_HDR_display,
+# which libEGL reads while SurfaceFlinger initialises graphics, and the phone
+# hung in exactly the same way, one property short. On 23.2 the count went from
+# thirteen to fourteen: secondary_display_orientation is new, has a property of
+# its own, and falls through to configstore like the rest.
 #
 # The values are the defaults each caller passes -- that is, what a phone built
 # today, which has no configstore at all, uses. They are written down rather
@@ -232,7 +238,8 @@ PRODUCT_SYSTEM_PROPERTIES += \
     ro.surface_flinger.max_virtual_display_dimension=0 \
     ro.surface_flinger.use_vr_flinger=false \
     ro.surface_flinger.start_graphics_allocator_service=false \
-    ro.surface_flinger.primary_display_orientation=ORIENTATION_0
+    ro.surface_flinger.primary_display_orientation=ORIENTATION_0 \
+    ro.surface_flinger.secondary_display_orientation=ORIENTATION_0
 
 # FM radio. LineageOS 22 builds libfmjni itself and reads the tuner settings
 # from ro.fm.* properties, which rootdir/etc/init/s88pro-fm.rc sets: see the
