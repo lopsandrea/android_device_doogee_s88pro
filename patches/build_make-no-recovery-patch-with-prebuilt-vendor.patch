@@ -1,0 +1,61 @@
+diff --git a/core/Makefile b/core/Makefile
+--- a/core/Makefile
++++ b/core/Makefile
+@@ -6094,6 +6094,9 @@
+ ifeq ($(BOARD_USES_FULL_RECOVERY_IMAGE),true)
+ 	$(hide) echo "full_recovery_image=true" >> $@
+ endif
++ifdef BUILDING_VENDOR_IMAGE
++	$(hide) echo "board_builds_vendorimage=true" >> $@
++endif
+ ifdef BOARD_USES_VENDORIMAGE
+ 	$(hide) echo "board_uses_vendorimage=true" >> $@
+ endif
+diff --git a/tools/releasetools/make_recovery_patch.py b/tools/releasetools/make_recovery_patch.py
+--- a/tools/releasetools/make_recovery_patch.py
++++ b/tools/releasetools/make_recovery_patch.py
+@@ -49,13 +49,19 @@
+ 
+   board_uses_vendorimage = OPTIONS.info_dict.get(
+       "board_uses_vendorimage") == "true"
++  board_builds_vendorimage = OPTIONS.info_dict.get(
++      "board_builds_vendorimage") == "true"
++  target_files_dir = None
+ 
+-  if board_uses_vendorimage:
++  if board_builds_vendorimage:
+     target_files_dir = "VENDOR"
+-  else:
++  elif not board_uses_vendorimage:
+     target_files_dir = "SYSTEM"
+ 
+   def output_sink(fn, data):
++    if target_files_dir is None:
++      return
++
+     with open(os.path.join(output_dir, target_files_dir,
+                            *fn.split("/")), "wb") as f:
+       f.write(data)
+diff --git a/tools/releasetools/non_ab_ota.py b/tools/releasetools/non_ab_ota.py
+--- a/tools/releasetools/non_ab_ota.py
++++ b/tools/releasetools/non_ab_ota.py
+@@ -709,12 +709,17 @@
+ 
+ def HasRecoveryPatch(target_files_zip, info_dict):
+   board_uses_vendorimage = info_dict.get("board_uses_vendorimage") == "true"
++  board_builds_vendorimage = info_dict.get("board_builds_vendorimage") == "true"
++  target_files_dir = None
+ 
+-  if board_uses_vendorimage:
++  if board_builds_vendorimage:
+     target_files_dir = "VENDOR"
+-  else:
++  elif not board_uses_vendorimage:
+     target_files_dir = "SYSTEM/vendor"
+ 
++  if target_files_dir is None:
++    return True
++
+   patch = "%s/recovery-from-boot.p" % target_files_dir
+   img = "%s/etc/recovery.img" % target_files_dir
+ 

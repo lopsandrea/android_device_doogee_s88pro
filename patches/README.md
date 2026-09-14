@@ -426,3 +426,45 @@ x100 throughout. It only bites once the app builds the library itself.
 **What it does**: makes `powerUp` and `tune` convert the way `seek` already
 does. Two lines. It is not an adaptation to this device: it is one file
 agreeing with itself.
+
+## build_make-no-recovery-patch-with-prebuilt-vendor.patch
+
+**Project**: `build/make`
+
+**Branch**: `lineage-23.2` only. LineageOS 22.2 and 21 already carry the change
+this restores.
+
+**Symptom**: the build reaches 95% and then stops packaging the target files:
+
+```
+FileNotFoundError: [Errno 2] No such file or directory:
+  '.../lineage_s88pro-target_files/VENDOR/bin/install-recovery.sh'
+```
+
+**Why**: `make_recovery_patch.py` writes the recovery-from-boot patch into the
+target files, and has to decide where. It knows two cases in 23.2:
+
+```python
+if board_uses_vendorimage:  target_files_dir = "VENDOR"
+else:                       target_files_dir = "SYSTEM"
+```
+
+There is a third, and it is ours: a device that *uses* a vendor image without
+*building* it. `BOARD_PREBUILT_VENDORIMAGE` means the image is copied whole, so
+target files hold `IMAGES/vendor.img` and no `VENDOR/` tree to write into.
+
+LineageOS already solved this. Commit 27376ac8dd by TheScarastic,
+*"Don't make recovery patch for devices with prebuilt vendor"*, adds
+`board_builds_vendorimage` next to `board_uses_vendorimage` and makes the
+writer do nothing when the vendor image is not built. It is on lineage-22.2 and
+on lineage-21; it has not been forward-ported to lineage-23.2.
+
+**What it does**: the same three changes, re-applied by hand because the
+surrounding code has moved since 2020 — `core/Makefile` declares
+`board_builds_vendorimage` when `BUILDING_VENDOR_IMAGE` is set,
+`make_recovery_patch.py` gains the third case and returns early from
+`output_sink`, and `non_ab_ota.py` stops looking for a patch nobody wrote.
+
+**When it can be dropped**: as soon as LineageOS forward-ports 27376ac8dd.
+Check with `git log -S board_builds_vendorimage -- tools/releasetools/` before
+carrying it to the next release.
