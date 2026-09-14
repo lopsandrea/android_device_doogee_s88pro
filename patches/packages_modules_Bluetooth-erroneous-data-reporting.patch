@@ -1,8 +1,8 @@
-diff --git a/system/gd/hci/controller.cc b/system/gd/hci/controller.cc
-index 925f1cc787c..e1de17ef42f 100644
---- a/system/gd/hci/controller.cc
-+++ b/system/gd/hci/controller.cc
-@@ -484,6 +484,22 @@ struct Controller::impl {
+diff --git a/system/gd/hci/controller_impl.cc b/system/gd/hci/controller_impl.cc
+index 69b2294bbe6..276dd3aadd1 100644
+--- a/system/gd/hci/controller_impl.cc
++++ b/system/gd/hci/controller_impl.cc
+@@ -477,6 +477,22 @@ struct ControllerImpl::impl {
    }
  
    void read_default_erroneous_data_reporting_handler(CommandCompleteView view) {
