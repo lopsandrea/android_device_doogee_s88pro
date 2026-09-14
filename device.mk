@@ -200,9 +200,12 @@ PRODUCT_PACKAGES += \
 #   if (temp.has_value()) return *temp;
 #   return getInt64<ISurfaceFlingerConfigs, ...>(defaultValue);   // configstore
 #
-# so a property that is set short-circuits the call. Twelve functions in that
-# file fall back to configstore; these are exactly those twelve, which is why
-# the list looks arbitrary and is not.
+# so a property that is set short-circuits the call. Thirteen functions in that
+# file fall back to configstore; these are exactly those thirteen, which is why
+# the list looks arbitrary and is not. Count the call sites before trusting a
+# list of them: the first attempt here set twelve, and the one it missed,
+# has_HDR_display, is the one libEGL calls while SurfaceFlinger initialises
+# graphics -- so the phone hung in exactly the same way, one property short.
 #
 # The values are the defaults each caller passes -- that is, what a phone built
 # today, which has no configstore at all, uses. They are written down rather
@@ -219,6 +222,7 @@ PRODUCT_SYSTEM_PROPERTIES += \
     ro.surface_flinger.use_context_priority=true \
     ro.surface_flinger.max_frame_buffer_acquired_buffers=2 \
     ro.surface_flinger.has_wide_color_display=false \
+    ro.surface_flinger.has_HDR_display=false \
     ro.surface_flinger.running_without_sync_framework=true \
     ro.surface_flinger.present_time_offset_from_vsync_ns=0 \
     ro.surface_flinger.force_hwc_copy_for_virtual_displays=false \
