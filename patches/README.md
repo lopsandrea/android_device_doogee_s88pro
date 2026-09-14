@@ -468,3 +468,75 @@ surrounding code has moved since 2020 — `core/Makefile` declares
 **When it can be dropped**: as soon as LineageOS forward-ports 27376ac8dd.
 Check with `git log -S board_builds_vendorimage -- tools/releasetools/` before
 carrying it to the next release.
+
+## system_core-blkio-cgroup-optional.patch
+
+**Project**: `system/core`
+
+**Branch**: `lineage-23.2` only. On 22.2 the same failure is not fatal.
+
+**Symptom**: LineageOS 23.2 installs and then reboots to the bootloader about
+fourteen seconds in, over and over. It is not a crash: init does it on purpose.
+
+```
+init: starting service 'apexd-bootstrap'...
+init: Command 'exec_start apexd-bootstrap' ... failed: Could not start exec
+  service: createProcessGroup(0, 327, 0) failed for service
+  'apexd-bootstrap': No such file or directory
+init: Service 'apexd-bootstrap' failed to start due to a fatal error
+reboot: Restarting system with command 'bootloader,bootstrap-apexd-failed'
+```
+
+apexd is not the culprit, it is simply the first service init tries to start.
+The real failure is ten lines earlier:
+
+```
+libprocessgroup: Failed to mount controller blkio: No such file or directory
+libprocessgroup: Failed to setup blkio cgroup
+init: Command 'SetupCgroups' ... failed: Failed to setup cgroups
+```
+
+**Why**: this kernel has no blkio controller. `/proc/cgroups` on the phone
+lists cpuset, cpu, cpuacct, schedtune, memory and freezer, and nothing else.
+That is equally true under 22.2, where the same two lines appear in the boot
+log and the phone boots anyway.
+
+What differs is what happens next. `CgroupSetup()` in
+`libprocessgroup/setup/cgroup_map_write.cpp` stops at the first controller that
+fails:
+
+```cpp
+if (!SetupCgroup(descriptor)) {
+    LOG(ERROR) << "Failed to setup " << name << " cgroup";
+    return false;
+}
+// System / app isolation.
+```
+
+and the block it never reaches, "System / app isolation", is the one that
+creates `/sys/fs/cgroup/system`. Without that directory `createProcessGroup`
+cannot place any service, so no service starts at all.
+
+`MountV1CgroupController` already has the answer written into it:
+
+```cpp
+if (mount(...)) {
+    if (IsOptionalController(controller)) {
+        PLOG(INFO) << "Failed to mount optional controller " << ...;
+        return true;
+    }
+    PLOG(ERROR) << "Failed to mount controller " << ...;
+    return false;
+}
+```
+
+and the log says `Failed to mount controller blkio`, the second branch.
+
+**What it does**: marks blkio `"Optional": true` in `cgroups.json`. One line.
+It states a fact about this device rather than working around a check.
+
+**The alternative, and why not**: turning on `CONFIG_BLK_CGROUP` in the kernel
+would give the controller for real. It also changes block layer structures,
+and on this device a kernel configuration change that moves symbol CRCs stops
+the factory Wi-Fi, Bluetooth and GPS modules from loading. That trade is not
+worth making for a controller Android has booted without here since 21.
