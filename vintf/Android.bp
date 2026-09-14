@@ -1,0 +1,38 @@
+// The framework compatibility matrix for FCM level 4.
+//
+// The vendor partition is the factory one, Android 10, and its manifest says
+// target-level="4". Android 14 no longer ships the matrix for that level --
+// AOSP deleted compatibility_matrix.3.xml and .4.xml -- so checkvintf stops
+// with "Cannot find framework matrix at FCM version 4.".
+//
+// That error used to be silenced by turning VINTF enforcement off, which was
+// the wrong trade. build/make/core/config.mk forces PRODUCT_FULL_TREBLE to
+// false as soon as any of its requirements is false, and without Treble
+// linkerconfig writes the legacy configuration: one non-isolated namespace
+// that searches /system/${LIB} first, with no vendor, system or vndk
+// namespaces at all. The Android 10 vendor binaries then link against
+// Android 14 libraries and die, starting with the keymaster HAL --
+//   cannot locate symbol "_ZN9keymaster24PureSoftKeymasterContextC1Ev"
+//   referenced by "/vendor/lib64/libkeymaster4.so"
+// because the no-argument constructor only exists in the VNDK 29 copy. From
+// there keystore2 never registers, vold waits for it forever, and init never
+// leaves post-fs-data: the phone sits on the boot logo without panicking.
+//
+// Turning the check off also turned the check off in a second place, which is
+// what made it look free: CheckVintfIfTrebleEnabled in releasetools/common.py
+// returns immediately when Treble is disabled.
+//
+// So the matrix is shipped instead. The file is the one LineageOS 20 built for
+// this same device -- assemble_vintf over the AOSP source
+// hardware/interfaces/compatibility_matrices/compatibility_matrix.4.xml plus
+// the Q kernel requirements -- unmodified, and the version this phone is known
+// to run with.
+//
+// It cannot go in PRODUCT_COPY_FILES: build/make/core/Makefile refuses
+// anything landing in $(TARGET_COPY_OUT_SYSTEM)/etc/vintf/.
+prebuilt_etc {
+    name: "compatibility_matrix.4.xml.s88pro",
+    src: "compatibility_matrix.4.xml",
+    filename: "compatibility_matrix.4.xml",
+    sub_dir: "vintf",
+}

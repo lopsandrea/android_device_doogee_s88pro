@@ -284,34 +284,50 @@ TARGET_FLATTEN_APEX := false
 #   MODULE.TARGET.SHARED_LIBRARIES.libfmjni already defined
 BOARD_HAVE_MTK_FM := true
 
-# VINTF is not enforced on this device, and cannot be.
+# VINTF is enforced, and it has to be.
 #
 # The vendor partition is the factory one, Android 10, and the charter allows
 # that for a non-A/B device. Its manifest declares target-level 4, and
-# Android 14 no longer ships a framework compatibility matrix for FCM 4:
+# Android 14 no longer ships a framework compatibility matrix for that level:
 #   Cannot find framework matrix at FCM version 4.
+# The matrix is shipped from the device tree instead -- see vintf/Android.bp,
+# which carries the whole story.
 #
-# Raising the level is not a fix, it is a false claim. At target-level 5
-# checkvintf reads the manifest against the R matrix and answers correctly
-# that the device offers HAL versions the framework no longer lists --
-# android.hardware.audio@5.0, light@2.0, power@1.3, configstore@1.1 and the
-# radio instances -- because that is what an Android 10 vendor offers. They
-# work anyway, which is measurable: this is the ROM that runs on the phone.
-# What does not work is claiming they are something else.
+# What must NOT be done is turning enforcement off:
 #
-# It has to be the _OVERRIDE form, and it has to be here rather than in
-# device.mk: build/make/core/config.mk rewrites PRODUCT_ENFORCE_VINTF_MANIFEST
-# from PRODUCT_FULL_TREBLE on every build, and only consults the override.
+#   PRODUCT_ENFORCE_VINTF_MANIFEST_OVERRIDE := false
 #
-# Turning enforcement off costs less than it looks. check_vintf_all only ever
-# produced check_vintf_system.log here: with a prebuilt vendor there is no
-# device manifest in the staging directory, so the device and compatibility
-# checks were skipped and only the AOSP system manifest was examined. The
-# kernel requirements of matrix level 5 -- the whole reason for the move to
-# 4.14.180 -- were checked by ota_from_target_files, and they are satisfied:
-# see the kernel config commits. Nothing verifies them now, but nothing
-# verified them before this either, and they remain correct.
-PRODUCT_ENFORCE_VINTF_MANIFEST_OVERRIDE := false
+# It reads like a local concession and it is not one. build/make/core/config.mk
+# treats PRODUCT_ENFORCE_VINTF_MANIFEST as a Treble requirement, and forces
+# PRODUCT_FULL_TREBLE back to false as soon as any requirement is false:
+#
+#   $(foreach req,$(requirements),$(eval \
+#       PRODUCT_FULL_TREBLE := $(if $(filter false,$($(req))),false,$(PRODUCT_FULL_TREBLE))))
+#
+# There is no configuration with Treble on and VINTF off. And without Treble,
+# ro.treble.enabled is false, so linkerconfig writes the legacy configuration:
+# a single non-isolated namespace searching /system/${LIB} first, with no
+# vendor, system or vndk namespaces at all. The Android 10 vendor binaries then
+# resolve against Android 14 libraries. Four of them die instantly -- aee_aedv,
+# aee_aedv64, nfc_hal_service and the keymaster HAL:
+#
+#   CANNOT LINK EXECUTABLE ".../android.hardware.keymaster@4.0-service.trustkernel":
+#   cannot locate symbol "_ZN9keymaster24PureSoftKeymasterContextC1Ev"
+#   referenced by "/vendor/lib64/libkeymaster4.so"
+#
+# because that no-argument constructor exists only in the VNDK 29 copy of
+# libpuresoftkeymasterdevice.so; the one in /system/lib64 takes (KmVersion,
+# keymaster_security_level_t). Then keystore2 blocks in getService(), vold
+# blocks waiting for keystore2, and init never leaves post-fs-data --
+# exec 4 (/system/bin/vdc --wait cryptfs enablefilecrypto) is started and never
+# returns. The phone sits on the boot logo, no panic, no reboot, watchdog
+# happily petted.
+#
+# It also hid its own damage: CheckVintfIfTrebleEnabled in
+# build/make/tools/releasetools/common.py returns immediately when Treble is
+# off, so the check that would have failed was never run. The build did say so,
+# once per compile, and it went unread:
+#   This device does not have Treble enabled. This is unsafe.
 
 # Vendor VNDK: the device shipped with Android 10.
 BOARD_VNDK_VERSION := current

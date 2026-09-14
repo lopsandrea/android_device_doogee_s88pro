@@ -400,3 +400,9 @@ PRODUCT_VENDOR_PROPERTIES += \
 # No HALs or libraries to request for vendor: it is a prebuilt image, see
 # BOARD_PREBUILT_VENDORIMAGE in BoardConfig. Everything it needs is already
 # inside.
+
+# The framework compatibility matrix for FCM level 4, which Android 14 no
+# longer ships and this Android 10 vendor needs. The story is in
+# vintf/Android.bp, next to the file.
+PRODUCT_PACKAGES += \
+    compatibility_matrix.4.xml.s88pro

@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest version="1.0" type="device">
-    <kernel target-level="5"/>
+    <kernel target-level="4"/>
 </manifest>
