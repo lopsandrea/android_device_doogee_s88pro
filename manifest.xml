@@ -79,16 +79,38 @@
         </interface>
         <fqname>@2.4::ICameraProvider/internal/0</fqname>
     </hal>
-    <hal format="hidl">
-        <name>android.hardware.configstore</name>
-        <transport>hwbinder</transport>
-        <version>1.1</version>
-        <interface>
-            <name>ISurfaceFlingerConfigs</name>
-            <instance>default</instance>
-        </interface>
-        <fqname>@1.1::ISurfaceFlingerConfigs/default</fqname>
-    </hal>
+    <!--
+      No configstore, and it is not an omission.
+
+      The stock vendor declares android.hardware.configstore@1.1 and ships an
+      implementation for it, but that implementation cannot run here. It is
+      sandboxed by a seccomp filter written for Android 10, which does not
+      allow a syscall the Android 15 libraries it now links against do make:
+
+        libminijail[701]: blocked syscall: gettid
+        init: Service 'vendor.configstore-hal' (pid 701) received signal 31
+
+      Signal 31 is SIGSYS. init restarts it, it dies again, every five seconds
+      for as long as the phone is on. The filter lives in /vendor, which this
+      device ships as a prebuilt image and does not rebuild, so it cannot be
+      widened.
+
+      Declaring the HAL anyway is worse than not having it. SurfaceFlinger asks
+      hwservicemanager for ISurfaceFlingerConfigs, and because the manifest
+      says it exists it waits for it instead of giving up:
+
+        getService: found dead hwbinder service for
+          android.hardware.configstore@1.0::ISurfaceFlingerConfigs/default
+        getService: Trying again for ...
+
+      SurfaceFlinger then never registers SurfaceFlingerAIDL, system_server
+      waits for that, and the phone stays on the vendor logo.
+
+      Undeclared, getService returns null at once and SurfaceFlinger uses its
+      own defaults, which is what AOSP expects: configstore has been deprecated
+      for years, and every value it carried has a ro.surface_flinger.* property
+      to override it if one ever proves wrong.
+    -->
     <hal format="hidl">
         <name>android.hardware.drm</name>
         <transport>hwbinder</transport>
