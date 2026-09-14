@@ -169,6 +169,64 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     S88ProParts
 
+# SurfaceFlinger: the values the stock configstore HAL used to answer.
+#
+# That HAL cannot run here any more. It is sandboxed by a seccomp filter
+# written for Android 10, and the Android 15 libraries it now links against
+# call a syscall that filter does not allow:
+#
+#   libminijail[701]: blocked syscall: gettid
+#   init: Service 'vendor.configstore-hal' (pid 701) received signal 31
+#
+# Signal 31 is SIGSYS. init restarts it every five seconds, for ever. The
+# filter lives in /vendor, which this device ships as a prebuilt image and does
+# not rebuild, so it cannot be widened, and the vendor VINTF manifest inside
+# that image declares the HAL, so hwservicemanager keeps trying to start it.
+#
+# That is what turns a broken HAL into a phone that does not boot.
+# SurfaceFlinger asks for ISurfaceFlingerConfigs, and because the manifest says
+# it exists it waits rather than giving up:
+#
+#   getService: found dead hwbinder service for
+#     android.hardware.configstore@1.0::ISurfaceFlingerConfigs/default
+#
+# It then never registers SurfaceFlingerAIDL, system_server waits for that, and
+# the phone stays on the vendor logo.
+#
+# The way out is not to argue with the HAL but to stop needing it.
+# SurfaceFlingerProperties.cpp reads each value like this:
+#
+#   auto temp = SurfaceFlingerProperties::vsync_event_phase_offset_ns();
+#   if (temp.has_value()) return *temp;
+#   return getInt64<ISurfaceFlingerConfigs, ...>(defaultValue);   // configstore
+#
+# so a property that is set short-circuits the call. Twelve functions in that
+# file fall back to configstore; these are exactly those twelve, which is why
+# the list looks arbitrary and is not.
+#
+# The values are the defaults each caller passes -- that is, what a phone built
+# today, which has no configstore at all, uses. They are written down rather
+# than inherited because inheriting them is what breaks: leaving a property
+# unset is what sends SurfaceFlinger to the HAL.
+#
+# One trap: Scheduler/VsyncConfiguration.cpp has a validateSysprops() that
+# aborts if the two vsync offsets are set. It only runs on the WorkDuration
+# path, chosen by debug.sf.use_phase_offsets_as_durations, which is not set
+# here. Setting that debug property on this device would now be fatal.
+PRODUCT_SYSTEM_PROPERTIES += \
+    ro.surface_flinger.vsync_event_phase_offset_ns=1000000 \
+    ro.surface_flinger.vsync_sf_event_phase_offset_ns=1000000 \
+    ro.surface_flinger.use_context_priority=true \
+    ro.surface_flinger.max_frame_buffer_acquired_buffers=2 \
+    ro.surface_flinger.has_wide_color_display=false \
+    ro.surface_flinger.running_without_sync_framework=true \
+    ro.surface_flinger.present_time_offset_from_vsync_ns=0 \
+    ro.surface_flinger.force_hwc_copy_for_virtual_displays=false \
+    ro.surface_flinger.max_virtual_display_dimension=0 \
+    ro.surface_flinger.use_vr_flinger=false \
+    ro.surface_flinger.start_graphics_allocator_service=false \
+    ro.surface_flinger.primary_display_orientation=ORIENTATION_0
+
 # FM radio. LineageOS 22 builds libfmjni itself and reads the tuner settings
 # from ro.fm.* properties, which rootdir/etc/init/s88pro-fm.rc sets: see the
 # comment there, and the one in proprietary-files.txt for why the MediaTek
