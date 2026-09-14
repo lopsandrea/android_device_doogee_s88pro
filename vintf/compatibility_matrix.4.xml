@@ -39,14 +39,6 @@
         </interface>
     </hal>
     <hal format="hidl" optional="true">
-        <name>android.hardware.automotive.audiocontrol</name>
-        <version>1.0</version>
-        <interface>
-            <name>IAudioControl</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
-    <hal format="hidl" optional="true">
         <name>android.hardware.automotive.evs</name>
         <version>1.0</version>
         <interface>
@@ -459,22 +451,6 @@
         <version>1.0</version>
         <interface>
             <name>IUsbGadget</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
-    <hal format="hidl" optional="true">
-        <name>android.hardware.vibrator</name>
-        <version>1.0-3</version>
-        <interface>
-            <name>IVibrator</name>
-            <instance>default</instance>
-        </interface>
-    </hal>
-    <hal format="hidl" optional="true">
-        <name>android.hardware.vr</name>
-        <version>1.0</version>
-        <interface>
-            <name>IVr</name>
             <instance>default</instance>
         </interface>
     </hal>
