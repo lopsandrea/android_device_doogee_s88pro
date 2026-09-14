@@ -424,14 +424,22 @@ TARGET_KERNEL_CONFIG := lineage_s88pro_defconfig
 # then a LineageOS bump would change our compiler without anyone deciding to,
 # and this kernel is from 2019: which clang builds it is not a detail.
 #
-# r487747c is clang-17, what LineageOS 21 ships. It is newer than the
-# clang-r353983c the factory kernel was built with, and two of its warnings
-# did not exist back then -- deprecated-non-prototype and
-# single-bit-bitfield-constant-conversion, introduced in clang-15 and 16. They
-# are turned off below. Do NOT carry those two flags back to a clang-14 tree:
-# it reports them as unknown options, and then the -fstack-protector-strong
-# probe fails and the build dies somewhere else entirely.
-TARGET_KERNEL_CLANG_VERSION := r487747c
+# r522817 is clang-18. LineageOS 21 pinned r487747c, clang-17, but 22.2 does
+# not ship it any more and the build stops before compiling a line:
+#
+#   /bin/sh: 1: .../clang-r487747c/bin/clang: not found
+#
+# Of what is left -- clang-18 (r522817), clang-19 (r530567, r536225) -- this is
+# the shortest step. That matters: the compiler is newer than the
+# clang-r353983c the factory kernel was built with, this kernel is from 2019,
+# and every release since has added warnings that -Werror turns into errors.
+# Two of them are already turned off below, deprecated-non-prototype and
+# single-bit-bitfield-constant-conversion, introduced in clang-15 and 16.
+#
+# Do NOT carry those two flags back to a clang-14 tree: it reports them as
+# unknown options, and then the -fstack-protector-strong probe fails and the
+# build dies somewhere else entirely.
+TARGET_KERNEL_CLANG_VERSION := r522817
 
 # The warnings clang-14 has and the stock clang-9 does not. The kernel builds
 # with -Werror, and code from 2019 becomes an error purely because the compiler
