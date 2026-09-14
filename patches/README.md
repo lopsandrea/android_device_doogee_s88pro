@@ -342,3 +342,48 @@ they rely on is still in the tree — `vndk-apex-defaults`, `apex_vndk`,
 `vndk-29` and `vndk-sp-29` symlinks in `system/lib` and `system/lib64`, the
 same layout LineageOS 21 produces, and passes `apex_linkerconfig_validation`,
 `apex_sepolicy_tests` and `host_apex_verifier`.
+
+## frameworks_av-restore-audio-hal-v5.patch
+
+**Project**: `frameworks/av`
+
+**Branch**: `lineage-22.2` only. LineageOS 21 still builds the V5 client.
+
+**Symptom**: the phone reaches the LineageOS boot animation and stays there.
+`audioserver` dies every five seconds and `system_server` files an ANR about
+once a minute:
+
+```
+F libc  : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0
+          in tid 724 (audioserver), pid 724 (audioserver)
+F DEBUG : Cause: null pointer dereference
+F DEBUG : #00 pc 000ccb58  /system/bin/audioserver
+            (android::AudioFlinger::onFirstRef()+704)
+F DEBUG : #01 pc 00078bf4  /system/bin/audioserver (main+332)
+```
+
+**Why**: `libaudiohal` only looks for the HAL versions it knows, and Android 15
+knows four:
+
+```cpp
+static const std::array<AudioHalVersionInfo, 4> sAudioHALVersions = {
+    AIDL 1.0, HIDL 7.1, HIDL 7.0, HIDL 6.0,
+};
+```
+
+This vendor is Android 10 and offers `android.hardware.audio@5.0::IDevicesFactory`.
+None of the four matches, `createPreferredImpl` returns null, and
+`AudioFlinger::onFirstRef()` dereferences it. LineageOS 21 has the same array
+with five entries, the fifth being HIDL 5.0, which is why the same vendor works
+there.
+
+**What it does**: reverts AOSP commit 559e9765c5, *"Remove framework support for
+audio HIDL HAL V5 — This HAL version has been deprecated in Android V"*. That
+commit is a clean deletion of 29 lines across three files: the version from the
+array, the `libaudiohal@5.0` module, and its entry in the parent Android.bp.
+
+Nothing else had to be restored, and that is the point: the conditional code
+the V5 client needs is still in the tree — `#if MAJOR_VERSION <= 5` and
+`#if MAJOR_VERSION < 5` are still in `impl/DeviceHalHidl.cpp` and
+`impl/StreamHalHidl.cpp`, and `hardware/interfaces/audio/5.0` still exists.
+Only the build target and the lookup entry were taken away.

@@ -1,0 +1,111 @@
+diff --git a/media/libaudiohal/Android.bp b/media/libaudiohal/Android.bp
+index 74a64bf6d0..75e2c11aba 100644
+--- a/media/libaudiohal/Android.bp
++++ b/media/libaudiohal/Android.bp
+@@ -23,6 +23,7 @@ cc_library_shared {
+     ],
+ 
+     required: [
++        "libaudiohal@5.0",
+         "libaudiohal@6.0",
+         "libaudiohal@7.0",
+         "libaudiohal@7.1",
+diff --git a/media/libaudiohal/FactoryHal.cpp b/media/libaudiohal/FactoryHal.cpp
+index 2c30693a61..15cb297b5c 100644
+--- a/media/libaudiohal/FactoryHal.cpp
++++ b/media/libaudiohal/FactoryHal.cpp
+@@ -50,11 +50,12 @@ using InterfaceName = std::pair<std::string, std::string>;
+  * This list need to keep sync with AudioHalVersionInfo.VERSIONS in
+  * media/java/android/media/AudioHalVersionInfo.java.
+  */
+-static const std::array<AudioHalVersionInfo, 4> sAudioHALVersions = {
++static const std::array<AudioHalVersionInfo, 5> sAudioHALVersions = {
+     AudioHalVersionInfo(AudioHalVersionInfo::Type::AIDL, 1, 0),
+     AudioHalVersionInfo(AudioHalVersionInfo::Type::HIDL, 7, 1),
+     AudioHalVersionInfo(AudioHalVersionInfo::Type::HIDL, 7, 0),
+     AudioHalVersionInfo(AudioHalVersionInfo::Type::HIDL, 6, 0),
++    AudioHalVersionInfo(AudioHalVersionInfo::Type::HIDL, 5, 0),
+ };
+ 
+ static const std::map<AudioHalVersionInfo::Type, InterfaceName> sDevicesHALInterfaces = {
+diff --git a/media/libaudiohal/impl/Android.bp b/media/libaudiohal/impl/Android.bp
+index 00f3929bff..3585402202 100644
+--- a/media/libaudiohal/impl/Android.bp
++++ b/media/libaudiohal/impl/Android.bp
+@@ -82,6 +82,32 @@ cc_defaults {
+     ],
+ }
+ 
++cc_library_shared {
++    name: "libaudiohal@5.0",
++    defaults: [
++        "libaudiohal_default",
++        "libaudiohal_hidl_default",
++    ],
++    srcs: [
++        ":audio_core_hal_client_sources",
++        ":audio_effect_hidl_hal_client_sources",
++        "EffectsFactoryHalEntry.cpp",
++    ],
++    shared_libs: [
++        "android.hardware.audio.common@5.0",
++        "android.hardware.audio.common@5.0-util",
++        "android.hardware.audio.effect@5.0",
++        "android.hardware.audio.effect@5.0-util",
++        "android.hardware.audio@5.0",
++        "android.hardware.audio@5.0-util",
++    ],
++    cflags: [
++        "-DMAJOR_VERSION=5",
++        "-DMINOR_VERSION=0",
++        "-include common/all-versions/VersionMacro.h",
++    ],
++}
++
+ cc_library_shared {
+     name: "libaudiohal@6.0",
+     defaults: [
+diff --git a/media/libstagefright/wifi-display/source/Converter.cpp b/media/libstagefright/wifi-display/source/Converter.cpp
+index 5502b063ab..19287c43cf 100644
+--- a/media/libstagefright/wifi-display/source/Converter.cpp
++++ b/media/libstagefright/wifi-display/source/Converter.cpp
+@@ -148,8 +148,37 @@ status_t Converter::initEncoder() {
+     bool isAudio = !strncasecmp(outputMIME.c_str(), "audio/", 6);
+ 
+     if (!mIsPCMAudio) {
+-        mEncoder = MediaCodec::CreateByType(
+-                mCodecLooper, outputMIME.c_str(), true /* encoder */);
++        // On some devices the hardware encoder cannot handle the buffers that
++        // come from a Surface and produces unreadable pictures: it encodes
++        // camera video correctly, but not the screen. Where that happens,
++        // this property allows a different encoder to be named for WiFi
++        // Display alone, without touching the default choice made for
++        // everything else:
++        //
++        //   media.wfd.video-encoder=c2.android.avc.encoder
++        //
++        AString encoderName;
++        char encoderProp[PROPERTY_VALUE_MAX];
++        if (!isAudio
++                && property_get("media.wfd.video-encoder", encoderProp, NULL) > 0) {
++            encoderName.setTo(encoderProp);
++        }
++
++        if (!encoderName.empty()) {
++            ALOGI("using encoder '%s' from media.wfd.video-encoder",
++                  encoderName.c_str());
++            mEncoder = MediaCodec::CreateByComponentName(
++                    mCodecLooper, encoderName.c_str());
++            if (mEncoder == NULL) {
++                ALOGW("encoder '%s' not available, falling back to the default one",
++                      encoderName.c_str());
++            }
++        }
++
++        if (mEncoder == NULL) {
++            mEncoder = MediaCodec::CreateByType(
++                    mCodecLooper, outputMIME.c_str(), true /* encoder */);
++        }
+ 
+         if (mEncoder == NULL) {
+             return ERROR_UNSUPPORTED;
