@@ -30,12 +30,12 @@
   <project path="device/doogee/s88pro"
            name="lopsandrea/android_device_doogee_s88pro"
            remote="github"
-           revision="lineage-21" />
+           revision="lineage-22.2" />
 
   <project path="vendor/doogee/s88pro"
            name="lopsandrea/android_vendor_doogee_s88pro"
            remote="github"
-           revision="lineage-21" />
+           revision="lineage-22.2" />
 
   <!--
     The kernel sources. BoardConfig builds the kernel from them, so they are
@@ -46,5 +46,24 @@
   <project path="kernel/doogee/s88pro"
            name="lopsandrea/android_kernel_doogee_s88pro"
            remote="github"
-           revision="lineage-21" />
+           revision="lineage-22.2" />
+
+  <!--
+    The VNDK 29 snapshot, which the LineageOS 22.2 manifest no longer carries:
+    Android 15 clears BOARD_VNDK_VERSION and PLATFORM_VNDK_VERSION, because the
+    platform has no VNDK of its own any more (build/make/core/config.mk), and
+    only v30 and above are left in the manifest. This vendor is Android 10,
+    that is VNDK 29, and without those libraries its binaries do not link: the
+    PureSoftKeymasterContext() constructor that /vendor/lib64/libkeymaster4.so
+    needs lives only in /apex/com.android.vndk.v29.
+
+    The revision is pinned to the tag LineageOS 21 took it from, so the build
+    stays reproducible.
+  -->
+  <project path="prebuilts/vndk/v29"
+           name="platform/prebuilts/vndk/v29"
+           remote="aosp"
+           revision="refs/tags/android-14.0.0_r67"
+           clone-depth="1"
+           groups="pdk" />
 </manifest>
