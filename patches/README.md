@@ -281,3 +281,64 @@ below the first read, so it never runs for a controller that lies this way.
 the view. An invalid answer is logged and ignored, which is what the existing
 guard was meant to do. Erroneous data reporting is an optional audio-quality
 feature; nothing else depends on it.
+
+## packages_modules_vndk-restore-vndk-29-apex.patch
+
+**Project**: `packages/modules/vndk`
+
+**Branch**: `lineage-22.2` only. LineageOS 21 still declares the module.
+
+**Symptom**: the phone hangs on the vendor logo and never reaches the boot
+animation. USB does not even enumerate, so there is nothing to read over adb;
+the log below was taken with `initlog`.
+
+```
+linkerconfig: Unable to access VNDK APEX at path: /apex/com.android.vndk.v29:
+  No such file or directory
+linkerconfig: Check failed: !"undefined var" SANITIZER_DEFAULT_VENDOR is not defined
+linkerconfig: libc: Fatal signal 6 (SIGABRT) in tid 382 (linkerconfig)
+  ... in BuildVendorNamespace(...)
+```
+
+`linkerconfig` aborts, `/linkerconfig/ld.config.txt` is never written, and the
+linker falls back to a single namespace. Everything that needs a real one then
+dies:
+
+```
+CANNOT LINK "/vendor/bin/hw/android.hardware.keymaster@4.0-service.trustkernel":
+  cannot locate symbol "_ZN9keymaster24PureSoftKeymasterContextC1Ev"
+  referenced by "/vendor/lib64/libkeymaster4.so"
+CANNOT LINK "/system/bin/keystore2":
+  library "libandroidicu.so" not found: needed by /system/lib64/libsqlite.so
+CANNOT LINK "/vendor/bin/hw/android.hardware.nfc@1.2-service-st":
+  library "android.hardware.nfc@1.0.so" not found
+```
+
+and vold waits for keystore2 forever, one line per second, without ever giving
+up:
+
+```
+ServiceManagerCppClient: Waited one second for
+  android.system.keystore2.IKeystoreService/default
+```
+
+**Why**: AOSP commit 6e59419, *"Removing vndk apex v29 — It's not used"*,
+deleted the module. For AOSP that is true: nothing there targets VNDK 29 any
+more. This vendor is Android 10 and targets exactly that, and
+`PRODUCT_TARGET_VNDK_VERSION := 29` in device.mk says so.
+
+Putting `prebuilts/vndk/v29` back in the local manifest is necessary and not
+sufficient: the libraries are there, but without this module nothing packages
+them into an APEX, and `/apex/com.android.vndk.v29` is what linkerconfig looks
+for.
+
+**What it does**: reverts that commit, and nothing else. The eight lines it
+restores are the same shape as the v30 block right above them, and everything
+they rely on is still in the tree — `vndk-apex-defaults`, `apex_vndk`,
+`build/soong/apex/vndk.go`.
+
+**Measured after**: `m com.android.vndk.v29` installs
+`system/system_ext/apex/com.android.vndk.v29.apex` together with the
+`vndk-29` and `vndk-sp-29` symlinks in `system/lib` and `system/lib64`, the
+same layout LineageOS 21 produces, and passes `apex_linkerconfig_validation`,
+`apex_sepolicy_tests` and `host_apex_verifier`.
