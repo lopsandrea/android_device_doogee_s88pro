@@ -352,16 +352,29 @@
         </interface>
         <fqname>@1.1::IUsb/default</fqname>
     </hal>
-    <hal format="hidl">
-        <name>android.hardware.vibrator</name>
-        <transport>hwbinder</transport>
-        <version>1.0</version>
-        <interface>
-            <name>IVibrator</name>
-            <instance>default</instance>
-        </interface>
-        <fqname>@1.0::IVibrator/default</fqname>
-    </hal>
+    <!--
+      No vibrator, and it is not an omission.
+
+      Android 16 deleted hardware/interfaces/vibrator/1.0 outright; only the
+      AIDL HAL is left. A compatibility matrix may not name a HAL the build has
+      no .hal definition for (checkMatrixHalsHasDefinition stops the build),
+      so compatibility_matrix.4.xml cannot list it, and an instance this
+      manifest declares that no matrix covers is equally fatal:
+
+        ERROR: files are incompatible: The following instances are in the
+        device manifest but not specified in framework compatibility matrix:
+          android.hardware.vibrator@1.0::IVibrator/default
+
+      Declaring it here buys nothing either way. This file feeds the build-time
+      VINTF check; the manifest hwservicemanager reads is the one inside
+      vendor.img, which this device ships prebuilt and does not rebuild, and
+      that one still declares the HAL. The framework simply will not talk to
+      it, because Android 16 speaks only AIDL to a vibrator.
+
+      So vibration does not work on 23.2, and removing this does not cause
+      that. Making it work needs an AIDL service forwarding to the stock HIDL
+      one.
+    -->
     <hal format="hidl">
         <name>android.hardware.wifi</name>
         <transport>hwbinder</transport>

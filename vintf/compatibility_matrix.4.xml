@@ -346,6 +346,15 @@
             <instance>slot1</instance>
             <instance>slot2</instance>
             <instance>slot3</instance>
+            <instance>em1</instance>
+            <instance>em2</instance>
+            <instance>em3</instance>
+            <instance>se1</instance>
+            <instance>se2</instance>
+            <instance>se3</instance>
+            <instance>imsAospSlot1</instance>
+            <instance>imsAospSlot2</instance>
+            <instance>imsAospSlot3</instance>
         </interface>
     </hal>
     <hal format="hidl" optional="true">
@@ -354,6 +363,8 @@
         <interface>
             <name>ISap</name>
             <instance>slot1</instance>
+            <instance>slot2</instance>
+            <instance>slot3</instance>
         </interface>
     </hal>
     <hal format="hidl" optional="true">
