@@ -1,0 +1,36 @@
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Puts the FM radio app in the domain the stock vendor grants the tuner to.
+#
+# /dev/fm is labelled fm_device, a type the MediaTek vendor policy declares and
+# which nothing in this tree may name: this device ships the stock vendor image
+# whole, and platform policy is not allowed to reference vendor types. The
+# missing rule therefore cannot be written. What the vendor already grants is:
+#
+#   (allow platform_app_29_0 fm_device (chr_file (ioctl read write ...)))
+#   (allow mediaserver_29_0  fm_device (...))
+#   (allow fm_hidl_service   fm_device (...))
+#
+# and platform_app_29_0 is our own platform_app, as the compatibility mapping
+# on the phone says:
+#
+#   typeattributeset platform_app_29_0 (platform_app)
+#
+# That is the domain the stock FM app ran in -- it lived in product and did not
+# share the system UID. The LineageOS app declares
+# android:sharedUserId="android.uid.system", which puts it in system_app
+# instead, and there it is denied:
+#
+#   avc: denied { read write } for name="fm" scontext=u:r:system_app:s0
+#     tcontext=u:object_r:fm_device:s0 tclass=chr_file permissive=0
+#   FMLIB_CORE: FMR_open_dev failed, [fd=-1]
+#
+# So move just this package to platform_app. Its UID stays system and so does
+# the label of its data, which is why platform_app.te grants platform_app what
+# system_app already had over system_app_data_file.
+#
+# Measured with SELinux permissive, to be sure this rule is the only thing in
+# the way: FMLIB_COM: COM_open_dev, [fd=94] [ret=0].
+user=system seinfo=platform name=com.android.fmradio isPrivApp=true domain=platform_app type=system_app_data_file

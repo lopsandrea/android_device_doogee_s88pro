@@ -105,6 +105,53 @@ be put elsewhere either.
 | `mediaserver`, `nfc` -> `debugfs_ion : dir search` | 6 |
 | `system_server -> tkcore_systa_file : dir getattr` | 1 |
 
+### Not expressible, but reachable anyway: the FM radio
+
+A denial of this kind that was closed, and the way it was closed is worth more
+than the rule itself.
+
+    avc: denied { read write } for name="fm" scontext=u:r:system_app:s0
+      tcontext=u:object_r:fm_device:s0 tclass=chr_file permissive=0
+    FMLIB_CORE: FMR_open_dev failed, [fd=-1]
+
+`fm_device` is the vendor's, so `allow system_app fm_device:chr_file
+rw_file_perms` does not compile, and the domain is ours, so the rule cannot be
+moved to the vendor either. By the rule of thumb above it is a dead end. It is
+not, because the vendor policy already grants the tuner to somebody:
+
+    (allow platform_app_29_0 fm_device (chr_file (ioctl read write ...)))
+    (allow mediaserver_29_0  fm_device (...))
+    (allow fm_hidl_service   fm_device (...))
+
+and `platform_app_29_0` is our own `platform_app`, as the compatibility mapping
+on the phone says: `typeattributeset platform_app_29_0 (platform_app)`. That is
+the domain the stock FM app ran in, which lived in product and did not share the
+system UID. The LineageOS app declares `android:sharedUserId="android.uid.system"`
+and therefore lands in `system_app`.
+
+So the answer is not to write a rule but to move the app: `seapp_contexts` puts
+that one package in `platform_app`, and `platform_app.te` grants it what
+`system_app` already had over `system_app_data_file`, since the UID stays system
+and so does the label of its data.
+
+**The lesson**, which generalises: when the type is the vendor's, look at which
+domains the vendor already grants it to before concluding it cannot be done. The
+vendor was written for a device that worked, so something was allowed to reach
+that hardware.
+
+Two denials remain after the move, and they are the app reading the tuner's
+correction tables:
+
+    avc: denied { read } for name="mt6631_fm_v1_patch.bin"  tcontext=vendor_file
+    avc: denied { read } for name="mt6631_fm_v1_coeff.bin"  tcontext=vendor_file
+
+They cannot be closed -- `domain.te:621` forbids `coredomain` every
+`vendor_file_type`, this time without the `-appdomain` exception the other
+neverallow has -- and they were measured not to matter: the same scan run under
+`setenforce 0` and `setenforce 1` walks the same 205 frequencies and tunes with
+`ret=0` either way. They are the MediaTek library's doing; LineageOS 22 builds
+`libfmjni` itself and it never reads those files.
+
 ### The vendor's, domain included
 
 `ccci_mdinit` (8), `stflashtool` (6), `rild` (6), `mtk_hal_camera` (6),
