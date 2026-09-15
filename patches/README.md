@@ -565,3 +565,53 @@ would turn a blocking read into a busy loop.
 
 **Note**: this is a portability fallback, not a guard being overridden. The two
 calls do the same thing.
+
+## packages_modules_Connectivity-bpfloader-kernel-version.patch
+
+**Project**: `packages/modules/Connectivity`
+
+**Branch**: `lineage-23.2` only. LineageOS 22.2 logs the same condition and
+carries on.
+
+**Symptom**: two failures in a row, both before any service starts. First the
+loader refuses to run and init reboots the phone:
+
+```
+NetBpfLoad: Android V requires kernel 4.19.
+init: bpfloader-failed
+```
+
+With that cleared, netd aborts every five seconds instead:
+
+```
+NetdUpdatable: libnetd_updatable_init: Failed:
+  V+ platform with kernel version < 4.19.0 is unsupported
+```
+
+**Why**: Android 15 bumped the eBPF kernel requirement to 4.19 and 25Q2 to 5.4.
+This phone is a 2019 MediaTek on 4.14.180, and it cannot be moved: the factory
+Wi-Fi, Bluetooth and GPS modules are binaries built against that kABI.
+
+**What it does**: turns four refusals into warnings, two in the loader and two
+in netd.
+
+**Note**: read this one carefully before assuming it is a guard being
+overridden. The distinction is in `BpfHandler.cpp` itself, a few lines below
+the change:
+
+```
+// V requires 4.19+, so technically this 2nd 'if' is not required, but
+// it doesn't hurt us to try to support AOSP forks that try to support
+// older kernels.
+```
+
+Every `attachProgramToCgroup` and every `queryProgram` in that function is
+already guarded by its own `isAtLeastKernelVersion`, so on 4.14 it attaches
+what the kernel takes and skips the rest. Of the sixteen kernel-version tests
+in Connectivity and netd, only four are refusals; the other twelve are branches
+that handle the old kernel. These four are a statement about what AOSP
+supports, not about what the code can do.
+
+**Still to verify on a booted phone**: per-uid traffic accounting, firewall and
+data saver rules, and tethering. A phone that boots with these quietly broken
+would be worse than 22.2, which works.
