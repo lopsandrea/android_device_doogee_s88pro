@@ -276,11 +276,28 @@ AOSP already expects controllers that lie about supporting this command — the
 comment in the handler says so, bug b/277589118 — but the guard sits one line
 below the first read, so it never runs for a controller that lies this way.
 
-**Change**: check `view.IsValid()` at the top of
-`read_default_erroneous_data_reporting_handler`, before anything is read from
-the view. An invalid answer is logged and ignored, which is what the existing
-guard was meant to do. Erroneous data reporting is an optional audio-quality
-feature; nothing else depends on it.
+**Change**: take the answer as a `CommandStatusOrCompleteView` instead of a
+`CommandCompleteView`, and return when it turns out to be a status. Erroneous
+data reporting is an optional audio-quality feature, which is why every other
+failure in that handler returns as well.
+
+**Why the shape of the fix changed on 23.2**: on 22.2 it was enough to check
+`view.IsValid()` at the top of the handler, because `hci_layer` handed the
+event over and only the unvalidated read aborted. Android 16 asserts one step
+earlier, before the handler is called at all:
+
+```
+hci_layer.cc:278 handle_command_response:
+  READ_DEFAULT_ERRONEOUS_DATA_REPORTING(0x0c5a) was not expecting status event
+```
+
+The parameter type of the handler is what decides this. `EnqueueCommand` picks
+its overload from the callback signature, and a `CommandCompleteView` callback
+tells `hci_layer` to expect a complete and nothing else. Asking for either lets
+the event through, and the check inside stays where it was.
+
+Symptom on 23.2: seven `com.android.bluetooth` tombstones in one boot, all with
+the same abort message.
 
 ## packages_modules_vndk-restore-vndk-29-apex.patch
 

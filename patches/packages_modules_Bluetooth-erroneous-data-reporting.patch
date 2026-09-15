@@ -1,27 +1,51 @@
 diff --git a/system/gd/hci/controller_impl.cc b/system/gd/hci/controller_impl.cc
-index 69b2294bbe6..276dd3aadd1 100644
+index 69b2294bbe6..061fe08a882 100644
 --- a/system/gd/hci/controller_impl.cc
 +++ b/system/gd/hci/controller_impl.cc
-@@ -477,6 +477,22 @@ struct ControllerImpl::impl {
+@@ -25,6 +25,7 @@
+ #include <memory>
+ #include <string>
+ #include <utility>
++#include <variant>
+ 
+ #include "hci/controller.h"
+ #include "hci/event_checkers.h"
+@@ -476,9 +477,35 @@ struct ControllerImpl::impl {
+     log::assert_that(status == ErrorCode::SUCCESS, "Status {}", ErrorCodeText(status));
    }
  
-   void read_default_erroneous_data_reporting_handler(CommandCompleteView view) {
-+    // The view has to be checked before anything is read from it, including
-+    // GetCommandOpCode() below: a controller that claims to support this
-+    // command and then answers UNKNOWN_HCI_COMMAND does so with a command
-+    // status, not a command complete, and hci_layer hands that event to this
-+    // handler anyway. Creating a CommandCompleteView from it yields an invalid
-+    // view, and reading any field of an unvalidated view aborts the process
-+    // with "assertion 'was_validated_' failed".
+-  void read_default_erroneous_data_reporting_handler(CommandCompleteView view) {
+-    ASSERT(view.GetCommandOpCode() == OpCode::READ_DEFAULT_ERRONEOUS_DATA_REPORTING);
+-    auto complete_view = ReadDefaultErroneousDataReportingCompleteView::Create(view);
++  void read_default_erroneous_data_reporting_handler(CommandStatusOrCompleteView view) {
++    // This controller claims to support the command and then answers
++    // UNKNOWN_HCI_COMMAND -- with a command status, not a command complete.
 +    //
-+    // The check below on complete_view already exists for controllers that lie
-+    // about supporting the command (b/277589118); it is simply one line too
-+    // late for the ones that lie in this particular way.
-+    if (!view.IsValid()) {
++    // The argument is a status-or-complete on purpose. Taking a
++    // CommandCompleteView here is what tells hci_layer to expect a complete and
++    // nothing else, and when the status arrives it aborts the process before
++    // this handler is ever called:
++    //
++    //   hci_layer.cc:278 handle_command_response:
++    //     READ_DEFAULT_ERRONEOUS_DATA_REPORTING(0x0c5a) was not expecting
++    //     status event
++    //
++    // Asking for either lets the event through, and a status simply means the
++    // controller does not really have the command. Returning here is the right
++    // answer: erroneous data reporting is an optional audio quality feature,
++    // which is why every other failure below returns as well.
++    auto* complete = std::get_if<CommandCompleteView>(&view);
++    if (complete == nullptr) {
++      log::error("command status instead of command complete; not supported");
++      return;
++    }
++    if (!complete->IsValid()) {
 +      log::error("invalid command complete view");
 +      return;
 +    }
 +
-     ASSERT(view.GetCommandOpCode() == OpCode::READ_DEFAULT_ERRONEOUS_DATA_REPORTING);
-     auto complete_view = ReadDefaultErroneousDataReportingCompleteView::Create(view);
++    ASSERT(complete->GetCommandOpCode() == OpCode::READ_DEFAULT_ERRONEOUS_DATA_REPORTING);
++    auto complete_view = ReadDefaultErroneousDataReportingCompleteView::Create(*complete);
      // Check to see that the opcode was correct.
+     // log::assert_that is not used here to avoid process abort.
+     // Some devices, such as mokey_go32, may claim to support it but do not
