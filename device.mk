@@ -455,6 +455,16 @@ $(call inherit-product-if-exists, vendor/doogee/s88pro/s88pro-vendor.mk)
 # service, when it fails, reboots the phone instead of complaining. The same
 # trap is already described in the TARGET_FLATTEN_APEX comment in
 # BoardConfig.mk: the second half of the same story.
+#
+# Careful with this block: on this device it does nothing.
+#
+# The vendor image is prebuilt (BOARD_PREBUILT_VENDORIMAGE), so it is copied
+# rather than built, and PRODUCT_VENDOR_PROPERTIES never reaches /vendor.
+# The values below that do show up on the phone -- ro.logd.size.stats,
+# camera.disable_zsl_mode, the dalvik.vm.isa.* ones -- are the stock vendor's
+# own, which is where they were extracted from in the first place. The two that
+# only exist here, ro.vendor.rc and ro.oem_unlock_supported, read back empty.
+# A vendor property that has to change must go somewhere else.
 PRODUCT_VENDOR_PROPERTIES += \
     ro.apex.updatable=true \
     ro.vendor.rc=/vendor/etc/init/hw/ \
