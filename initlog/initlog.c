@@ -82,9 +82,22 @@
  *
  * La partizione e 432 MiB. Si crea il filesystem di 256 MiB (prepara-cache.sh)
  * e si scrive oltre: ext4 si ferma alla dimensione nel superblocco e non sa
- * nemmeno che il resto esiste. */
+ * nemmeno che il resto esiste.
+ *
+ * Nessuno dei due flussi ha un limite: si scrive finche l avvio dura. In un
+ * avvio di mezz ora quello del kernel ha superato i 50 MiB e ha mangiato i
+ * pacchetti di logd, lasciando al loro posto altro testo del kernel -- la
+ * cattura sembrava riuscita ed era inservibile. Per un avvio lungo si tiene
+ * la sessione corta, tre minuti bastano.
+ *
+ * Provato a invertirli e allargarli (logd a 260 MiB, kernel a 400 MiB): non
+ * funziona. Entrambi i figli smettono di scrivere dopo 259 KiB, nell istante
+ * di "SELinux: Setting up existing superblocks". L unico indizio e un denial
+ * su /initlog_cache marcato permissive=1, quindi innocuo. Il perche resta
+ * ignoto; questi due valori invece sono provati. */
 #define OFFSET_KERNEL (300L * 1024 * 1024)
 #define OFFSET_LOGD (350L * 1024 * 1024)
+
 #define SOCKET_LOGD "/dev/socket/logdr"
 #define RICHIESTA "stream tail=99999"
 
