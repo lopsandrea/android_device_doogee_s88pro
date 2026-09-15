@@ -1,0 +1,13 @@
+# lmkd needs to write cgroup.event_control, not just read the memcg files.
+#
+# It asks the kernel for PSI first and falls back to vmpressure when there is
+# none -- and there is none here, PSI landed in 4.20 and this device runs
+# 4.14.180. The fallback registers an eventfd by writing "<evfd> <mpfd> <level>"
+# into /dev/memcg/cgroup.event_control; see init_mp_common in
+# system/memory/lmkd/lmkd.cpp. AOSP grants lmkd only r_file_perms on cgroup
+# files, because on a kernel new enough for PSI this path is never taken.
+#
+# Without it lmkd exits, init restarts it, and ActivityManagerService retries
+# the connection from inside updateOomAdjLocked -- holding the AMS lock. That
+# ends with the watchdog killing system_server: 7535 retries in one boot.
+allow lmkd cgroup:file w_file_perms;

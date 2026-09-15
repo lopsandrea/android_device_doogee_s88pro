@@ -486,7 +486,7 @@ surrounding code has moved since 2020 — `core/Makefile` declares
 Check with `git log -S board_builds_vendorimage -- tools/releasetools/` before
 carrying it to the next release.
 
-## system_core-blkio-cgroup-optional.patch
+## system_core-cgroups-json.patch
 
 **Project**: `system/core`
 
@@ -551,6 +551,56 @@ and the log says `Failed to mount controller blkio`, the second branch.
 
 **What it does**: marks blkio `"Optional": true` in `cgroups.json`. One line.
 It states a fact about this device rather than working around a check.
+
+## The second change in the same file: memory back to cgroup v1
+
+**Symptom**: the phone boots all the way -- `Boot is finished (74802 ms)`, the
+launcher runs -- and then, about two minutes later, the screen goes black with
+the backlight on and "System UI isn't responding" appears. `system_server` is
+killed:
+
+```
+Watchdog: *** WATCHDOG KILLING SYSTEM PROCESS: Blocked in handler on main
+          thread (main) for 60s
+    at ActivityManagerService.serviceDoneExecuting
+    - waiting to lock <0x07e79054> (a ActivityManagerService)
+```
+
+The counts in that boot's log say the rest:
+
+```
+7535  W ActivityManager: Failed to connect to lowmemorykiller, retry later
+  31  E lowmemorykiller: init_mp_common: global monitoring is only available
+                         for the v1 cgroup hierarchy
+```
+
+**Why**: lmkd asks the kernel for PSI and falls back to vmpressure when there
+is none. PSI landed in 4.20 and this device runs 4.14.180, so the fallback is
+the only path -- and it needs the memory controller in the **v1** hierarchy,
+because `memory.pressure_level` and `cgroup.event_control` are v1 features.
+`cgroups.json` declares memory under `Cgroups2`, so `memcg_version()` answers
+v2, `init_mp_common` refuses, and lmkd exits. init restarts it, it exits again,
+and ActivityManagerService retries the connection from inside
+`updateOomAdjLocked` -- while holding the AMS lock. Hence the 3-second stalls
+all over that boot (`Slow operation: 3011ms so far, now at
+attachApplicationLocked: after updateOomAdjLocked`) and, in the end, the
+watchdog.
+
+**What it does**: moves the memory controller out of `Cgroups2` and into the v1
+list at `/dev/memcg`, mode 0700 root:system -- which is where it was until
+Android 13. The v2 entry was already marked `"Optional": true`, so AOSP already
+allows for devices that do not have it there.
+
+**See also**: `sepolicy/system_ext/private/lmkd.te`. Writing the eventfd triplet
+into `cgroup.event_control` needs a permission AOSP does not grant, for the same
+reason: on a kernel new enough for PSI this path is never taken.
+
+**The alternative, and why not**: turning on `CONFIG_BLK_CGROUP` in the kernel
+would give the controller for real. It also changes block layer structures,
+and on this device a kernel configuration change that moves symbol CRCs stops
+the factory Wi-Fi, Bluetooth and GPS modules from loading. That trade is not
+worth making for a controller Android has booted without here since 21.
+
 
 **The alternative, and why not**: turning on `CONFIG_BLK_CGROUP` in the kernel
 would give the controller for real. It also changes block layer structures,

@@ -1,8 +1,27 @@
 # SELinux rules between system types
 
-There is only `file_contexts` here.
+Besides `file_contexts`, `genfs_contexts` and `seapp_contexts`, there are a few
+`allow` rules: `init.te`, `lmkd.te`, `platform_app.te`, `system_app.te`. Each
+one is there for a denial measured on the phone, and each is narrow. The next
+section is about the ones that cannot be here at all.
 
-## Why there are no `allow` rules
+## lmkd.te
+
+    allow lmkd cgroup:file w_file_perms;
+
+lmkd asks the kernel for PSI and falls back to vmpressure when there is none.
+PSI landed in 4.20 and this device runs 4.14.180, so the fallback is the only
+path -- and it registers an eventfd by *writing* into
+`/dev/memcg/cgroup.event_control`. AOSP grants lmkd only `r_file_perms` on
+cgroup files, because on a kernel new enough for PSI this never happens.
+
+Without it lmkd exits, init restarts it, and ActivityManagerService retries the
+connection from inside `updateOomAdjLocked` -- holding the AMS lock -- until the
+watchdog kills `system_server`. 7535 retries in one boot. The other half of that
+fix is in `patches/system_core-cgroups-json.patch`, which puts the memory
+controller back in the v1 hierarchy where `cgroup.event_control` exists.
+
+## Why some `allow` rules cannot be here
 
 Two rules used to be here, for two denials measured on the phone:
 

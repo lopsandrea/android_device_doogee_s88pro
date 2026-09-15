@@ -1,0 +1,33 @@
+diff --git a/libprocessgroup/profiles/cgroups.json b/libprocessgroup/profiles/cgroups.json
+index e9345a5312..ca410810a8 100644
+--- a/libprocessgroup/profiles/cgroups.json
++++ b/libprocessgroup/profiles/cgroups.json
+@@ -5,6 +5,14 @@
+       "Path": "/dev/blkio",
+       "Mode": "0775",
+       "UID": "system",
++      "GID": "system",
++      "Optional": true
++    },
++    {
++      "Controller": "memory",
++      "Path": "/dev/memcg",
++      "Mode": "0700",
++      "UID": "root",
+       "GID": "system"
+     },
+     {
+@@ -31,13 +39,6 @@
+       {
+         "Controller": "freezer",
+         "Path": "."
+-      },
+-      {
+-        "Controller": "memory",
+-        "Path": ".",
+-        "NeedsActivation": true,
+-        "MaxActivationDepth": 3,
+-        "Optional": true
+       }
+     ]
+   }
