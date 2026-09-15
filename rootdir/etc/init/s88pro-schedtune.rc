@@ -32,8 +32,27 @@
 #
 # To be revisited if we ever move to a kernel with uclamp in the cgroups: there
 # the framework handles it by itself and this file has to go.
+#
+# On 23.2 this stopped working, silently. The service named /system/bin/sh as
+# its executable, and init refuses to start a service that would stay in the
+# init domain:
+#
+#   Could not start service: File /system/bin/sh (labeled
+#   "u:object_r:shell_exec:s0") has incorrect label or no domain transition
+#   from u:r:init:s0 to another SELinux domain defined.
+#
+# Nothing said so out loud: that refusal goes to /dev/kmsg, which the kernel
+# rate-limits, and the only trace is an empty init.svc.s88pro_schedtune. The
+# phone simply ran with top-app boost=0, which is what the whole file exists to
+# prevent. Measured on 23.2 before the repair, scrolling Settings: median frame
+# 25 ms and 88.7% of frames past the 16.6 ms budget.
+#
+# So the script is executed directly now. That needs two things: it lives under
+# /system/bin, because fs_config only gives 0755 there and 0644 everywhere else
+# in /system, and it has a domain of its own so the transition exists. See
+# sepolicy/system_ext/private/s88pro_schedtune.te.
 
-service s88pro_schedtune /system/bin/sh /system/etc/s88pro-schedtune.sh
+service s88pro_schedtune /system/bin/s88pro-schedtune.sh
     user root
     group root system
     disabled

@@ -17,3 +17,9 @@
 # Every domain can read system_file: system/sepolicy/public/domain.te says
 # allow domain system_file_type:file { getattr open read map execute }.
 /fstab\.s88pro    u:object_r:system_file:s0
+
+# The EAS boost applier. It is executed directly rather than through
+# /system/bin/sh, because init will not start a service that has no domain
+# transition -- see sepolicy/system_ext/private/s88pro_schedtune.te -- and the
+# transition is computed from the label of the file named in the service.
+/system/bin/s88pro-schedtune\.sh    u:object_r:s88pro_schedtune_exec:s0
