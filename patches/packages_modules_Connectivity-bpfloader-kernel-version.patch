@@ -32,3 +32,44 @@ index 238864798b7..bcb9790f3fd 100644
      }
  
      // 25Q4 bumps the kernel requirement up to 5.10
+diff --git a/bpf/netd/BpfHandler.cpp b/bpf/netd/BpfHandler.cpp
+index 7367ec5e979..2ec1f912497 100644
+--- a/bpf/netd/BpfHandler.cpp
++++ b/bpf/netd/BpfHandler.cpp
+@@ -96,14 +96,32 @@ static Status initPrograms(const char* cg2_path) {
+         return Status("U+ platform with cg2_path != /sys/fs/cgroup is unsupported");
+     }
+ 
+-    // V bumps the kernel requirement up to 4.19
++    // V bumps the kernel requirement up to 4.19, and 25Q2 up to 5.4. Both were
++    // refusals here; on this device they are warnings, and the reason is a
++    // comment further down this very file:
++    //
++    //   // V requires 4.19+, so technically this 2nd 'if' is not required, but
++    //   // it doesn't hurt us to try to support AOSP forks that try to support
++    //   // older kernels.
++    //
++    // Every attachProgramToCgroup and every queryProgram below is already
++    // guarded by its own isAtLeastKernelVersion, so on a 4.14 kernel this
++    // function attaches what that kernel can take and skips the rest. The
++    // refusals above are a statement about what AOSP supports, not about what
++    // the code can do, and this phone cannot move off 4.14.180 without losing
++    // the factory Wi-Fi, Bluetooth and GPS modules, which are binaries built
++    // against that kABI.
++    //
++    // Without this, netd aborts every five seconds and the phone never
++    // finishes booting:
++    //   NetdUpdatable: libnetd_updatable_init: Failed:
++    //     V+ platform with kernel version < 4.19.0 is unsupported
+     if (isAtLeastV && !isAtLeastKernelVersion(4, 19)) {
+-        return Status("V+ platform with kernel version < 4.19.0 is unsupported");
++        ALOGW("V+ platform with kernel version < 4.19.0 is unsupported");
+     }
+ 
+-    // 25Q2 bumps the kernel requirement up to 5.4
+     if (isAtLeast25Q2 && !isAtLeastKernelVersion(5, 4)) {
+-        return Status("25Q2+ platform with kernel version < 5.4.0 is unsupported");
++        ALOGW("25Q2+ platform with kernel version < 5.4.0 is unsupported");
+     }
+ 
+     unique_fd cg_fd(open(cg2_path, O_DIRECTORY | O_RDONLY | O_CLOEXEC));
