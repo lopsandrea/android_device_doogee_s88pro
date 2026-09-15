@@ -540,3 +540,28 @@ would give the controller for real. It also changes block layer structures,
 and on this device a kernel configuration change that moves symbol CRCs stops
 the factory Wi-Fi, Bluetooth and GPS modules from loading. That trade is not
 worth making for a controller Android has booted without here since 21.
+
+## frameworks_native-epoll-pwait2-fallback.patch
+
+**Project**: `frameworks/native`
+
+**Branch**: `lineage-23.2` only. LineageOS 22.2 does not call epoll_pwait2.
+
+**Symptom**: the phone reaches the LineageOS boot animation and stays there for
+ever. Nothing crashes, no tombstone is written, and one line repeats:
+
+```
+E BLASTBufferQueue: epoll_wait error while waiting for buffer release.
+  errno=38 message='Function not implemented'
+```
+
+**Why**: errno 38 is ENOSYS. `BufferReleaseReader::readBlocking` calls
+`epoll_pwait2`, added in Linux 5.11; this device runs 4.14.180.
+
+**What it does**: tries `epoll_pwait2`, and on ENOSYS falls back to
+`epoll_pwait`, which differs only in taking a millisecond timeout instead of a
+timespec. The timeout is rounded up: truncating a sub-millisecond wait to zero
+would turn a blocking read into a busy loop.
+
+**Note**: this is a portability fallback, not a guard being overridden. The two
+calls do the same thing.

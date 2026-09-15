@@ -1,0 +1,39 @@
+diff --git a/libs/gui/BLASTBufferQueue.cpp b/libs/gui/BLASTBufferQueue.cpp
+index 05fbc148d2c..7c3708f256e 100644
+--- a/libs/gui/BLASTBufferQueue.cpp
++++ b/libs/gui/BLASTBufferQueue.cpp
+@@ -29,6 +29,7 @@
+ #include <gui/BufferQueueCore.h>
+ #include <gui/BufferQueueProducer.h>
+ #include <sys/epoll.h>
++#include <limits.h>
+ #include <sys/eventfd.h>
+ 
+ #include <gui/FrameRateUtils.h>
+@@ -1469,6 +1470,26 @@ status_t BufferReleaseReader::readBlocking(ReleaseCallbackId& outId, sp<Fence>&
+     do {
+         eventCount = epoll_pwait2(mEpollFd.get(), &event, 1 /*maxevents*/,
+                                   timespec ? &(*timespec) : nullptr, nullptr /*sigmask*/);
++        if (eventCount == -1 && errno == ENOSYS) {
++            // epoll_pwait2() is Linux 5.11 and later. On an older kernel it
++            // returns ENOSYS every time, this function never succeeds, and the
++            // buffer release loop spins for as long as the device is on -- the
++            // boot animation never hands over.
++            //
++            // epoll_pwait() has been there since 2.6.19 and does the same job
++            // with a millisecond timeout. Round a non-zero timeout up rather
++            // than down: truncating a sub-millisecond wait to 0 would turn a
++            // blocking read into a busy loop, which is the failure this is
++            // meant to avoid.
++            int timeoutMs = -1;
++            if (timespec) {
++                const int64_t ms = (static_cast<int64_t>(timespec->tv_sec) * 1000) +
++                                   ((timespec->tv_nsec + 999999) / 1000000);
++                timeoutMs = (ms > INT_MAX) ? INT_MAX : static_cast<int>(ms);
++            }
++            eventCount = epoll_pwait(mEpollFd.get(), &event, 1 /*maxevents*/, timeoutMs,
++                                     nullptr /*sigmask*/);
++        }
+     } while (eventCount == -1 && errno == EINTR);
+ 
+     if (eventCount == -1) {
