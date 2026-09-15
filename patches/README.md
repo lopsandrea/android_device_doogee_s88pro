@@ -667,3 +667,48 @@ where `mPowerHalVersion` stays 0 and both headroom flags are set false.
 hint sessions were never available. Every other `mPowerHal` call site sits
 behind `usesSessions` or `isCpuSupported`/`isGpuSupported`, all of which are
 false on this device.
+
+## packages_modules_Connectivity-lpm-trie-no-next-key.patch
+
+**Project**: `packages/modules/Connectivity`
+
+**Branch**: `lineage-23.2` only. The map does not exist before Android 16.
+
+**Symptom**: the phone stays on the LineageOS boot animation. `system_server`
+throws, zygote dies with it, and init restarts the whole group every seventeen
+seconds. There is no tombstone, because the crash is a Java exception:
+
+```
+Failed to create service com.android.server.NetworkStatsServiceInitializer
+Caused by: IllegalStateException: Cannot open local_net_access map
+Caused by: ErrnoException: nativeGetNextMapKey failed: errno 524
+  at BpfMap.getFirstKey(BpfMap.java:247)
+  at SingleWriterBpfMap.<init>(SingleWriterBpfMap.java:78)
+```
+
+and, once that one is fixed, the same errno one line further on, from
+`IBpfMap.clear()`.
+
+**Why**: 524 is ENOTSUPP. `local_net_access_map` is an `LPM_TRIE`
+(`bpf/progs/netd.c`), and the kernel only learned `MAP_GET_NEXT_KEY` for that
+map type in 4.16. This device runs 4.14.180, so the map can be created, read
+and written, but not walked.
+
+**What it does**: two changes in `SingleWriterBpfMap`. The constructor tolerates
+ENOTSUPP while priming its cache -- at boot the loader has just created the map
+and an empty cache is the right answer. And `clear()` is overridden to delete
+the keys it has cached instead of walking the map in the kernel, which is
+consistent with how the class already works: it is the map's exclusive writer,
+and `containsKey()` and `getValue()` answer from the cache alone.
+
+**What it costs**: after a runtime restart the cache starts empty while the map
+may still hold entries, so it can under-report what is there. Nothing walks
+this map on a fresh boot, which is the case that matters here.
+
+**Verified on the phone**: per-uid accounting works. All six eBPF maps report
+`OK` in `dumpsys netstats`, and a 1 MB download as uid 2000 shows up in the
+per-uid history (`rb=2174394` across the session). Firewall rules reach netd
+without error (`UID=10072 policy=1 (REJECT_METERED_BACKGROUND)`). Tethering
+starts with `enableBpfOffload: true`; hardware offload is absent because the
+vendor has no offload HAL, which is not new. Tethering itself was not driven
+end to end -- that needs a second device.

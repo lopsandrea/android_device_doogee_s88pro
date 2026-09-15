@@ -1,0 +1,70 @@
+diff --git a/staticlibs/device/com/android/net/module/util/SingleWriterBpfMap.java b/staticlibs/device/com/android/net/module/util/SingleWriterBpfMap.java
+index a638cc4151a..206b3e876b5 100644
+--- a/staticlibs/device/com/android/net/module/util/SingleWriterBpfMap.java
++++ b/staticlibs/device/com/android/net/module/util/SingleWriterBpfMap.java
+@@ -59,6 +59,11 @@ import java.util.NoSuchElementException;
+  */
+ @RequiresApi(Build.VERSION_CODES.S)
+ public class SingleWriterBpfMap<K extends Struct, V extends Struct> extends BpfMap<K, V> {
++    // ENOTSUPP, the kernel's own "not supported by this map type". It is an
++    // internal errno that is not meant to reach userspace and so has no name in
++    // OsConstants, but bpf_map_get_next_key returns it verbatim.
++    private static final int ENOTSUPP = 524;
++
+     // HashMap instead of ArrayMap because it performs better on larger maps, and many maps used in
+     // our code can contain hundreds of items.
+     @GuardedBy("this")
+@@ -75,10 +80,24 @@ public class SingleWriterBpfMap<K extends Struct, V extends Struct> extends BpfM
+ 
+         // Populate cache with the current map contents.
+         synchronized (this) {
+-            K currentKey = super.getFirstKey();
+-            while (currentKey != null) {
+-                mCache.put(currentKey, super.getValue(currentKey));
+-                currentKey = super.getNextKey(currentKey);
++            try {
++                K currentKey = super.getFirstKey();
++                while (currentKey != null) {
++                    mCache.put(currentKey, super.getValue(currentKey));
++                    currentKey = super.getNextKey(currentKey);
++                }
++            } catch (ErrnoException e) {
++                if (e.errno != ENOTSUPP) throw e;
++                // The map cannot be walked at all on this kernel. LPM_TRIE only
++                // learned MAP_GET_NEXT_KEY in 4.16, and local_net_access_map is
++                // one; on an older kernel the first getFirstKey() fails and
++                // NetworkStatsServiceInitializer takes system_server down with
++                // it, in a loop, before the boot animation ever ends.
++                //
++                // Starting empty is right at boot, which is when the loader has
++                // just created the map. What is lost is picking up entries a
++                // previous system_server left behind, so after a runtime
++                // restart the cache can under-report what the map holds.
+             }
+         }
+     }
+@@ -135,6 +154,24 @@ public class SingleWriterBpfMap<K extends Struct, V extends Struct> extends BpfM
+         return ret;
+     }
+ 
++    @Override
++    public synchronized void clear() throws ErrnoException {
++        // The default clear() walks the map in the kernel, and some map types
++        // cannot be walked at all: LPM_TRIE only learned MAP_GET_NEXT_KEY in
++        // 4.16, so on an older kernel local_net_access_map's first getFirstKey()
++        // throws ENOTSUPP and NetworkStatsServiceInitializer takes system_server
++        // down with it, in a loop.
++        //
++        // Walking is not needed here. This class is the map's exclusive writer,
++        // and the cache is already what containsKey() and getValue() answer
++        // from, so the cached keys are the map's contents. Deleting through
++        // super avoids touching mCache while iterating over it.
++        for (final K key : mCache.keySet()) {
++            super.deleteEntry(key);  // ignores ENOENT
++        }
++        mCache.clear();
++    }
++
+     @Override
+     public synchronized boolean containsKey(@NonNull K key) throws ErrnoException {
+         return mCache.containsKey(key);
