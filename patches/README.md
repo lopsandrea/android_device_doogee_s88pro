@@ -615,3 +615,55 @@ supports, not about what the code can do.
 **Still to verify on a booted phone**: per-uid traffic accounting, firewall and
 data saver rules, and tethering. A phone that boots with these quietly broken
 would be worse than 22.2, which works.
+
+## frameworks_base-hintmanager-no-aidl-power-hal.patch
+
+**Project**: `frameworks/base`
+
+**Branch**: `lineage-23.2` only. LineageOS 22.2 has no `SupportInfo`.
+
+**Symptom**: the phone reaches the LineageOS boot animation and stays there.
+`system_server` throws, zygote dies with it, and init restarts the whole group
+— zygote, zygote_secondary, netd, media, wificond, audioserver, cameraserver —
+every seventeen seconds, indefinitely. Nothing else looks wrong: SELinux is up,
+`/data` is mounted, the APEXes mount and unmount on every attempt. There is no
+tombstone, because the crash is a Java exception:
+
+```
+E Zygote: System zygote died with fatal exception
+java.lang.RuntimeException: Failed to create service
+  com.android.server.power.hint.HintManagerService
+Caused by: java.lang.NullPointerException: Attempt to read from field
+  'android.hardware.power.SupportInfo$HeadroomSupportInfo
+   android.hardware.power.SupportInfo.headroom' on a null object reference
+  at HintManagerService.<init>(HintManagerService.java:337)
+```
+
+**Why**: the constructor only asks the HAL for its `SupportInfo` when the AIDL
+power HAL exists:
+
+```java
+mPowerHal = injector.createIPower();
+if (mPowerHal != null) {
+    mSupportInfo = getSupportInfo();
+}
+if (mSupportInfo.headroom.isCpuSupported) {   // NPE when it does not
+```
+
+`createIPower` is `waitForDeclaredService(android.hardware.power.IPower)`. This
+vendor declares `android.hardware.power` **HIDL 1.3** over hwbinder and
+MediaTek's own `vendor.mediatek.hardware.power` 2.1, and no AIDL power HAL at
+all, so it returns null and `mSupportInfo` stays null. AOSP assumes every
+device has the AIDL HAL; a 2019 vendor image predates it.
+
+**What it does**: lets the no-HAL case fall through to the defaults
+`getSupportInfo()` already builds for a HAL too old to answer, instead of
+leaving `mSupportInfo` null. The null check moves into `getSupportInfo()`,
+where `mPowerHalVersion` stays 0 and both headroom flags are set false.
+
+**Note**: this costs nothing that was working. With no AIDL HAL,
+`isHintSessionSupported()` is already false — it reads
+`mHintSessionPreferredRate`, which the native wrapper leaves at -1 — so ADPF
+hint sessions were never available. Every other `mPowerHal` call site sits
+behind `usesSessions` or `isCpuSupported`/`isGpuSupported`, all of which are
+false on this device.
