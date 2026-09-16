@@ -12,39 +12,24 @@
 # they do. Something in the last phase of boot resets them; once that is past,
 # nobody touches them again.
 #
-# How much later depends on the version, though: on Android 12 five seconds was
-# enough, on Android 13 it is not (the service wrote 10 and something put it
-# back to zero). Rather than guessing a longer wait, we reapply until the value
-# holds.
+# How much later depends on the version, and there is no window that always
+# works. Two attempts at guessing one both failed on 23.2: five seconds, then
+# "hold for three consecutive checks over five minutes". Each time the boost was
+# found back at zero on a booted phone, with the service already stopped and
+# prefer_idle still set -- the signature of a write undone after the loop ended.
 #
-# "Holds" used to mean "survived one five second wait", and on 23.2 that is not
-# enough: the boost was found back at zero on a booted phone, with the service
-# already stopped and prefer_idle still set -- the signature of a write that
-# stuck just long enough to end the loop and was undone afterwards. Measured
-# with root on a running phone: set by hand at any point after boot the value
-# stays put indefinitely, so whatever resets it acts only in a window near the
-# end of boot, and the loop simply has to outlive that window.
+# Measured with root: set by hand at any point after boot, the value stays put
+# indefinitely. So whatever resets it acts in a window near the end of boot
+# whose length is not predictable, and a loop that exits can always exit too
+# early.
 #
-# So: reapply every ten seconds for up to five minutes, and only stop once the
-# value has held three checks in a row. The cost is a shell asleep for a few
-# minutes on a phone that has finished booting.
+# So it does not exit. It reapplies every thirty seconds for as long as the
+# phone is up, which costs a shell waking twice a minute and removes the guess
+# entirely. The loop must stay in the foreground: the service is not oneshot, so
+# if this script returned init would restart it and stack one more loop on every
+# round.
 
 sleep 5
-
-# The apps the user is looking at: higher frequency and a preference for idle
-# cores. These are the values AOSP used up to Android 11.
-tenuto=0
-for _ in $(seq 1 30); do
-    if [ "$(cat /dev/stune/top-app/schedtune.boost)" = "10" ]; then
-        tenuto=$((tenuto + 1))
-        [ "$tenuto" -ge 3 ] && break
-    else
-        tenuto=0
-        echo 10 > /dev/stune/top-app/schedtune.boost
-        echo 1  > /dev/stune/top-app/schedtune.prefer_idle
-    fi
-    sleep 10
-done
 
 # The rest of the foreground: no boost, but idle cores all the same. Raising
 # this one too is pointless, SystemUI is already in top-app.
@@ -54,4 +39,11 @@ echo 1 > /dev/stune/foreground/schedtune.prefer_idle
 echo 0 > /dev/stune/rt/schedtune.boost
 echo 1 > /dev/stune/rt/schedtune.prefer_idle
 
-log -t s88pro-schedtune "top-app boost=$(cat /dev/stune/top-app/schedtune.boost) prefer_idle=$(cat /dev/stune/top-app/schedtune.prefer_idle)"
+while true; do
+    if [ "$(cat /dev/stune/top-app/schedtune.boost)" != "10" ]; then
+        echo 10 > /dev/stune/top-app/schedtune.boost
+        echo 1  > /dev/stune/top-app/schedtune.prefer_idle
+        log -t s88pro-schedtune "reapplied top-app boost=10 prefer_idle=1"
+    fi
+    sleep 30
+done
