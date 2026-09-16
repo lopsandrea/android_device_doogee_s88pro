@@ -552,6 +552,32 @@ and the log says `Failed to mount controller blkio`, the second branch.
 **What it does**: marks blkio `"Optional": true` in `cgroups.json`. One line.
 It states a fact about this device rather than working around a check.
 
+**The alternative, and why it is not one**: turning on `CONFIG_BLK_CGROUP` in
+the kernel would give the controller for real. It was tried, and measured:
+
+```
+module_layout:  0x2d522840 -> 0xb801cb84
+```
+
+`module_layout` is the first symbol every module checks, so a kernel built that
+way loads none of them: no Wi-Fi, no Bluetooth, no GPS, no FM radio. Nor is it
+one symbol -- 92 of the 231 that `wlan_drv_gen3` asks for move, 85 of 247 for
+`wmt_drv`, 47 of 159 for `met`. The cause is `CONFIG_CGROUP_WRITEBACK`, which
+`BLK_CGROUP` brings with it: it puts a field in `struct inode`, and `struct
+inode` sits in the expansion of half the VFS symbols.
+
+So the controller is not available on this device. Not inadvisable: not
+available.
+
+**How that was measured**, because it makes any other defconfig change
+decidable too. Every `.ko` carries the CRCs it demands in its own `__versions`
+section, 8 bytes of CRC and 56 of name per entry, and the kernel's
+`Module.symvers` carries what it offers. Pull the modules out of `vendor.img`
+with `debugfs`, read both sides, compare. The eight stock modules ask for 514
+distinct symbols, of which this kernel exports 486, and the baseline has zero
+diverging; a change that keeps it at zero is safe to flash. Disabling
+`CONFIG_MTK_MMC_DEBUG` passed that check in the same sitting and freed 488 kB.
+
 ## The second change in the same file: memory back to cgroup v1
 
 **Symptom**: the phone boots all the way -- `Boot is finished (74802 ms)`, the
@@ -595,18 +621,6 @@ allows for devices that do not have it there.
 into `cgroup.event_control` needs a permission AOSP does not grant, for the same
 reason: on a kernel new enough for PSI this path is never taken.
 
-**The alternative, and why not**: turning on `CONFIG_BLK_CGROUP` in the kernel
-would give the controller for real. It also changes block layer structures,
-and on this device a kernel configuration change that moves symbol CRCs stops
-the factory Wi-Fi, Bluetooth and GPS modules from loading. That trade is not
-worth making for a controller Android has booted without here since 21.
-
-
-**The alternative, and why not**: turning on `CONFIG_BLK_CGROUP` in the kernel
-would give the controller for real. It also changes block layer structures,
-and on this device a kernel configuration change that moves symbol CRCs stops
-the factory Wi-Fi, Bluetooth and GPS modules from loading. That trade is not
-worth making for a controller Android has booted without here since 21.
 
 ## frameworks_native-epoll-pwait2-fallback.patch
 
