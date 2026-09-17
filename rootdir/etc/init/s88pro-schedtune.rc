@@ -3,68 +3,43 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# EAS boost for foreground apps.
+# prefer_idle for the scheduler groups. The boost that belongs next to it is
+# not here, and the reason is worth writing down.
 #
-# Without it the UI visibly stutters. Measured with dumpsys gfxinfo on a scroll
-# through Settings, same sequence, two runs each:
+# This kernel has SchedTune (CONFIG_SCHED_TUNE=y) and does not expose uclamp in
+# the cgroups: /dev/cpuctl/*/cpu.uclamp.min does not exist. Up to Android 11
+# AOSP set the /dev/stune boosts in init.rc; Android 12 dropped those lines
+# because it moved to uclamp, so nobody raises the frequency for what the user
+# is looking at. Apps do land in the right group -- task_profiles_29.json does
+# that, and it is what the system loads since the vendor is API 29 -- but the
+# group sits at boost=0.
 #
-#                     without        with
-#   janky frames       28.4%         0.4%
-#   median frame       19 ms         11 ms      (60 Hz budget: 16.6 ms)
-#   99th percentile    32 ms         22 ms
+# The obvious repair is to write schedtune.boost here. It does not work, and
+# two attempts at making it work by retrying failed on 23.2: the value was
+# always found back at zero on a booted phone. The reason is that the file is
+# not a setting. On this SoC /dev/stune/<group>/schedtune.boost is the output
+# of an arbitration inside the kernel, drivers/misc/mediatek/performance/
+# boost_ctrl/eas_ctrl/, which recomputes it as the MAX over its kickers and
+# writes the result. Every app launch triggers a recomputation, all kickers are
+# zero, and zero is what lands in the file. Isolated by bisection: the value
+# survives idling, a force-stop and any amount of scrolling, and dies exactly
+# on am start.
 #
-# The reason is a mismatch between framework and kernel. This MediaTek kernel
-# has SchedTune (CONFIG_SCHED_TUNE=y) and does not expose uclamp in the cgroups:
-# /dev/cpuctl/*/cpu.uclamp.min does not exist. Up to Android 11 AOSP set the
-# /dev/stune boosts inside init.rc; in Android 12 those lines were dropped
-# because it moved to uclamp, and only one remains, for nnapi-hal.
+# So the boost is set on the kernel side now, as a kicker, by the ta_boost_floor
+# parameter of that driver. Being one term of a MAX it only raises the boost and
+# never caps it, so the vendor perf service still wins when it asks for more.
 #
-# The result: apps do land in the right group -- task_profiles_29.json does
-# that, and it is what the system loads since the vendor is API 29
-# (MaxPerformance -> JoinCgroup schedtune top-app) -- but that group stays at
-# boost=0 and prefer_idle=0, that is, with no effect at all. Nobody raises the
-# frequency for what the user is looking at, and nobody prefers the idle cores.
-#
-# Why a service and not "write" lines in here: tried, they do not work. With
-# "on post-fs-data" or "on property:sys.boot_completed=1" init does run the
-# lines (verified with a sentinel setprop) but only prefer_idle sticks, while
-# boost goes back to zero.
-#
-# Writing them later works, but "later" has no fixed value. Five seconds was
-# enough on 22.2 and is not on 23.2; neither is a loop that retries for five
-# minutes and stops once the value has held three checks in a row. Both were
-# tried and both ended with boost back at zero on a booted phone. Set by hand
-# at any later moment it stays put indefinitely, so the reset happens inside a
-# window near the end of boot whose length we cannot predict. The service
-# therefore never exits and reapplies every thirty seconds; it is not oneshot,
-# so init brings it back if it ever dies.
-#
-# To be revisited if we ever move to a kernel with uclamp in the cgroups: there
-# the framework handles it by itself and this file has to go.
-#
-# On 23.2 this stopped working, silently. The service named /system/bin/sh as
-# its executable, and init refuses to start a service that would stay in the
-# init domain:
-#
-#   Could not start service: File /system/bin/sh (labeled
-#   "u:object_r:shell_exec:s0") has incorrect label or no domain transition
-#   from u:r:init:s0 to another SELinux domain defined.
-#
-# Nothing said so out loud: that refusal goes to /dev/kmsg, which the kernel
-# rate-limits, and the only trace is an empty init.svc.s88pro_schedtune. The
-# phone simply ran with top-app boost=0, which is what the whole file exists to
-# prevent. Measured on 23.2 before the repair, scrolling Settings: median frame
-# 25 ms and 88.7% of frames past the 16.6 ms budget.
-#
-# So the script is executed directly now. That needs two things: it lives under
-# /system/bin, because fs_config only gives 0755 there and 0644 everywhere else
-# in /system, and it has a domain of its own so the transition exists. See
-# sepolicy/system_ext/private/s88pro_schedtune.te.
-
-service s88pro_schedtune /system/bin/s88pro-schedtune.sh
-    user root
-    group root system
-    disabled
+# prefer_idle is a different matter: the arbitration does not touch it, it is
+# measured to survive an app launch, and plain init writes make it stick -- that
+# much was always true, and was the half of the old service that actually
+# worked. Which is why there is no service here any more.
 
 on property:sys.boot_completed=1
-    start s88pro_schedtune
+    # What the user is looking at: idle cores, and the boost from the kernel.
+    write /dev/stune/top-app/schedtune.prefer_idle 1
+
+    # The rest of the foreground: no boost, but idle cores all the same.
+    # Raising this one too is pointless, SystemUI is already in top-app.
+    write /dev/stune/foreground/schedtune.prefer_idle 1
+
+    write /dev/stune/rt/schedtune.prefer_idle 1

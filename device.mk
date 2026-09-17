@@ -263,7 +263,6 @@ PRODUCT_COPY_FILES += \
 # two "write" lines.
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init/s88pro-schedtune.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-schedtune.rc \
-    $(LOCAL_PATH)/rootdir/bin/s88pro-schedtune.sh:$(TARGET_COPY_OUT_SYSTEM)/bin/s88pro-schedtune.sh
 
 # The serial console shell, which AOSP starts on every userdebug build, must
 # not run here. See the comment inside the file: the kernel console stays, only
