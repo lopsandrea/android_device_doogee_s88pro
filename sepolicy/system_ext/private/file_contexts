@@ -23,3 +23,17 @@
 # transition -- see sepolicy/system_ext/private/s88pro_schedtune.te -- and the
 # transition is computed from the label of the file named in the service.
 /system/bin/s88pro-schedtune\.sh    u:object_r:s88pro_schedtune_exec:s0
+
+# The AIDL vibrator HAL. Same reason as the line above: init computes the
+# domain transition from the label of the file it is told to execute.
+# The alternation is not decoration. system_ext is a partition of its own on
+# some devices and a directory inside system on others -- here it is the
+# second, and /system_ext is a symlink to /system/system_ext. The image is
+# labelled by physical path, so a rule matching only /system_ext never fires
+# and the generic /(system_ext|system/system_ext)(/.*)? -> system_file wins.
+# The binary then has no domain transition from init, init refuses to start
+# the service without saying so on any channel that survives, and -- because
+# the HAL is declared in VINTF -- the framework waits for it forever on
+# AServiceManager_waitForService. That is a phone stuck on the boot animation.
+# AOSP writes every system_ext rule this way; see plat_file_contexts.
+/(system_ext|system/system_ext)/bin/hw/android\.hardware\.vibrator-service\.s88pro    u:object_r:hal_vibrator_s88pro_exec:s0

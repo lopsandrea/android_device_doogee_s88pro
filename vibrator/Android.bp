@@ -1,0 +1,29 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+cc_binary {
+    name: "android.hardware.vibrator-service.s88pro",
+    relative_install_path: "hw",
+    init_rc: ["android.hardware.vibrator-service.s88pro.rc"],
+    // Required, not optional: ServiceManager::addService rejects an undeclared
+    // instance with EX_ILLEGAL_ARGUMENT ("VINTF declaration error") long
+    // before anyone tries to find it. The check is in addService, not in
+    // canAddService where one would look for it.
+    vintf_fragments: ["android.hardware.vibrator-service.s88pro.xml"],
+    srcs: [
+        "Vibrator.cpp",
+        "service.cpp",
+    ],
+    shared_libs: [
+        "libbase",
+        "libbinder_ndk",
+        "liblog",
+        "android.hardware.vibrator-V2-ndk",
+    ],
+    // Not vendor: this phone ships a prebuilt vendor image and the build
+    // installs nothing into it. See BoardConfig.mk, BOARD_PREBUILT_VENDORIMAGE.
+    system_ext_specific: true,
+}

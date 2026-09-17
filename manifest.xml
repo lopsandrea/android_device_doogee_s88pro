@@ -371,9 +371,15 @@
       that one still declares the HAL. The framework simply will not talk to
       it, because Android 16 speaks only AIDL to a vibrator.
 
-      So vibration does not work on 23.2, and removing this does not cause
-      that. Making it work needs an AIDL service forwarding to the stock HIDL
-      one.
+      So removing this does not break vibration; it was already broken.
+      Vibration is provided instead by an AIDL service of our own, built from
+      device/doogee/s88pro/vibrator/ and installed in system_ext because the
+      vendor image is prebuilt. It drives /sys/class/leds/vibrator directly
+      rather than forwarding to the stock HIDL HAL, which would have meant
+      dlopen-ing a vendor library from a system process -- not allowed. Its
+      VINTF fragment goes in the framework manifest, which servicemanager
+      consults alongside the device one (ServiceManager.cpp, forEachManifest),
+      so AServiceManager_isDeclared finds it.
     -->
     <hal format="hidl">
         <name>android.hardware.wifi</name>

@@ -1,0 +1,4 @@
+service vibrator-s88pro /system_ext/bin/hw/android.hardware.vibrator-service.s88pro
+    class hal
+    user system
+    group system

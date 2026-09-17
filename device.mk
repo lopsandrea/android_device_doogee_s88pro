@@ -342,6 +342,21 @@ PRODUCT_PACKAGES += \
     libhidltransport \
     libhwbinder
 
+# Vibration. Android 16 deleted hardware/interfaces/vibrator/1.0 and speaks
+# only AIDL to a vibrator, while this phone's stock vendor offers HIDL 1.0 and
+# nothing else, so on 23.2 the phone simply never buzzed. See manifest.xml.
+#
+# The obvious repair -- an AIDL service forwarding to the stock HIDL one --
+# turns out not to be needed, and would not have worked anyway: the stock HAL
+# is a thin wrapper around /vendor/lib64/hw/vibrator.default.so, and a process
+# in system_ext may not dlopen a vendor library. What that library drives is
+# /sys/class/leds/vibrator, an ordinary LED class device labelled
+# sysfs_vibrator -- a public type, so system-side policy may name it. Writing
+# the length to duration and 1 to activate runs the motor; verified by
+# hand on the phone before any of this was written.
+PRODUCT_PACKAGES += \
+    android.hardware.vibrator-service.s88pro
+
 # The modem keeps VoLTE off until told otherwise.
 PRODUCT_SYSTEM_PROPERTIES += \
     persist.vendor.mtk.volte.enable=1

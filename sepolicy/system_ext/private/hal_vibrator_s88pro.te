@@ -1,0 +1,21 @@
+# The AIDL vibrator HAL, which on this device lives in system_ext rather than
+# vendor: the vendor image is the stock prebuilt one and the build installs
+# nothing into it (BoardConfig.mk, BOARD_PREBUILT_VENDORIMAGE).
+#
+# Nothing forbids a core domain from serving a HAL -- the neverallows in
+# system/sepolicy/private/hal_neverallows.te are about network capabilities --
+# and the two types this needs are both public: hal_vibrator_service is
+# declared in system/sepolicy/public/service.te, and the sysfs node carries
+# sysfs_vibrator, not a vendor-only type. That is what makes this possible at
+# all; the same approach fails for, say, /proc/driver/thermal, whose type
+# system-side policy may not name.
+type hal_vibrator_s88pro, domain, coredomain;
+type hal_vibrator_s88pro_exec, system_file_type, exec_type, file_type;
+
+init_daemon_domain(hal_vibrator_s88pro)
+hal_server_domain(hal_vibrator_s88pro, hal_vibrator)
+
+# /sys/class/leds/vibrator: duration and activate. The files are system:system
+# 0644, and the service runs as system, so DAC allows the write too.
+allow hal_vibrator_s88pro sysfs_vibrator:dir search;
+allow hal_vibrator_s88pro sysfs_vibrator:file rw_file_perms;
