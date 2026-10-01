@@ -42,4 +42,72 @@
          USB-C port declares only the "ufp dfp" data roles, with no alt mode.
     -->
     <bool name="config_enableWifiDisplay">true</bool>
+
+    <!--
+      Haptic feedback durations, measured on this phone.
+
+      The vibrator HAL (device/doogee/s88pro/vibrator) supports no prebaked
+      effects, so keyboard taps, button clicks and long presses are played
+      through these fallback patterns: CLICK uses config_virtualKeyVibePattern,
+      TICK config_clockTickVibePattern, HEAVY_CLICK config_longPressVibePattern
+      and DOUBLE_CLICK config_doubleClickVibePattern
+      (VibrationSettings.createEffectsFromResource).
+
+      Why the keyboard went silent. The stock Android 10 framework-res gave
+      keyboard taps a pattern of their own, config_keyboardTapVibePattern =
+      [40]. This framework no longer has that resource: KEYBOARD_TAP becomes
+      EFFECT_CLICK with fallback (HapticFeedbackVibrationProvider
+      .getKeyboardVibration), and the AOSP fallback for EFFECT_CLICK is
+      [0, 20]. The driver stretches anything between vib_limit and vib_timer,
+      9 and 25 ms in the device tree, up to 25 ms, so a keypress went from
+      40 ms of drive to 25. That is below what this motor can render.
+
+      The motor is an eccentric rotating mass in a heavy rugged body. Measured
+      by writing /sys/class/leds/vibrator directly, at typing cadence: four
+      pulses 300 ms apart, a finger resting on the glass, the person holding
+      the phone reporting:
+
+          20 ms (25 after the driver)   too weak
+          30 ms                         borderline
+          40 ms                         felt, chosen
+          120 ms                        felt, too insistent for typing
+
+      The context matters a great deal: with the phone simply held and no
+      finger on the screen, nothing under 120 ms was felt at all, and an
+      earlier version of this overlay was calibrated on that and shipped 120 ms
+      everywhere; it was felt, and it buzzed. The keyboard is used with a
+      finger on the glass, and that is the threshold that counts.
+
+      The power side was checked too: sampling the PMIC while pulsing, the VIBR
+      LDO comes up with no measurable delay and stays on for the length asked,
+      at 2.8 V (VOSEL 9, the stock device tree value).
+
+      TICK equals CLICK on purpose: below the threshold a lighter tick is not
+      lighter, it is absent. HEAVY_CLICK is longer so a long press stays
+      distinguishable from a tap. The gap in the double click lets the mass
+      coast down, or the two pulses merge into one. KEYBOARD_RELEASE asks for
+      TICK without fallback and is skipped by the framework on a vibrator with
+      no effects, which is what it should do.
+    -->
+    <integer-array name="config_virtualKeyVibePattern" translatable="false">
+        <item>0</item>
+        <item>40</item>
+    </integer-array>
+
+    <integer-array name="config_clockTickVibePattern" translatable="false">
+        <item>0</item>
+        <item>40</item>
+    </integer-array>
+
+    <integer-array name="config_longPressVibePattern" translatable="false">
+        <item>0</item>
+        <item>100</item>
+    </integer-array>
+
+    <integer-array name="config_doubleClickVibePattern" translatable="false">
+        <item>0</item>
+        <item>40</item>
+        <item>100</item>
+        <item>40</item>
+    </integer-array>
 </resources>
