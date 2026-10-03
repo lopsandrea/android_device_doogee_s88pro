@@ -1,0 +1,44 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Video calling off, because nothing on this system can carry it, and leaving
+# it on costs a busy loop in the radio daemon.
+#
+# The stock vendor declares persist.vendor.vilte_support=1 and
+# persist.vendor.viwifi_support=1. Video over LTE and over Wi-Fi on MediaTek
+# needs two halves: vtservice_hidl in the vendor image, which is here and
+# running, and the system-side vtservice daemon, which lived in the stock MTK
+# system image and has no counterpart in LineageOS. The radio daemon does not
+# know that. Profiled with simpleperf, its RfxSender_11 thread spends all its
+# time in
+#
+#   RmcVtReqHandler::handleRequestUpdateOpid
+#     RmcVtReqHandler::sendMsgToVTS
+#       usleep
+#
+# retrying a message to a video service that never answers. Measured: about
+# 4800 wakeups a second and 7.3 percent of a core, around the clock, whether
+# a SIM is inserted or not -- the single largest idle drain found on this
+# phone. With both properties at 0 the daemon drops to about 6 wakeups a
+# second and 0.35 percent of a core.
+#
+# Voice over LTE is governed by other properties (see device.mk,
+# persist.vendor.mtk.volte.enable) and is not affected.
+#
+# The value has to be forced, not just set once: vendor/build.prop defines
+# both properties, and a value defined in a build.prop wins over the one saved
+# in /data at every boot. post-fs-data runs before class main, where the radio
+# daemon (vendor.ril-daemon-mtk) is started; the property triggers catch any
+# later write of 1.
+
+on post-fs-data
+    setprop persist.vendor.vilte_support 0
+    setprop persist.vendor.viwifi_support 0
+
+on property:persist.vendor.vilte_support=1
+    setprop persist.vendor.vilte_support 0
+
+on property:persist.vendor.viwifi_support=1
+    setprop persist.vendor.viwifi_support 0

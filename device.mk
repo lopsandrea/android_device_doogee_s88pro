@@ -310,6 +310,11 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init/s88pro-cache.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-cache.rc
 
+# Video calling off: the radio daemon otherwise busy-loops waiting for a
+# video service LineageOS does not have. See the comment in the file.
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/rootdir/etc/init/s88pro-vt.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-vt.rc
+
 
 
 # Device system properties
