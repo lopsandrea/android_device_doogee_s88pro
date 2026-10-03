@@ -793,3 +793,45 @@ without error (`UID=10072 policy=1 (REJECT_METERED_BACKGROUND)`). Tethering
 starts with `enableBpfOffload: true`; hardware offload is absent because the
 vendor has no offload HAL, which is not new. Tethering itself was not driven
 end to end -- that needs a second device.
+
+## frameworks_base-choreographer-stuffing-tuning.patch
+
+**Project**: `frameworks/base`
+
+**Symptom**: no crash and no visible jank, but scrolling runs three to four
+frames behind the finger, 50 to 65 ms from intended vsync to present on this
+61 Hz panel, against a floor of two frames (about 33 ms).
+
+**Cause**: buffer stuffing that is never drained. Every missed deadline -- the
+app's, whose real work per frame is about 15 ms out of 16.4, or
+SurfaceFlinger's, when a vsync is delivered late by the vendor HWC -- leaves
+one more buffer queued, and the queue then stays that deep for the rest of the
+gesture. Choreographer's recovery skips a vsync to drain it, but:
+
+- this tree carries AOSP's multi-recovery change ("Recover from buffer
+  stuffing multiple times in 1 animation"), behind the read-write aconfig flag
+  `android.view.flags.buffer_stuffing_multi_recovery`. The flag has no value
+  in the release config and is missing from the device's flag storage, so it
+  reads false and `device_config` cannot turn it on: only the first stuffing
+  of an animation is ever drained;
+- a wait counts as stuffing only past half a frame interval, while in the
+  three-frame state the app waits 1 to 2 ms on `dequeueBuffer`. That state is
+  never detected at all.
+
+Measured on traces: of 474 frames in a scroll, 410 Buffer Stuffing, 59 App
+Deadline Missed, 1 on time; recovery started once in 12 s and never again.
+
+**Change**: two hooks read when a Choreographer instance is created, so a
+change applies on the next app start (the class is preloaded in zygote, and
+static fields would freeze the value for every app):
+
+- `debug.choreographer.multi_recovery`: when true, behave as if the flag were
+  on;
+- `debug.choreographer.stuffing_wait_us`: the dequeue wait that counts as
+  stuffing; unset or negative keeps half a frame interval.
+
+Unset, behaviour is unchanged. `debug.choreographer.*` is a namespace
+Choreographer already reads and that every app may read; `persist.sys.*` would
+be invisible to third-party apps, which would silently get the default. The
+values the device ships are set in `device.mk`, with the measurements behind
+them.

@@ -310,6 +310,30 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init/s88pro-cache.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-cache.rc
 
+# Buffer stuffing recovery, tuned for latency. The hooks are added to
+# Choreographer by patches/frameworks_base-choreographer-stuffing-tuning.patch;
+# see patches/README.md for the full story.
+#
+# Scrolling here runs 3 to 4 frames behind the finger: every missed deadline,
+# the app's or SurfaceFlinger's, leaves one more buffer queued, and AOSP's
+# recovery only drained the first one per animation (its multi-recovery flag
+# is off in this build) and only once a dequeue wait passed half a frame, which
+# the 3-frame state never reaches. Measured over 12 s of scrolling, three runs
+# each, latency from intended vsync to present:
+#
+#                                   at 2 frames   at 4+    visible stutters  mean
+#   stock                               1-5%     55-72%        6-12         ~59 ms
+#   multi-recovery, half-frame wait     3-24%     1-3%          7-8         ~47 ms
+#   multi-recovery, 1 ms wait          77-85%     0-1%         24-34        ~36 ms
+#
+# Draining a queued frame shows one frame twice -- there is no way to take a
+# frame of latency out of the pipeline without it -- so the 1 ms setting trades
+# about two extra stutters a second of scrolling for 40 percent less latency.
+# Chosen by trying both in hand.
+PRODUCT_SYSTEM_PROPERTIES += \
+    debug.choreographer.multi_recovery=1 \
+    debug.choreographer.stuffing_wait_us=1000
+
 # Video calling off: the radio daemon otherwise busy-loops waiting for a
 # video service LineageOS does not have. See the comment in the file.
 PRODUCT_COPY_FILES += \

@@ -1,0 +1,40 @@
+diff --git a/core/java/android/view/Choreographer.java b/core/java/android/view/Choreographer.java
+index 37782ac7f2f23..93e373a3ced1a 100644
+--- a/core/java/android/view/Choreographer.java
++++ b/core/java/android/view/Choreographer.java
+@@ -271,6 +271,15 @@ public final class Choreographer {
+ 
+     private final BufferStuffingState mBufferStuffingState = new BufferStuffingState();
+ 
++    // Tuning hooks for buffer stuffing recovery, read when the instance is
++    // created so that a change takes effect on the next app start. Unset, both
++    // keep the platform behaviour: multi-recovery follows its flag, and a wait
++    // counts as stuffing past half a frame interval.
++    private final boolean mStuffingMultiRecovery =
++            SystemProperties.getBoolean("debug.choreographer.multi_recovery", false);
++    private final long mStuffingWaitThresholdNanos =
++            SystemProperties.getLong("debug.choreographer.stuffing_wait_us", -1L) * 1000L;
++
+     /**
+      * Set flag to indicate that client is blocked waiting for buffer release and
+      * buffer stuffing recovery should soon begin. This is provided with the
+@@ -278,7 +287,9 @@ public final class Choreographer {
+      * @hide
+      */
+     public void onWaitForBufferRelease(long durationNanos) {
+-        if (durationNanos > mLastFrameIntervalNanos / 2) {
++        final long threshold = mStuffingWaitThresholdNanos >= 0
++                ? mStuffingWaitThresholdNanos : mLastFrameIntervalNanos / 2;
++        if (durationNanos > threshold) {
+             mBufferStuffingState.isStuffed.set(true);
+         }
+     }
+@@ -946,7 +957,7 @@ public final class Choreographer {
+         // Multi-recovery allows the app to recover from stuffing multiple times within
+         // the same animation. Without multi-recovery, only 1 attempt at recovering from
+         // stuffing is attempted when it is first detected in an animation.
+-        if (bufferStuffingMultiRecovery()) {
++        if (bufferStuffingMultiRecovery() || mStuffingMultiRecovery) {
+             // Canned animations can recover from buffer stuffing whenever the
+             // client is blocked on dequeueBuffer.
+             if (mBufferStuffingState.isStuffed.getAndSet(false)) {
