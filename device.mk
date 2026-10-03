@@ -218,6 +218,35 @@ PRODUCT_PACKAGES += \
 # than inherited because inheriting them is what breaks: leaving a property
 # unset is what sends SurfaceFlinger to the HAL.
 #
+# One value in this list is deliberately not the caller's default:
+# running_without_sync_framework. The caller reads
+#
+#   hasSyncFramework = running_without_sync_framework(true);
+#
+# and the helper returns the property negated (SurfaceFlingerProperties.cpp:
+# return !(*temp)), so the default -- "there is a sync framework" -- is
+# reproduced by false, and true tells SurfaceFlinger there are no fences. The
+# phone does have them, framestats reports a DisplayPresentTime for every
+# frame, and the stock configstore answered hasSyncFramework=true.
+#
+# It stays true anyway, because true measures better. Its only effect in this
+# SurfaceFlinger is the !hasSyncFramework branch after each composition, which
+# re-enables hardware vsync instead of letting the vsync model run on present
+# fences. Fed by this Android 10 HWC, the model is the worse clock. Scrolling a
+# long list away from its edges, eight runs per build, jank as FrameTimeline
+# counts it (gfxinfo "Janky frames"):
+#
+#   true  (hardware vsync kept on)        median 5.7%, range 3.0-7.3
+#   false (the nominally correct value)   median 10.0%, range 4.6-15.1
+#   true again, rebuilt and reflashed     median 3.7%, range 3.1-6.3
+#
+# with SurfaceFlinger itself reporting prediction-error jank under false. The
+# false build also had three framebuffers instead of two; those only matter
+# when SurfaceFlinger composes on the GPU, which it does not while scrolling
+# (every layer is DEVICE), and on their own they did not move app transitions
+# either. The price of true is sixty vsync interrupts a second with the screen
+# on. Do not "fix" it without measuring.
+#
 # One trap: Scheduler/VsyncConfiguration.cpp has a validateSysprops() that
 # aborts if the two vsync offsets are set. It only runs on the WorkDuration
 # path, chosen by debug.sf.use_phase_offsets_as_durations, which is not set
