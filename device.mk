@@ -339,6 +339,16 @@ PRODUCT_SYSTEM_PROPERTIES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init/s88pro-vt.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-vt.rc
 
+# Virtual SIM off: the vendor's radio daemon adds a third protocol stack for
+# it, which polls the modem for a network it never finds. The product
+# build.prop loads after the vendor one and overrides it. See the comment in
+# the file.
+PRODUCT_PRODUCT_PROPERTIES += \
+    ro.vendor.radio.max.multisim=dsds
+
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/rootdir/etc/init/s88pro-vsim.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-vsim.rc
+
 
 
 # Device system properties

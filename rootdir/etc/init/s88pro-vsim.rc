@@ -1,0 +1,10 @@
+# The modem firmware is a virtual-SIM build (E977_VSIM). mtkfusionrild
+# picks the SIM mode at start: persist.vendor.radio.multisimslot=2 gives
+# dsds, then ro.vendor.mtk_non_dsda_rsim_support=1 together with
+# ro.vendor.radio.max.multisim=tsts adds a third protocol stack for the
+# virtual SIM. Nothing ever provisions it, so that slot keeps searching
+# for a network and polling the modem. device.mk overrides max.multisim;
+# this asks for the two physical slots. rild writes the result to
+# persist.radio.multisim.config, which the framework reads.
+on post-fs-data
+    setprop persist.vendor.radio.multisimslot 2
