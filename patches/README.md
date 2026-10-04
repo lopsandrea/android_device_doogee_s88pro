@@ -223,7 +223,7 @@ be unfounded: `e2fsdroid -e -B` still produces the block map, `vendor.map`
 comes out at 110 kB and `vendor_disable_sparse=true` reaches the misc_info.
 Measured on the tree of 11 September 2026, not assumed.
 
-## vendor_lineage-kernel-flags-for-soong.patch
+## vendor_lineage-kernel-flags-for-soong.patch — REMOVED, no longer needed
 
 **Project**: `vendor/lineage`
 
@@ -245,6 +245,15 @@ they are already there when the export happens.
 **Status**: needed as long as this device builds a 4.14 kernel with the
 toolchain LineageOS ships. The four obstacles that make that necessary are in
 `docs/bringup/` in the oracolo repository.
+
+**LineageOS 23.2 builds without it.** The patch no longer applies, forwards or
+backwards (`config/BoardConfigKernel.mk` has moved under it), and it was not
+applied in the tree that produced every 23.2 build of this device: from the
+first boot in September to the builds of 4 October, `vendor/lineage` had no
+local changes. `TARGET_KERNEL_ADDITIONAL_FLAGS` is still read only in
+`build/tasks/kernel.mk`, so what changed is on the soong side; which change it
+was has not been traced. The kernel flags themselves are still needed and
+still in `BoardConfig.mk`.
 
 ## packages_modules_Bluetooth-erroneous-data-reporting.patch
 
