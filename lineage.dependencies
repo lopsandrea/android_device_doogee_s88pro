@@ -1,5 +1,9 @@
 [
   {
+    "repository": "android_kernel_doogee_s88pro",
+    "target_path": "kernel/doogee/s88pro"
+  },
+  {
     "repository": "android_vendor_doogee_s88pro",
     "target_path": "vendor/doogee/s88pro"
   }
