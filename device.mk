@@ -140,6 +140,11 @@ PRODUCT_SHIPPING_API_LEVEL := 29
 # See the comment inside overlay/frameworks/base/core/res/res/values/config.xml
 DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay
 
+# Wi-Fi module overlay: 5 GHz and 802.11ac, as on stock. See the comment
+# inside rro_overlays/S88proWifiResTarget/res/values/config.xml.
+PRODUCT_PACKAGES += \
+    S88proWifiResTarget
+
 # TEE startup: see the comment inside the file.
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init/trustkernel-fixup.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/trustkernel-fixup.rc

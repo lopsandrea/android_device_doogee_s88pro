@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+<!--
+     The stock ROM declares the first two of these, in its vendor
+     framework-res overlay, under their Android 10 names:
+     config_wifi_dual_band_support and
+     config_wifi_softap_ieee80211ac_supported. Since Android 11 they live in
+     the Wi-Fi module's resources instead, where that overlay never reaches,
+     so both read false: the hotspot offered 2.4 GHz only and the station
+     side reported no 5 GHz band, although the radio scans 5 GHz networks.
+-->
+<resources>
+    <!-- Dual band: 5 GHz for the station, and for the hotspot together
+         with config_wifiSoftap5ghzSupported, which already defaults to true -->
+    <bool name="config_wifi5ghzSupport">true</bool>
+
+    <!-- 802.11ac on the hotspot, handed to hostapd as enable80211AC -->
+    <bool name="config_wifi_softap_ieee80211ac_supported">true</bool>
+
+    <!-- Automatic channel selection. Without it the framework picks one of
+         the allowed channels at random on every start, and hostapd HAL 1.1
+         only asks for an 80 MHz channel (ht_capab [HT40+], vht_oper_chwidth
+         1) on the ACS path, so the hotspot also stayed at 20 MHz. The
+         driver carries its own ACS, which also drops channels that
+         interfere with LTE. -->
+    <bool name="config_wifi_softap_acs_supported">true</bool>
+
+    <!-- Channels ACS may pick from on 5 GHz. With hostapd HAL 1.1 these
+         strings become the ACS channel ranges as they are, and the empty
+         default turned into "chanlist=0": hostapd refused to start on 5 GHz
+         while 2.4 GHz, whose default is 1-11, worked. hostapd drops what the
+         country does not allow (149-165 in Italy), and DFS channels are
+         excluded on the ACS path. -->
+    <string name="config_wifiSoftap5gChannelList">36-48,149-165</string>
+</resources>
