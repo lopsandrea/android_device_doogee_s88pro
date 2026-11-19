@@ -80,16 +80,6 @@
         <fqname>@2.4::ICameraProvider/internal/0</fqname>
     </hal>
     <hal format="hidl">
-        <name>android.hardware.configstore</name>
-        <transport>hwbinder</transport>
-        <version>1.1</version>
-        <interface>
-            <name>ISurfaceFlingerConfigs</name>
-            <instance>default</instance>
-        </interface>
-        <fqname>@1.1::ISurfaceFlingerConfigs/default</fqname>
-    </hal>
-    <hal format="hidl">
         <name>android.hardware.drm</name>
         <transport>hwbinder</transport>
         <version>1.0</version>
@@ -181,16 +171,6 @@
         <fqname>@4.0::IKeymasterDevice/default</fqname>
     </hal>
     <hal format="hidl">
-        <name>android.hardware.light</name>
-        <transport>hwbinder</transport>
-        <version>2.0</version>
-        <interface>
-            <name>ILight</name>
-            <instance>default</instance>
-        </interface>
-        <fqname>@2.0::ILight/default</fqname>
-    </hal>
-    <hal format="hidl">
         <name>android.hardware.media.omx</name>
         <transport>hwbinder</transport>
         <version>1.0</version>
@@ -204,16 +184,6 @@
         </interface>
         <fqname>@1.0::IOmx/default</fqname>
         <fqname>@1.0::IOmxStore/default</fqname>
-    </hal>
-    <hal format="hidl">
-        <name>android.hardware.memtrack</name>
-        <transport>hwbinder</transport>
-        <version>1.0</version>
-        <interface>
-            <name>IMemtrack</name>
-            <instance>default</instance>
-        </interface>
-        <fqname>@1.0::IMemtrack/default</fqname>
     </hal>
     <hal format="hidl">
         <name>android.hardware.neuralnetworks</name>
@@ -380,6 +350,20 @@
       VINTF fragment goes in the framework manifest, which servicemanager
       consults alongside the device one (ServiceManager.cpp, forEachManifest),
       so AServiceManager_isDeclared finds it.
+    -->
+    <!--
+      No configstore, light or memtrack either, for the same reason as the
+      vibrator note above: Android 17 deleted hardware/interfaces/
+      configstore/1.0 and 1.1, light/2.0 and memtrack/1.0, so the FCM 4 matrix
+      can no longer name them and an instance declared here would be one no
+      matrix covers. The vendor image still declares and runs all three.
+
+      configstore was already bypassed: SurfaceFlinger reads the thirteen
+      ro.surface_flinger.* properties set in device.mk instead. memtrack only
+      feeds the graphics column of dumpsys meminfo. The lights, the panel
+      backlight and the notification LED, are what matters, and are provided
+      by an AIDL service of our own in system_ext, device/doogee/s88pro/light/,
+      built the same way as the vibrator's.
     -->
     <hal format="hidl">
         <name>android.hardware.wifi</name>
