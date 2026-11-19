@@ -1,9 +1,9 @@
 diff --git a/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java b/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java
-index 6100b603..2ce15eba 100644
+index f8072c678f0b5..3eb8dcae22a83 100644
 --- a/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java
 +++ b/packages/SystemUI/src/com/android/systemui/screenrecord/ScreenMediaRecorder.java
-@@ -197,21 +197,37 @@ public class ScreenMediaRecorder {
-                 .getCapabilitiesForType(videoType).getVideoCapabilities();
+@@ -309,21 +309,37 @@ public class ScreenMediaRecorder {
+                 .getVideoCapabilities();
          decoder.release();
  
 +        // And from the encoder too: a size the decoder can play back is useless if
@@ -45,9 +45,9 @@ index 6100b603..2ce15eba 100644
 +                && vc.isSizeSupported(screenWidthAligned, screenHeightAligned)
 +                && evc.isSizeSupported(screenWidthAligned, screenHeightAligned)) {
              // Desired size is supported, now get the rate
-             int maxRate = vc.getSupportedFrameRatesFor(screenWidthAligned,
-                     screenHeightAligned).getUpper().intValue();
-@@ -229,11 +245,11 @@ public class ScreenMediaRecorder {
+             int maxRate = getSupportedFrameRateFor(vc, screenWidthAligned, screenHeightAligned);
+ 
+@@ -345,11 +361,11 @@ public class ScreenMediaRecorder {
  
          int scaledWidth = (int) (screenWidth * scale);
          int scaledHeight = (int) (screenHeight * scale);

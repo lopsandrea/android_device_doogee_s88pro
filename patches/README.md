@@ -312,7 +312,7 @@ the same abort message.
 
 **Project**: `packages/modules/vndk`
 
-**Branch**: `lineage-22.2` only. LineageOS 21 still declares the module.
+**Branch**: from `lineage-22.2` on. LineageOS 21 still declares the module.
 
 **Symptom**: the phone hangs on the vendor logo and never reaches the boot
 animation. USB does not even enumerate, so there is nothing to read over adb;
@@ -373,7 +373,7 @@ same layout LineageOS 21 produces, and passes `apex_linkerconfig_validation`,
 
 **Project**: `frameworks/av`
 
-**Branch**: `lineage-22.2` only. LineageOS 21 still builds the V5 client.
+**Branch**: from `lineage-22.2` on. LineageOS 21 still builds the V5 client.
 
 **Symptom**: the phone reaches the LineageOS boot animation and stays there.
 `audioserver` dies every five seconds and `system_server` files an ANR about
@@ -457,7 +457,7 @@ agreeing with itself.
 
 **Project**: `build/make`
 
-**Branch**: `lineage-23.2` only. LineageOS 22.2 and 21 already carry the change
+**Branch**: from `lineage-23.2` on. LineageOS 22.2 and 21 already carry the change
 this restores.
 
 **Symptom**: the build reaches 95% and then stops packaging the target files:
@@ -499,7 +499,7 @@ carrying it to the next release.
 
 **Project**: `system/core`
 
-**Branch**: `lineage-23.2` only. On 22.2 the same failure is not fatal.
+**Branch**: from `lineage-23.2` on. On 22.2 the same failure is not fatal.
 
 **Symptom**: LineageOS 23.2 installs and then reboots to the bootloader about
 fourteen seconds in, over and over. It is not a crash: init does it on purpose.
@@ -631,11 +631,12 @@ into `cgroup.event_control` needs a permission AOSP does not grant, for the same
 reason: on a kernel new enough for PSI this path is never taken.
 
 
-## frameworks_native-epoll-pwait2-fallback.patch
+## frameworks_native-epoll-pwait2-fallback.patch — REMOVED, no longer needed
 
 **Project**: `frameworks/native`
 
-**Branch**: `lineage-23.2` only. LineageOS 22.2 does not call epoll_pwait2.
+**Branch**: `lineage-23.2` only. LineageOS 22.2 does not call epoll_pwait2,
+and 24.0 no longer does.
 
 **Symptom**: the phone reaches the LineageOS boot animation and stays there for
 ever. Nothing crashes, no tombstone is written, and one line repeats:
@@ -656,11 +657,16 @@ would turn a blocking read into a busy loop.
 **Note**: this is a portability fallback, not a guard being overridden. The two
 calls do the same thing.
 
+**LineageOS 24.0 no longer needs it.** `BufferReleaseReader::readBlocking`
+calls `epoll_wait` there, rounding the timeout up to a millisecond as this
+patch did, with a TODO about moving to `epoll_pwait2` once libgui can use it.
+Verified against the tree synced on 19 November 2026.
+
 ## packages_modules_Connectivity-bpfloader-kernel-version.patch
 
 **Project**: `packages/modules/Connectivity`
 
-**Branch**: `lineage-23.2` only. LineageOS 22.2 logs the same condition and
+**Branch**: from `lineage-23.2` on. LineageOS 22.2 logs the same condition and
 carries on.
 
 **Symptom**: two failures in a row, both before any service starts. First the
@@ -684,6 +690,13 @@ Wi-Fi, Bluetooth and GPS modules are binaries built against that kABI.
 
 **What it does**: turns four refusals into warnings, two in the loader and two
 in netd.
+
+**LineageOS 24.0** adds a third refusal to the loader, `Android 25Q4 requires
+kernel 5.10.`, which returns 7 and reboots the phone the same way; it is a
+warning too. The programs that need 5.10 carry their own minimum kernel
+version, and the loader skips them below it as it does for 4.19 and 5.4. The
+next step is already in the file: 26Q4 requires 5.15, and is not reached on
+24.0, which is API 37.0 (26Q4 is 37.1).
 
 **Note**: read this one carefully before assuming it is a guard being
 overridden. The distinction is in `BpfHandler.cpp` itself, a few lines below
@@ -710,7 +723,7 @@ would be worse than 22.2, which works.
 
 **Project**: `frameworks/base`
 
-**Branch**: `lineage-23.2` only. LineageOS 22.2 has no `SupportInfo`.
+**Branch**: from `lineage-23.2` on. LineageOS 22.2 has no `SupportInfo`.
 
 **Symptom**: the phone reaches the LineageOS boot animation and stays there.
 `system_server` throws, zygote dies with it, and init restarts the whole group
@@ -762,7 +775,7 @@ false on this device.
 
 **Project**: `packages/modules/Connectivity`
 
-**Branch**: `lineage-23.2` only. The map does not exist before Android 16.
+**Branch**: from `lineage-23.2` on. The map does not exist before Android 16.
 
 **Symptom**: the phone stays on the LineageOS boot animation. `system_server`
 throws, zygote dies with it, and init restarts the whole group every seventeen
@@ -844,3 +857,40 @@ Choreographer already reads and that every app may read; `persist.sys.*` would
 be invisible to third-party apps, which would silently get the default. The
 values the device ships are set in `device.mk`, with the measurements behind
 them.
+
+## system_sepolicy-core-domain-lights-hal.patch
+
+**Project**: `system/sepolicy`
+
+**Branch**: from `lineage-24.0` on. Up to 23.2 the framework still talks to the
+factory HIDL lights HAL.
+
+**Symptom**: the build stops at the system_ext policy:
+
+```
+neverallow check failed at plat_sepolicy.cil:22288 from system/sepolicy/private/coredomain.te:40
+  (neverallow base_typeattr_374 sysfs_leds (file (ioctl read write create ...)))
+    allow at plat_sepolicy.cil:38058 from system/sepolicy/private/hal_light.te:14
+      (allow hal_light sysfs_leds (file (ioctl read write getattr lock append map open watch watch_reads)))
+```
+
+**Why**: Android 17 deleted `android.hardware.light@2.0`, the only lights
+interface the factory vendor offers, and on this phone the backlight goes
+through the lights HAL as well as the LEDs: the composer is 2.1 and cannot set
+brightness. So 24.0 needs an AIDL lights HAL, and with the vendor image
+prebuilt it lives in system_ext (`light/` in the device tree), where every
+process is a core domain. The vendor labels the nodes of the LED driver
+`sysfs_leds`; `coredomain.te` forbids core domains file access of any kind on
+that type, and `hal_light.te` grants it to every lights HAL. A core-domain
+lights HAL breaks the rule just by being one, whatever it touches.
+
+**What it does**: adds `hal_light_server` to the exceptions of that
+neverallow, next to `init`, `apexd`, `ueventd` and `vold`.
+
+**Note**: neither way round it inside the device tree builds. Taking
+`hal_light_server` without `hal_light` gets past this rule but trips
+`{ hal_light_server -hal_light } domain:process fork` in `hal_attribute()`
+(`public/te_macros`), which every domain breaks, since all of them may fork.
+Relabelling the four nodes with a type of our own leaves the `hal_light` rule
+where it is. The change is to private policy, which the freeze test does not
+compare against the prebuilts.

@@ -1,8 +1,8 @@
 diff --git a/src/java/com/android/internal/telephony/GsmCdmaPhone.java b/src/java/com/android/internal/telephony/GsmCdmaPhone.java
-index fff77b6..c7269ad 100644
+index ef655d72bcf..28dfe543cad 100644
 --- a/src/java/com/android/internal/telephony/GsmCdmaPhone.java
 +++ b/src/java/com/android/internal/telephony/GsmCdmaPhone.java
-@@ -3036,7 +3036,7 @@ public class GsmCdmaPhone extends Phone {
+@@ -2939,7 +2939,7 @@ public class GsmCdmaPhone extends Phone {
                  String version = (String)ar.result;
                  if (version != null) {
                      int length = version.length();

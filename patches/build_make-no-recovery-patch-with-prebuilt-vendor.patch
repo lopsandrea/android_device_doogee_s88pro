@@ -1,7 +1,8 @@
 diff --git a/core/Makefile b/core/Makefile
+index 65c45cb835d..14efc555430 100644
 --- a/core/Makefile
 +++ b/core/Makefile
-@@ -6094,6 +6094,9 @@
+@@ -6182,6 +6182,9 @@ endif
  ifeq ($(BOARD_USES_FULL_RECOVERY_IMAGE),true)
  	$(hide) echo "full_recovery_image=true" >> $@
  endif
@@ -12,9 +13,10 @@ diff --git a/core/Makefile b/core/Makefile
  	$(hide) echo "board_uses_vendorimage=true" >> $@
  endif
 diff --git a/tools/releasetools/make_recovery_patch.py b/tools/releasetools/make_recovery_patch.py
+index 1497d69ed78..4cb583c4a10 100644
 --- a/tools/releasetools/make_recovery_patch.py
 +++ b/tools/releasetools/make_recovery_patch.py
-@@ -49,13 +49,19 @@
+@@ -49,13 +49,19 @@ def main(argv):
  
    board_uses_vendorimage = OPTIONS.info_dict.get(
        "board_uses_vendorimage") == "true"
@@ -37,9 +39,10 @@ diff --git a/tools/releasetools/make_recovery_patch.py b/tools/releasetools/make
                             *fn.split("/")), "wb") as f:
        f.write(data)
 diff --git a/tools/releasetools/non_ab_ota.py b/tools/releasetools/non_ab_ota.py
+index 2d1075eb814..41931445b7d 100644
 --- a/tools/releasetools/non_ab_ota.py
 +++ b/tools/releasetools/non_ab_ota.py
-@@ -709,12 +709,17 @@
+@@ -709,12 +709,17 @@ def _WriteRecoveryImageToBoot(script, output_zip):
  
  def HasRecoveryPatch(target_files_zip, info_dict):
    board_uses_vendorimage = info_dict.get("board_uses_vendorimage") == "true"

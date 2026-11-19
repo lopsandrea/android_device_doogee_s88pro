@@ -1,8 +1,8 @@
 diff --git a/bpf/loader/NetBpfLoad.cpp b/bpf/loader/NetBpfLoad.cpp
-index 238864798b7..bcb9790f3fd 100644
+index 7ba3247dcc6..5839e17c961 100644
 --- a/bpf/loader/NetBpfLoad.cpp
 +++ b/bpf/loader/NetBpfLoad.cpp
-@@ -1619,16 +1619,25 @@ static int doLoad(char** argv, char * const envp[]) {
+@@ -1561,23 +1561,34 @@ static int doLoad(char** argv, char * const envp[]) {
  
      // V bumps the kernel requirement up to 4.19
      // see also: //system/netd/tests/kernel_test.cpp TestKernel419
@@ -32,12 +32,23 @@ index 238864798b7..bcb9790f3fd 100644
      }
  
      // 25Q4 bumps the kernel requirement up to 5.10
+     // see also: //system/netd/tests/kernel_test.cpp TestKernel510
++    // Warned rather than enforced, for the reason above. The programs that
++    // need 5.10 carry their own minimum kernel version and are skipped below
++    // it, like the ones that need 4.19 and 5.4.
+     if (isAtLeast25Q4 && !isAtLeastKernelVersion(5, 10)) {
+-        ALOGE("Android 25Q4 requires kernel 5.10.");
+-        return 7;
++        ALOGW("Android 25Q4 requires kernel 5.10.");
+     }
+ 
+     // 26Q4 bumps the kernel requirement up to 5.15
 diff --git a/bpf/netd/BpfHandler.cpp b/bpf/netd/BpfHandler.cpp
-index 7367ec5e979..2ec1f912497 100644
+index 9b57548b54d..aed3e2421aa 100644
 --- a/bpf/netd/BpfHandler.cpp
 +++ b/bpf/netd/BpfHandler.cpp
-@@ -96,14 +96,32 @@ static Status initPrograms(const char* cg2_path) {
-         return Status("U+ platform with cg2_path != /sys/fs/cgroup is unsupported");
+@@ -129,14 +129,32 @@ static Result<void> initPrograms(const char* cg2_path) {
+         return Error() << "U+ platform with cg2_path != /sys/fs/cgroup is unsupported";
      }
  
 -    // V bumps the kernel requirement up to 4.19
@@ -62,13 +73,13 @@ index 7367ec5e979..2ec1f912497 100644
 +    //   NetdUpdatable: libnetd_updatable_init: Failed:
 +    //     V+ platform with kernel version < 4.19.0 is unsupported
      if (isAtLeastV && !isAtLeastKernelVersion(4, 19)) {
--        return Status("V+ platform with kernel version < 4.19.0 is unsupported");
+-        return Error() << "V+ platform with kernel version < 4.19.0 is unsupported";
 +        ALOGW("V+ platform with kernel version < 4.19.0 is unsupported");
      }
  
 -    // 25Q2 bumps the kernel requirement up to 5.4
      if (isAtLeast25Q2 && !isAtLeastKernelVersion(5, 4)) {
--        return Status("25Q2+ platform with kernel version < 5.4.0 is unsupported");
+-        return Error() << "25Q2+ platform with kernel version < 5.4.0 is unsupported";
 +        ALOGW("25Q2+ platform with kernel version < 5.4.0 is unsupported");
      }
  

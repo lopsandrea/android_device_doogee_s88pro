@@ -1,0 +1,16 @@
+diff --git a/private/coredomain.te b/private/coredomain.te
+index 7defa00632..a17cb1eb6e 100644
+--- a/private/coredomain.te
++++ b/private/coredomain.te
+@@ -48,6 +48,11 @@ neverallow {
+     -apexd
+     -ueventd
+     -vold
++
++    # A lights HAL built with the system rather than the vendor, for a device
++    # whose vendor image is prebuilt and older than the AIDL lights interface.
++    # hal_light.te grants every lights HAL read and write on sysfs_leds.
++    -hal_light_server
+ } sysfs_leds:file *;
+ ')
+ 

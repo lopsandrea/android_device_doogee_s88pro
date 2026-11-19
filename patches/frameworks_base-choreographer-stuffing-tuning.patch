@@ -1,8 +1,8 @@
 diff --git a/core/java/android/view/Choreographer.java b/core/java/android/view/Choreographer.java
-index 37782ac7f2f23..93e373a3ced1a 100644
+index fe9f7e7874a7b..6ef857c242a6a 100644
 --- a/core/java/android/view/Choreographer.java
 +++ b/core/java/android/view/Choreographer.java
-@@ -271,6 +271,15 @@ public final class Choreographer {
+@@ -281,6 +281,15 @@ public final class Choreographer {
  
      private final BufferStuffingState mBufferStuffingState = new BufferStuffingState();
  
@@ -18,7 +18,7 @@ index 37782ac7f2f23..93e373a3ced1a 100644
      /**
       * Set flag to indicate that client is blocked waiting for buffer release and
       * buffer stuffing recovery should soon begin. This is provided with the
-@@ -278,7 +287,9 @@ public final class Choreographer {
+@@ -288,7 +297,9 @@ public final class Choreographer {
       * @hide
       */
      public void onWaitForBufferRelease(long durationNanos) {
@@ -29,7 +29,7 @@ index 37782ac7f2f23..93e373a3ced1a 100644
              mBufferStuffingState.isStuffed.set(true);
          }
      }
-@@ -946,7 +957,7 @@ public final class Choreographer {
+@@ -993,7 +1004,7 @@ public final class Choreographer {
          // Multi-recovery allows the app to recover from stuffing multiple times within
          // the same animation. Without multi-recovery, only 1 attempt at recovering from
          // stuffing is attempted when it is first detected in an animation.

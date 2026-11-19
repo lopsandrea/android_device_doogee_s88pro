@@ -1,8 +1,8 @@
 diff --git a/core/Makefile b/core/Makefile
-index 849dac7074..c05f0ce0c9 100644
+index 65c45cb835d..14efc555430 100644
 --- a/core/Makefile
 +++ b/core/Makefile
-@@ -6581,7 +6581,11 @@ ifdef BUILDING_USERDATA_IMAGE
+@@ -6907,7 +6910,11 @@ ifdef BUILDING_USERDATA_IMAGE
  	$(hide) $(call package_files-copy-root, \
  	    $(TARGET_OUT_DATA),$(zip_root)/DATA)
  endif
@@ -15,7 +15,7 @@ index 849dac7074..c05f0ce0c9 100644
  	@# Contents of the vendor image
  	$(hide) $(call package_files-copy-root, \
  	    $(TARGET_OUT_VENDOR),$(zip_root)/VENDOR)
-@@ -6714,6 +6718,52 @@ endif
+@@ -7044,6 +7051,52 @@ endif
  ifdef BOARD_PREBUILT_VENDORIMAGE
  	$(hide) mkdir -p $(zip_root)/IMAGES
  	$(hide) cp $(INSTALLED_VENDORIMAGE_TARGET) $(zip_root)/IMAGES/

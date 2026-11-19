@@ -1,5 +1,5 @@
 diff --git a/media/libstagefright/wifi-display/source/Converter.cpp b/media/libstagefright/wifi-display/source/Converter.cpp
-index 5502b06..10b8a93 100644
+index 5502b063abf..19287c43cfc 100644
 --- a/media/libstagefright/wifi-display/source/Converter.cpp
 +++ b/media/libstagefright/wifi-display/source/Converter.cpp
 @@ -148,8 +148,37 @@ status_t Converter::initEncoder() {
