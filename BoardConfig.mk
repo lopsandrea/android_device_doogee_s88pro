@@ -416,7 +416,8 @@ SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/system_ext/private
 # With this flag init recompiles the policy at runtime, joining our platform
 # policy to the MediaTek rules, which is the intended mechanism for an
 # Android 10 vendor under an Android 12 framework (the 29.0.cil mapping is
-# there).
+# there; from 24.0 on only because
+# patches/system_sepolicy-restore-vendor-29-mapping.patch puts it back).
 #
 # The second flag removes a line that made that recompilation fail:
 #   device/lineage/sepolicy/common/private/genfs_contexts

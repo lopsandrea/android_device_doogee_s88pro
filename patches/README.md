@@ -894,3 +894,46 @@ neverallow, next to `init`, `apexd`, `ueventd` and `vold`.
 Relabelling the four nodes with a type of our own leaves the `hal_light` rule
 where it is. The change is to private policy, which the freeze test does not
 compare against the prebuilts.
+
+## system_sepolicy-restore-vendor-29-mapping.patch
+
+**Project**: `system/sepolicy`
+
+**Branch**: from `lineage-24.0` on. Up to 23.2 the mappings are upstream.
+
+**Symptom**: the install succeeds, and the first boot drops into the
+bootloader: the screen shows "FASTBOOT mode". The last lines `init` leaves in
+`console-ramoops` are
+
+```
+init: /system/etc/selinux/plat_sepolicy_and_mapping.sha256 and /vendor/etc/selinux/precompiled_sepolicy.plat_sepolicy_and_mapping.sha256 differ
+init: Compiling SELinux policy
+init: Missing /system/etc/selinux/plat_sepolicy_genfs_202404.cil; skipping
+```
+
+and then nothing: `secilc` fails silently, and `InitFatalReboot` reboots into
+the bootloader.
+
+**Why**: AOSP commit `4758f73f98` ("Remove 29.0 and 30.0 SEPolicy support")
+deleted the mapping files for vendor policies 29.0 and 30.0. The factory
+vendor of this phone is 29.0 (`/vendor/etc/selinux/plat_sepolicy_vers.txt`),
+and `init` compiles the policy at every boot with
+`/system/etc/selinux/mapping/29.0.cil`, which the system image no longer
+carries. The chain also goes through 30.0: the 29.0 mapping names types that
+only the 30.0 mapping carries forward to 31.0.
+
+**What it does**: restores, as they were before `4758f73f98`:
+- `private/compat/29.0/` and `private/compat/30.0/` (mapping, compat and
+  ignore files);
+- the `se_build_files` and `se_cil_compat_map` modules for plat, system_ext
+  and product in `compat/Android.bp`;
+- the 29.0 and 30.0 entries in the phony lists of `Android.bp`, so the
+  modules get installed.
+
+**Note**: the `treble_sepolicy_tests_29.0` and `_30.0` lines are left out on
+purpose: they compare against `prebuilts/api/29.0` and `30.0`, which that
+commit deleted too, and they only check the build. The patch was checked
+before flashing by repeating the compilation `init` does
+(`system/core/init/selinux.cpp`, `LoadSplitPolicy`) on the build host, with
+the build outputs and the files of the factory `vendor.img`: it fails without
+the patch and succeeds with it.
