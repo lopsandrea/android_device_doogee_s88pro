@@ -1,0 +1,27 @@
+# The AIDL lights HAL, in system_ext for the same reason as the vibrator's:
+# the vendor image is the stock prebuilt one. See hal_vibrator_s88pro.te.
+#
+# Unlike the vibrator, this needs a change to the platform policy, carried in
+# patches/system_sepolicy-core-domain-lights-hal.patch. The stock vendor policy
+# labels every node of the leds-mt65xx driver sysfs_leds, and
+# system/sepolicy/private/coredomain.te forbids file access of any kind on that
+# type to core domains. Being a lights HAL at all is enough to break it:
+# hal_light.te grants hal_light read and write on sysfs_leds, whether or not
+# the access is used. Neither way round it inside the device tree builds --
+# taking hal_light_server without hal_light trips the hal_attribute()
+# neverallow in te_macros, and relabelling the nodes leaves the hal_light rule
+# where it is -- so the patch exempts hal_light_server from that neverallow.
+type hal_light_s88pro, domain, coredomain;
+type hal_light_s88pro_exec, system_file_type, exec_type, file_type;
+
+init_daemon_domain(hal_light_s88pro)
+hal_server_domain(hal_light_s88pro, hal_light)
+
+# /sys/class/leds/* is a symlink into /sys/devices/platform/leds-mt65xx/leds,
+# and on this kernel the symlinks carry plain sysfs, not sysfs_leds. The nodes
+# below are sysfs_leds, and the vendor .rc files hand them to system
+# (init.mt6771.rc for brightness and trigger, ueventd.rc for the delay_on and
+# delay_off that the timer trigger creates); the service runs as system. The
+# sysfs_leds rules come with hal_light.
+allow hal_light_s88pro sysfs:dir search;
+allow hal_light_s88pro sysfs:lnk_file read;

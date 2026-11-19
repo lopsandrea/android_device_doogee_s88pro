@@ -32,3 +32,7 @@
 # AServiceManager_waitForService. That is a phone stuck on the boot animation.
 # AOSP writes every system_ext rule this way; see plat_file_contexts.
 /(system_ext|system/system_ext)/bin/hw/android\.hardware\.vibrator-service\.s88pro    u:object_r:hal_vibrator_s88pro_exec:s0
+
+# The AIDL lights HAL. Same reasons, and the same alternation, as the vibrator
+# line above.
+/(system_ext|system/system_ext)/bin/hw/android\.hardware\.light-service\.s88pro    u:object_r:hal_light_s88pro_exec:s0

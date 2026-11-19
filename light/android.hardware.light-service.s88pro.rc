@@ -1,0 +1,6 @@
+service light-s88pro /system_ext/bin/hw/android.hardware.light-service.s88pro
+    class hal
+    user system
+    group system
+    # Turn the LEDs off while powering off, as the stock service did.
+    shutdown critical

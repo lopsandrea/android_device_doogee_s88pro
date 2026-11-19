@@ -429,6 +429,18 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     android.hardware.vibrator-service.s88pro
 
+# Lights. Android 17 deleted hardware/interfaces/light/2.0, the only lights
+# HAL this phone's stock vendor offers, and with it went the panel backlight
+# and the notification LED. Same story and same answer as the vibrator: the
+# stock HAL is lights.mt6771.so, a system process may not dlopen it, and what
+# it drives are LED class devices. The AIDL service writes the very nodes the
+# library's strings list. One difference: those nodes are labelled sysfs_leds,
+# which the platform policy keeps from core domains, so this one also needs
+# patches/system_sepolicy-core-domain-lights-hal.patch. See manifest.xml and
+# sepolicy/system_ext/private/hal_light_s88pro.te.
+PRODUCT_PACKAGES += \
+    android.hardware.light-service.s88pro
+
 # The modem keeps VoLTE off until told otherwise.
 PRODUCT_SYSTEM_PROPERTIES += \
     persist.vendor.mtk.volte.enable=1
