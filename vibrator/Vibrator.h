@@ -8,6 +8,8 @@
 
 #include <aidl/android/hardware/vibrator/BnVibrator.h>
 
+#include <mutex>
+
 using ::aidl::android::hardware::vibrator::Braking;
 using ::aidl::android::hardware::vibrator::CompositeEffect;
 using ::aidl::android::hardware::vibrator::CompositePrimitive;
@@ -53,6 +55,13 @@ class Vibrator : public BnVibrator {
     ndk::ScopedAStatus getSupportedBraking(std::vector<Braking>* _aidl_return) override;
     ndk::ScopedAStatus composePwle(const std::vector<PrimitivePwle>& composite,
                                    const std::shared_ptr<IVibratorCallback>& callback) override;
+
+  private:
+    std::mutex mLock;
+    // The window the last on() asked for, and whether the motor has been
+    // started inside it. See the comment above setAmplitude().
+    int32_t mWindowMs = 0;
+    bool mStarted = false;
 };
 
 }  // namespace vibrator

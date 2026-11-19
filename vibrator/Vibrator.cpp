@@ -39,6 +39,16 @@ namespace {
 constexpr char kActivatePath[] = "/sys/class/leds/vibrator/activate";
 constexpr char kDurationPath[] = "/sys/class/leds/vibrator/duration";
 
+/*
+ * Below this the motor is not started at all. An ERM has one strength, so a
+ * request can only be played in full or not played; the line sits between
+ * the faint textures SystemUI sends while a finger drags a slider or a
+ * notification (at most 50/255, about 0.2, see MSDLRepositoryImpl.kt,
+ * DRAG_INDICATOR_CONTINUOUS) and everything meant to be felt, which asks for
+ * 1.0 or close to it.
+ */
+constexpr float kAmplitudeThreshold = 0.3f;
+
 bool write(const char* path, int32_t value) {
     const std::string content = std::to_string(value);
     if (!::android::base::WriteStringToFile(content, path)) {
@@ -54,34 +64,67 @@ ndk::ScopedAStatus Vibrator::getCapabilities(int32_t* _aidl_return) {
     /* No CAP_ON_CALLBACK: this HAL does not tell the caller when the buzz ends,
      * so the framework has to keep its own timer. Claiming the capability and
      * then never calling back would leave it waiting.
+     *
+     * CAP_AMPLITUDE_CONTROL although the motor has none: without it the
+     * framework plays every waveform at full strength whatever amplitude it
+     * asks for, and the faint drag textures of Android 16 turn into a motor
+     * running almost without pause -- 65 ms out of every 70 while a slider
+     * moves. With it, setAmplitude() gets to say which requests are too faint
+     * to play.
      */
-    *_aidl_return = 0;
+    *_aidl_return = IVibrator::CAP_AMPLITUDE_CONTROL;
     return ndk::ScopedAStatus::ok();
 }
 
+/*
+ * With CAP_AMPLITUDE_CONTROL the framework turns the motor on for a window
+ * and sets the amplitude right after, then again at every step of the
+ * waveform (SetAmplitudeVibratorStep.java, startVibrating()). So on() only
+ * opens the window, and the motor starts at the first amplitude strong enough
+ * to be meant, for the whole window: these windows are tens of milliseconds,
+ * and this motor needs about 40 to be felt at all.
+ */
 ndk::ScopedAStatus Vibrator::on(int32_t timeoutMs,
                                 const std::shared_ptr<IVibratorCallback>& /*callback*/) {
     if (timeoutMs <= 0) {
         return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
     }
-    if (!write(kDurationPath, timeoutMs) || !write(kActivatePath, 1)) {
-        return ndk::ScopedAStatus::fromExceptionCode(EX_TRANSACTION_FAILED);
-    }
+    std::lock_guard<std::mutex> lock(mLock);
+    mWindowMs = timeoutMs;
+    mStarted = false;
     return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus Vibrator::off() {
+    std::lock_guard<std::mutex> lock(mLock);
+    mWindowMs = 0;
+    mStarted = false;
     if (!write(kActivatePath, 0)) {
         return ndk::ScopedAStatus::fromExceptionCode(EX_TRANSACTION_FAILED);
     }
     return ndk::ScopedAStatus::ok();
 }
 
+ndk::ScopedAStatus Vibrator::setAmplitude(float amplitude) {
+    if (amplitude <= 0.0f || amplitude > 1.0f) {
+        return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
+    }
+    std::lock_guard<std::mutex> lock(mLock);
+    if (mStarted || mWindowMs == 0 || amplitude < kAmplitudeThreshold) {
+        return ndk::ScopedAStatus::ok();
+    }
+    if (!write(kDurationPath, mWindowMs) || !write(kActivatePath, 1)) {
+        return ndk::ScopedAStatus::fromExceptionCode(EX_TRANSACTION_FAILED);
+    }
+    mStarted = true;
+    return ndk::ScopedAStatus::ok();
+}
+
 /*
  * Everything below is what this motor cannot do. A plain ERM with one on/off
- * line has no effects, no amplitude and no waveform composition; saying so
- * makes the framework fall back to timed buzzes built out of on() and off(),
- * which is the whole of what the hardware offers.
+ * line has no effects and no waveform composition; saying so makes the
+ * framework fall back to timed buzzes built out of on(), setAmplitude() and
+ * off(), which is the whole of what the hardware offers.
  */
 
 ndk::ScopedAStatus Vibrator::perform(Effect /*effect*/, EffectStrength /*strength*/,
@@ -91,10 +134,6 @@ ndk::ScopedAStatus Vibrator::perform(Effect /*effect*/, EffectStrength /*strengt
 }
 
 ndk::ScopedAStatus Vibrator::getSupportedEffects(std::vector<Effect>* /*_aidl_return*/) {
-    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
-}
-
-ndk::ScopedAStatus Vibrator::setAmplitude(float /*amplitude*/) {
     return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
 }
 
