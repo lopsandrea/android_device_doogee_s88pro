@@ -9,6 +9,20 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
 $(call inherit-product, device/doogee/s88pro/device.mk)
 $(call inherit-product, vendor/lineage/config/common_full_phone.mk)
 
+# ART's userfaultfd GC needs MREMAP_DONTUNMAP (Linux 5.7) and userfaultfd
+# features this 4.14 kernel does not have. Up to 23.2 the build worked that
+# out from the kernel version ("default") and turned it off; LineageOS 24 sets
+# it to true for every device, assuming a backport this kernel does not carry
+# (build/make, "Enable PRODUCT_ENABLE_UFFD_GC by default"). With it on, the
+# boot image is compiled for the userfaultfd collector, and ART, which checks
+# the kernel at run time and falls back to the concurrent copying one, can no
+# longer use it.
+#
+# Here and not in device.mk: it is a single-value variable, and among
+# inherited makefiles the first one to set it wins, which is
+# full_base_telephony.mk, above. The value set in this file beats them all.
+PRODUCT_ENABLE_UFFD_GC := false
+
 PRODUCT_DEVICE := s88pro
 PRODUCT_NAME := lineage_s88pro
 PRODUCT_BRAND := DOOGEE
