@@ -523,7 +523,55 @@ KERNEL_WARN_OFF += -Wno-single-bit-bitfield-constant-conversion
 # calling HOSTCC without passing HOSTLDFLAGS, and clang looks for "ld":
 #   clang-14: error: unable to execute command: Executable "ld" doesn't exist!
 # With -fuse-ld=lld it uses the linker sitting next to the compiler.
-TARGET_KERNEL_ADDITIONAL_FLAGS := LLVM_IAS=0 HOSTCFLAGS="-fuse-ld=lld" KCFLAGS="-gdwarf-4 -fuse-ld=lld $(KERNEL_WARN_OFF)"
+#
+# The rest is the toolchain LineageOS 23.2 set up by itself for a kernel older
+# than 5.10. 24 dropped that branch of
+# vendor/lineage/config/BoardConfigKernel.mk and builds every kernel as 5.10
+# and later are built: LLVM alone, with LLVM=1 telling the kernel to use clang
+# for its host tools. The 4.14 Makefile does not know LLVM=1 and falls back to
+# gcc, which the build does not have:
+#
+#   /bin/sh: 1: gcc: not found
+#   make[2]: *** [scripts/Makefile.host:102: scripts/basic/fixdep] Error 127
+#
+# So these are the flags that branch passed, with the same values. clang,
+# ld.lld and llvm-ar are the pinned compiler's, as above. HOSTLDFLAGS too: 24
+# links the host tools against the glibc 2.17 sysroot, while HOSTCFLAGS above
+# replaces the one that compiled them against it, and the headers of the build
+# machine's glibc then ask for symbols the old one lacks:
+#
+#   ld.lld: error: undefined symbol: __isoc23_strtoul
+#   make[3]: *** [scripts/Makefile.host:111: scripts/mod/modpost] Error 1
+#
+# 23.2 compiled and linked them both against the build machine's.
+#
+# CROSS_COMPILE names the GCC 4.9 binutils, which only the local manifest
+# (s88pro.xml) still pulls in. They are needed for the assembler: 4.14 always
+# passes -no-integrated-as to clang, and clang then looks for
+# aarch64-linux-gnu-as in PATH. 23.2 put this toolchain's bin/ there; 24 does
+# not, and the search ends at /usr/bin/as, which is x86. -B names the same
+# file instead (aarch64-linux-gnu-as is a link to aarch64-linux-android-as).
+# It goes into CC, through KERNEL_CC, which kernel.mk leaves to the device when
+# set: in KCFLAGS it would come too late. The Makefile tests most of its
+# options with cc-option, compiling a probe file, before KCFLAGS is added, and
+# a probe with no assembler fails and drops the option without a word. The
+# first one to show was -Wno-pointer-sign:
+#
+#   include/linux/seq_buf.h:35:12: error: assigning to 'char *' from
+#     'unsigned char *' ... [-Werror,-Wpointer-sign]
+#
+# $(abspath .) rather than $(BUILD_TOP): that is the same expression, but
+# BoardConfigKernel.mk defines it after this file is read.
+KERNEL_CLANG_BIN := $(abspath .)/prebuilts/clang/host/linux-x86/clang-$(TARGET_KERNEL_CLANG_VERSION)/bin
+KERNEL_GCC_BIN := $(abspath .)/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin
+TARGET_KERNEL_ADDITIONAL_FLAGS := LLVM_IAS=0 HOSTCFLAGS="-fuse-ld=lld" \
+    KCFLAGS="-gdwarf-4 -fuse-ld=lld $(KERNEL_WARN_OFF)" \
+    CROSS_COMPILE=$(KERNEL_GCC_BIN)/aarch64-linux-android- \
+    HOSTCC=$(KERNEL_CLANG_BIN)/clang HOSTCXX=$(KERNEL_CLANG_BIN)/clang++ \
+    HOSTLD=$(KERNEL_CLANG_BIN)/ld.lld HOSTAR=$(KERNEL_CLANG_BIN)/llvm-ar \
+    AR=$(KERNEL_CLANG_BIN)/llvm-ar \
+    HOSTLDFLAGS="-L/usr/lib/x86_64-linux-gnu -L/usr/lib64 -fuse-ld=lld"
+KERNEL_CC := CC="clang -B$(KERNEL_GCC_BIN)/aarch64-linux-gnu-" LD=ld.lld
 
 # NO "include vendor/lineage/config/BoardConfigLineage.mk" here: it is already
 # done by build/core/config.mk:361, and including it a second time breaks the

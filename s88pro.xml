@@ -49,6 +49,20 @@
            revision="lineage-23.2" />
 
   <!--
+    The GCC 4.9 binutils for aarch64, which the LineageOS 24 manifest no longer
+    carries: its kernel build now assumes 5.10 or later, compiled with LLVM
+    alone. This kernel is 4.14, whose Makefile always passes -no-integrated-as
+    to clang, so it still needs a GNU assembler; BoardConfig.mk points the
+    kernel build at this one. Same project and revision as in the LineageOS
+    23.2 manifest.
+  -->
+  <project path="prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9"
+           name="LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9"
+           remote="github"
+           revision="lineage-19.1"
+           clone-depth="1" />
+
+  <!--
     The VNDK 29 snapshot, which the LineageOS 22.2 manifest no longer carries:
     Android 15 clears BOARD_VNDK_VERSION and PLATFORM_VNDK_VERSION, because the
     platform has no VNDK of its own any more (build/make/core/config.mk), and
