@@ -1,0 +1,26 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+cc_binary {
+    name: "vendor.lineage.powershare-service.s88pro",
+    relative_install_path: "hw",
+    init_rc: ["vendor.lineage.powershare-service.s88pro.rc"],
+    // addService rejects an instance that no VINTF manifest declares.
+    vintf_fragments: ["vendor.lineage.powershare-service.s88pro.xml"],
+    srcs: [
+        "PowerShare.cpp",
+        "service.cpp",
+    ],
+    shared_libs: [
+        "libbase",
+        "libbinder_ndk",
+        "liblog",
+        "vendor.lineage.powershare-V1-ndk",
+    ],
+    // Not vendor: the vendor image is the stock prebuilt one. See
+    // BoardConfig.mk, BOARD_PREBUILT_VENDORIMAGE.
+    system_ext_specific: true,
+}

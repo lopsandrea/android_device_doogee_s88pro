@@ -1,0 +1,16 @@
+# LineageOS's PowerShare HAL, for reverse charging, in system_ext for the same
+# reason as the vibrator's: the vendor image is the stock prebuilt one. See
+# hal_vibrator_s88pro.te.
+type hal_lineage_powershare_s88pro, domain, coredomain;
+type hal_lineage_powershare_s88pro_exec, system_file_type, exec_type, file_type;
+
+init_daemon_domain(hal_lineage_powershare_s88pro)
+hal_server_domain(hal_lineage_powershare_s88pro, hal_lineage_powershare)
+
+# Registering with servicemanager: see hal_lineage_touch_s88pro.te.
+binder_use(hal_lineage_powershare_s88pro)
+
+# The MT5725's reverse_charger node, under /sys/devices/platform/..., which
+# stays generic sysfs up to the node itself. See file.te.
+allow hal_lineage_powershare_s88pro sysfs:dir search;
+allow hal_lineage_powershare_s88pro sysfs_rvs:file rw_file_perms;

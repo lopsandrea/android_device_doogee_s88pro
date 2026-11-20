@@ -42,6 +42,9 @@
 
 # LineageOS's touch HAL. Same reasons, and the same alternation.
 /(system_ext|system/system_ext)/bin/hw/vendor\.lineage\.touch-service\.s88pro    u:object_r:hal_lineage_touch_s88pro_exec:s0
+
+# LineageOS's PowerShare HAL. Same reasons, and the same alternation.
+/(system_ext|system/system_ext)/bin/hw/vendor\.lineage\.powershare-service\.s88pro    u:object_r:hal_lineage_powershare_s88pro_exec:s0
 /system/bin/vtservice    u:object_r:vtservice_s88pro_exec:s0
 
 # The fingerprint HAL's configuration; see file.te.

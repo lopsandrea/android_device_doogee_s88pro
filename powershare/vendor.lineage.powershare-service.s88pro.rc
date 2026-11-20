@@ -1,0 +1,4 @@
+service powershare-s88pro /system_ext/bin/hw/vendor.lineage.powershare-service.s88pro
+    class hal
+    user system
+    group system

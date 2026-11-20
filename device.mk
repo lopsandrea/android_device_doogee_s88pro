@@ -505,6 +505,12 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     vendor.lineage.touch-service.s88pro
 
+# Reverse charging: the phone powers another device resting on its back, from
+# LineageOS's PowerShare tile in Quick Settings. The switch is the MT5725
+# wireless charging chip's. See powershare/PowerShare.h.
+PRODUCT_PACKAGES += \
+    vendor.lineage.powershare-service.s88pro
+
 # The modem keeps VoLTE off until told otherwise. See the VoLTE section above.
 PRODUCT_SYSTEM_PROPERTIES += \
     persist.vendor.mtk.volte.enable=1
