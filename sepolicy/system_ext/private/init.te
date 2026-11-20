@@ -20,3 +20,11 @@ allow init socket_device:sock_file { create setattr unlink };
 #   denied { setattr } for comm="init" name="gesmask"
 #     tcontext=u:object_r:sysfs_tp_gesture:s0 tclass=file
 allow init sysfs_tp_gesture:file setattr;
+
+# rootdir/etc/init/s88pro-fingerprint.rc mounts our sw_config.xml over the
+# vendor's, which is a file: init's mounton rules are all on directories.
+allow init vendor_configs_file:file mounton;
+# Once mounted, init looks at the file in its place:
+#   denied { getattr } for comm="init" path="/vendor/etc/sw_config.xml"
+#     tcontext=u:object_r:sw_config_file:s0 tclass=file
+allow init sw_config_file:file getattr;

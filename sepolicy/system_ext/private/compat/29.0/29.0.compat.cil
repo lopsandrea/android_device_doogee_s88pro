@@ -100,3 +100,8 @@
 ;; vtservice and vtservice_hidl add it and radio find it, through this
 ;; attribute.
 (typeattributeset vtservice_service_29_0 (vtservice_s88pro_service))
+
+;; The Sunwave fingerprint HAL reads /vendor/etc/sw_config.xml, over which
+;; rootdir/etc/init/s88pro-fingerprint.rc mounts ours, labelled sw_config_file
+;; (file.te). The vendor policy knows nothing of that type.
+(allow hal_fingerprint_default sw_config_file (file (read open getattr map)))

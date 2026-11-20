@@ -125,4 +125,9 @@
          (power/) switches the touch controller's gesture mode, in which a
          double tap on the dark panel comes back as the power key. -->
     <bool name="config_supportDoubleTapWake">true</bool>
+
+    <!-- The fingerprint sensor's swipes, as the keys for Settings > System >
+         Gestures > Swipe fingerprint for notifications. See
+         rootdir/usr/keylayout/sf-keys.kl. -->
+    <bool name="config_supportSystemNavigationKeys">true</bool>
 </resources>

@@ -7,12 +7,12 @@
 #
 # Without this file `sf-keys` falls back to Generic.kl, which maps 105 and 106
 # as DPAD_LEFT/RIGHT: the swipes would end up moving focus inside apps, which
-# makes no sense to anyone unaware the sensor does this too. The real actions
-# are decided by KeyHandler, which gets the key before the app does.
+# makes no sense to anyone unaware the sensor does this too.
 #
-# The gestures are NOT on by default: they are enabled in
-# /vendor/etc/sw_config.xml with <navigation>true</navigation>, otherwise the
-# HAL reports the tap only. See docs/bringup/hardware-riferimento.md.
+# The gestures are NOT on by default: the HAL reports them only with
+# <navigation>true</navigation> in its sw_config.xml, otherwise every touch,
+# swipes included, comes as the tap. The stock file leaves it off; ours is
+# mounted over it at boot, see rootdir/etc/init/s88pro-fingerprint.rc.
 #
 # What was actually observed, with `getevent -lt` while using the sensor (the
 # counts come from a 45-second session):
@@ -23,19 +23,18 @@
 #
 # The sensor resolves one axis only: swipes along the phone's long axis are
 # classified as taps, not as a direction.
+#
+# The two swipes become AOSP's fingerprint navigation keys, which open and
+# close the notification shade once the user turns on Settings > System >
+# Gestures > Swipe fingerprint for notifications (config_supportSystemNavigationKeys
+# in the framework overlay). One swipe opens, the other closes; which is which
+# was chosen on the phone.
+key 105   SYSTEM_NAVIGATION_DOWN
+key 106   SYSTEM_NAVIGATION_UP
 
-key 68    F10
-key 105   DPAD_LEFT
-key 106   DPAD_RIGHT
-
+# The tap is left unmapped. It comes with every touch of the sensor, unlocking
+# included, and no setting in Android gives it a meaning; unmapped, it reaches
+# apps as an unknown key, which they ignore.
+#
 # Declared by the driver in the sf-keys bitmap but never observed coming out.
-# They are mapped anyway: should a HAL update or a different configuration make
-# them appear, they would already arrive under a sensible name instead of
-# falling back to Generic.kl.
-key 103   DPAD_UP
-key 108   DPAD_DOWN
-key 102   HOME
-key 158   BACK
-key 139   MENU
-key 28    DPAD_CENTER
 key 143   WAKEUP    WAKE

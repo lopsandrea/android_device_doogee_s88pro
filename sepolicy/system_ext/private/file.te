@@ -27,3 +27,10 @@ type vtservice_s88pro_exec, system_file_type, exec_type, file_type;
 # generic sysfs neither init, which changes its owner on post-fs-data, nor the
 # HALs that write it (power and touch) may touch it.
 type sysfs_tp_gesture, fs_type, sysfs_type;
+
+# /system/etc/sw_config.xml, the Sunwave fingerprint HAL's configuration with
+# the sensor's swipes on, mounted over the vendor's at boot (see
+# rootdir/etc/init/s88pro-fingerprint.rc). A type of its own, so that the HAL
+# -- a vendor domain, which may not read system files at large -- is granted
+# this one alone, in compat/29.0/29.0.compat.cil.
+type sw_config_file, system_file_type, file_type;

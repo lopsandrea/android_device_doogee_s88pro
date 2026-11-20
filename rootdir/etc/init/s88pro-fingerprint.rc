@@ -1,0 +1,21 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# The fingerprint sensor's swipes.
+#
+# The Sunwave HAL reports swipes on the sensor -- as keys of the sf-keys input
+# device, see rootdir/usr/keylayout/sf-keys.kl -- only with "navigation" on in
+# its configuration. The stock /vendor/etc/sw_config.xml leaves it off and
+# turns key emulation on instead, which the HAL treats as the alternative: the
+# sensor then sends a tap for every touch, swipes included.
+#
+# The HAL takes the first of /vendor/etc/sw_config.xml and
+# /system/etc/sw_config.xml that it can open (sf_config_sync() in
+# sunwave.fingerprint.default.so), so a file of our own at the second path is
+# not enough while the vendor's exists. It is mounted over the vendor's
+# instead, before the HAL starts with class hal on boot. The vendor image stays
+# as it is.
+on post-fs
+    mount none /system/etc/sw_config.xml /vendor/etc/sw_config.xml bind

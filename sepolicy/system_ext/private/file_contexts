@@ -43,3 +43,6 @@
 # LineageOS's touch HAL. Same reasons, and the same alternation.
 /(system_ext|system/system_ext)/bin/hw/vendor\.lineage\.touch-service\.s88pro    u:object_r:hal_lineage_touch_s88pro_exec:s0
 /system/bin/vtservice    u:object_r:vtservice_s88pro_exec:s0
+
+# The fingerprint HAL's configuration; see file.te.
+/system/etc/sw_config\.xml    u:object_r:sw_config_file:s0

@@ -181,14 +181,17 @@ PRODUCT_COPY_FILES += \
 #
 # The Sunwave reader registers a second input device, sf-keys, which reports
 # swipes and taps: verified with getevent, the tap arrives as F10 (scancode 68)
-# and the two crosswise swipes as 105 and 106. Without this file they fall back
-# to Generic.kl and the swipes move focus inside apps.
+# and the two crosswise swipes as 105 and 106. The swipes become AOSP's
+# fingerprint navigation keys; without this file they would fall back to
+# Generic.kl and move focus inside apps.
 #
-# The gestures are enabled by <navigation>true</navigation> in
-# /vendor/etc/sw_config.xml, which lives in the stock image: see
-# hardware-riferimento.md for how to edit it at constant length.
+# The swipes come only with "navigation" on in the Sunwave HAL's sw_config.xml,
+# which the stock one leaves off: ours is mounted over it at boot. See
+# rootdir/etc/init/s88pro-fingerprint.rc.
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/rootdir/usr/keylayout/sf-keys.kl:$(TARGET_COPY_OUT_SYSTEM)/usr/keylayout/sf-keys.kl
+    $(LOCAL_PATH)/rootdir/usr/keylayout/sf-keys.kl:$(TARGET_COPY_OUT_SYSTEM)/usr/keylayout/sf-keys.kl \
+    $(LOCAL_PATH)/rootdir/etc/sw_config.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/sw_config.xml \
+    $(LOCAL_PATH)/rootdir/etc/init/s88pro-fingerprint.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-fingerprint.rc
 
 # Device-specific settings: case LEDs, keys, reverse charging.
 PRODUCT_PACKAGES += \
