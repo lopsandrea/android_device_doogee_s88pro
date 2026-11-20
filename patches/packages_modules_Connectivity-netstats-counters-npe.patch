@@ -1,0 +1,36 @@
+diff --git a/service-t/src/com/android/server/net/NetworkStatsService.java b/service-t/src/com/android/server/net/NetworkStatsService.java
+index 14809fb6117..697254eb976 100644
+--- a/service-t/src/com/android/server/net/NetworkStatsService.java
++++ b/service-t/src/com/android/server/net/NetworkStatsService.java
+@@ -1169,17 +1169,20 @@ public class NetworkStatsService extends INetworkStatsService.Stub {
+         final int targetAttempts = mDeps.getUseFastDataInputTargetAttempts();
+         int successes = 0;
+         int fallbacks = 0;
+-        try {
+-            successes = mFastDataInputSuccessesCounter.get();
+-            // Fallbacks counter would be set to non-zero value to indicate the reading was
+-            // not successful.
+-            fallbacks = mFastDataInputFallbacksCounter.get();
+-        } catch (IOException e) {
+-            TerribleErrorLog.logTerribleError(ConnectivityStatsLog::write,
+-                    "Failed to read counters, skip: " + e,
+-                    CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
+-                    CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_NETWORK_STATS_FAST_DATA_INPUT_COUNTERS_READ_ERROR);
+-            useFastDataInput = false;
++        // The counters are null when creating them failed above.
++        if (useFastDataInput) {
++            try {
++                successes = mFastDataInputSuccessesCounter.get();
++                // Fallbacks counter would be set to non-zero value to indicate the reading was
++                // not successful.
++                fallbacks = mFastDataInputFallbacksCounter.get();
++            } catch (IOException e) {
++                TerribleErrorLog.logTerribleError(ConnectivityStatsLog::write,
++                        "Failed to read counters, skip: " + e,
++                        CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED,
++                        CORE_NETWORKING_TERRIBLE_ERROR_OCCURRED__ERROR_TYPE__TYPE_NETWORK_STATS_FAST_DATA_INPUT_COUNTERS_READ_ERROR);
++                useFastDataInput = false;
++            }
+         }
+ 
+         final boolean doComparison;

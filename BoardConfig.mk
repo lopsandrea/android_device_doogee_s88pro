@@ -267,6 +267,19 @@ DEVICE_MATRIX_FILE := $(DEVICE_PATH)/compatibility_matrix.xml
 #
 # Like the file above it carries NO XML comments, for the same reason: this one
 # goes through assemble_vintf too.
+#
+# From 24.0 it also carries a <sepolicy> section naming 29.0, the version of the
+# stock vendor policy. Android 17 dropped 29.0 and 30.0 from
+# PLATFORM_SEPOLICY_COMPAT_VERSIONS (build/make 99ddf11dd4d), which is what
+# assemble_vintf turns into the sepolicy-version list, and the runtime VINTF
+# check then fails:
+#   E Build   : Vendor interface is incompatible, error=1
+#   E ActivityTaskManager: Build fingerprint is not consistent, warning user
+# and every boot ends on "There's an internal problem with your device".
+# Restoring the variable is not an option: it also generates the sepolicy
+# compat tests, which need prebuilts/api/29.0, deleted with it. The versions
+# listed here are merged with the platform's; kernel-sepolicy-version is
+# required by the schema and matches POLICYVERS.
 DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE := \
     $(DEVICE_PATH)/vintf/compatibility_matrix.device.xml
 
@@ -374,6 +387,17 @@ BOARD_HAVE_MTK_FM := true
 
 # Vendor VNDK: the device shipped with Android 10.
 BOARD_VNDK_VERSION := current
+
+# Gralloc: the vendor offers mapper 2.1 (passthrough) and allocator 2.0, and
+# nothing newer. From Android 17 libui refuses mappers older than 4.0 on any
+# device whose API level is 36 or more (flag require_gralloc4_or_newer, AOSP
+# 5b8a1d2247), and surfaceflinger aborts on its first buffer:
+#   Abort message: 'gralloc-mapper is missing'
+#     android::GraphicBuffer::GraphicBuffer() (libui.so)
+#     android::SurfaceFlinger::setupNewDisplayDeviceInternal(...)
+# init restarts it, zygote with it, forever, on a black screen. LineageOS keeps
+# the old mappers behind this switch (frameworks/native c7d417fbe1e).
+$(call soong_config_set_bool,libui,legacy_gralloc,true)
 
 # Do NOT set BOARD_SEPOLICY_VERS := 29.0.
 #

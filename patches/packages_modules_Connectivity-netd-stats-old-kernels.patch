@@ -1,0 +1,22 @@
+diff --git a/bpf/progs/netd.c b/bpf/progs/netd.c
+index e4cd7c93b40..b28c04e77bc 100644
+--- a/bpf/progs/netd.c
++++ b/bpf/progs/netd.c
+@@ -1026,7 +1026,7 @@ return bpf_traffic_account(skb, INGRESS, KVER_4_19, API(T));
+ }
+ 
+ // Android T 4.9 & T/U 4.14
+-DEFINE_NETD_BPF_PROG_RANGES(ingress, stats, 4_9, 4_19, T, V)
++DEFINE_NETD_T_BPF_PROG_KVER_RANGE(ingress, stats, 4_9, 4_19)
+ (struct __sk_buff* skb) {
+     return bpf_traffic_account(skb, INGRESS, KVER_4_9, API(T));
+ }
+@@ -1082,7 +1082,7 @@ return bpf_traffic_account(skb, EGRESS, KVER_4_19, API(T));
+ }
+ 
+ // Android T 4.9 & T/U 4.14
+-DEFINE_NETD_BPF_PROG_RANGES(egress, stats, 4_9, 4_19, T, V)
++DEFINE_NETD_T_BPF_PROG_KVER_RANGE(egress, stats, 4_9, 4_19)
+ (struct __sk_buff* skb) {
+     return bpf_traffic_account(skb, EGRESS, KVER_4_9, API(T));
+ }

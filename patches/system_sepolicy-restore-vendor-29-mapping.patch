@@ -2292,13 +2292,17 @@ index 0000000000..408cf335da
 +(typeattributeset zygote_tmpfs_29_0 (zygote_tmpfs))
 diff --git a/private/compat/29.0/29.0.compat.cil b/private/compat/29.0/29.0.compat.cil
 new file mode 100644
-index 0000000000..2d37de63be
+index 0000000000..0852f093ef
 --- /dev/null
 +++ b/private/compat/29.0/29.0.compat.cil
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,42 @@
 +;; complement CIL file for compatibility between ToT policy and 29.0 vendors.
 +;; will be compiled along with other normal policy files, on 29.0 vendors.
 +;;
++
++;; New system images do not allow open() to work on ashmem for all domains,
++;; so add it for compatibility with older vendor images.
++(allow domain ashmem_libcutils_device (chr_file (open)))
 +
 +(typeattribute vendordomain)
 +(typeattributeset vendordomain ((and (domain) ((not (coredomain))))))
@@ -4762,13 +4766,17 @@ index 0000000000..f95488ccaf
 +(typeattributeset zygote_tmpfs_30_0 (zygote_tmpfs))
 diff --git a/private/compat/30.0/30.0.compat.cil b/private/compat/30.0/30.0.compat.cil
 new file mode 100644
-index 0000000000..c9c5f477dd
+index 0000000000..4e8ef284a9
 --- /dev/null
 +++ b/private/compat/30.0/30.0.compat.cil
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,43 @@
 +;; complement CIL file for compatibility between ToT policy and 30.0 vendors.
 +;; will be compiled along with other normal policy files, on 30.0 vendors.
 +;;
++
++;; New system images do not allow open() to work on ashmem for all domains,
++;; so add it for compatibility with older vendor images.
++(allow domain ashmem_libcutils_device (chr_file (open)))
 +
 +(typeattribute vendordomain)
 +(typeattributeset vendordomain ((and (domain) ((not (coredomain))))))

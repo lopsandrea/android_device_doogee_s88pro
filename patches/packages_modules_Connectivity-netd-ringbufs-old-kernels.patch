@@ -1,0 +1,45 @@
+diff --git a/service/src/com/android/server/ConnectivityService.java b/service/src/com/android/server/ConnectivityService.java
+index 7682d508263..dc75dec4771 100644
+--- a/service/src/com/android/server/ConnectivityService.java
++++ b/service/src/com/android/server/ConnectivityService.java
+@@ -1966,6 +1966,22 @@ public class ConnectivityService extends IConnectivityManager.Stub
+             return SdkLevel.isAtLeastB();
+         }
+ 
++        /**
++         * Whether the kernel has netd's BPF ring buffers (local network note ops and loopback
++         * access). netd.o creates them only on 5.10 and later (ring buffers came with 5.8), and
++         * opening a missing ring buffer aborts system_server.
++         */
++        public boolean hasNetdRingbufs() {
++            final String[] version = android.system.Os.uname().release.split("[.-]", 3);
++            try {
++                final int major = Integer.parseInt(version[0]);
++                final int minor = Integer.parseInt(version[1]);
++                return major > 5 || (major == 5 && minor >= 10);
++            } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
++                return true;
++            }
++        }
++
+         public boolean isAtLeast25Q4() {
+             return SdkUtil.isAtLeast25Q4();
+         }
+@@ -2655,7 +2671,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
+                 ? mDeps.makeMultiProxyTracker(mContext, mHandler)
+                 : mDeps.makeProxyTracker(mContext, mHandler);
+ 
+-        if (mDeps.isAtLeastB()) {
++        if (mDeps.isAtLeastB() && mDeps.hasNetdRingbufs()) {
+             mLocalNetEventListener = mDeps.getLocalNetEventListener(
+                     mContext,
+                     mHandler.getLooper(),
+@@ -5082,7 +5098,7 @@ public class ConnectivityService extends IConnectivityManager.Stub
+             mSatisfiedByLocalNetworkMetrics.start();
+         }
+ 
+-        if (mBpfNetMaps.isLoopbackAccessMetricsEnabled()) {
++        if (mBpfNetMaps.isLoopbackAccessMetricsEnabled() && mDeps.hasNetdRingbufs()) {
+             BpfEventPoller.nativeInitLoopbackEventConsumer();
+         }
+ 

@@ -930,6 +930,16 @@ only the 30.0 mapping carries forward to 31.0.
 - the 29.0 and 30.0 entries in the phony lists of `Android.bp`, so the
   modules get installed.
 
+One line is added to both compat files, which they never had upstream:
+`(allow domain ashmem_libcutils_device (chr_file (open)))`. Android 17 no
+longer lets every domain open `/dev/ashmem*`, and AOSP commit `7de96a86be`
+put that rule back for older vendors in the 31.0 to 202504 compat files --
+after 29.0 and 30.0 had been deleted. An Android 10 vendor only knows
+`ashmem_device`, so without it every vendor and system process is refused
+ashmem under enforcing (in permissive: 56 denials for
+`hal_allocator_default` alone, plus `system_server`, `mediaserver`,
+`audioserver`).
+
 **Note**: the `treble_sepolicy_tests_29.0` and `_30.0` lines are left out on
 purpose: they compare against `prebuilts/api/29.0` and `30.0`, which that
 commit deleted too, and they only check the build. The patch was checked
@@ -937,3 +947,197 @@ before flashing by repeating the compilation `init` does
 (`system/core/init/selinux.cpp`, `LoadSplitPolicy`) on the build host, with
 the build outputs and the files of the factory `vendor.img`: it fails without
 the patch and succeeds with it.
+
+## system_core-ueventd-legacy-paths.patch
+
+**Project**: `system/core`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: the first boot stops on the DOOGEE logo, with no boot animation
+and no adb. `vold` waits for keystore2 forever, keystore2 waits for the
+keymaster, and the TrustKernel keymaster fails once a second:
+
+```
+tkcore-teec: error opening [/dev/tkcoredrv]: Permission denied(13)
+init: Service 'teed' (pid 504) exited with status 253
+KeymasterHAL: TrustKernelKeymasterImplementation.cpp:2005:  InitializeContext failed with 0xffff0008
+libbinder.ServiceManagerCppClient: Waited one second for android.system.keystore2.IKeystoreService/default
+```
+
+The error is from the file mode, not from SELinux: it was measured with
+SELinux permissive. `wmt_loader` and `wmt_launcher` (the Wi-Fi, Bluetooth and
+GPS combo chip) loop on the same kind of error.
+
+**Why**: AOSP commit `1b926a3444` ("Clean unused legacy_path from ueventd")
+dropped the legacy configuration paths `/vendor/ueventd.rc`,
+`/odm/ueventd.rc` and `/ueventd.<hardware>.rc`, which ueventd read for devices
+whose `ro.product.first_api_level` is below 33. Now it reads
+`/system/etc/ueventd.rc` only, which imports `/vendor/etc/ueventd.rc`. The
+factory vendor is Android 10 and keeps its rules in `/vendor/ueventd.rc`, so
+every MediaTek node is created with the default mode `0600 root root`. For
+`/dev/tkcoredrv` the vendor says `0666`, and `teed` runs as `system`.
+
+**What it does**: reverts `1b926a3444`. The legacy paths are read again only
+when `ro.product.first_api_level` is below 33; here it is 29.
+
+## system_core-init-session-keyring.patch and system_vold-session-keyring.patch
+
+**Projects**: `system/core` and `system/vold`
+
+**Branch**: from `lineage-24.0` on. LineageOS 23.2 carried the same reverts
+itself (Michael Bestas: `97da59b5a5` and `9c5c0bad95` in `system/core`,
+`5cbee143` in `system/vold`); 24.0 dropped them.
+
+**Symptom**: about five seconds into the first boot the phone reboots into
+recovery:
+
+```
+vold: Stored key /data/unencrypted/key
+vold: Failed to install fscrypt key to /data: Inappropriate ioctl for device
+init: Exec service failed, status 25: Rebooting into recovery, reason: enablefilecrypto_failed
+```
+
+**Why**: AOSP removed the way older kernels take file encryption keys, the
+`fscrypt` keyring under init's session keyring ("remove session keyring
+workaround for old kernels", Eric Biggers, `5d7c35ce20` in init and
+`0e87a83c` in vold), and then `libkeyutils`, left without users
+(`6dce39d61c`). vold now calls `FS_IOC_ADD_ENCRYPTION_KEY` unconditionally.
+The commit message counts on android-4.14-stable having that ioctl; this
+MediaTek 4.14 does not, and returns `ENOTTY`. The policy is v1 here
+(`first_api_level` 29), which is what the session keyring serves.
+
+**What it does**: reverts the three commits. Init creates the `fscrypt`
+keyring again, and vold checks once whether the kernel has the ioctl, falling
+back to `add_key()` on that keyring when it does not. In `installKey()` the
+revert had to be merged with LineageOS's wrapped-key branch: the fallback now
+comes right after the key reference is computed, whichever branch computed
+it. This phone uses raw keys.
+
+## system_bpf-restore-kver-5-10.patch
+
+**Project**: `system/bpf`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: a boot loop. The DOOGEE logo comes up, the phone restarts after
+about ten seconds, and again, never reaching the boot animation:
+
+```
+BpfLoader-rs: Error when loading /system/etc/bpf/memevents/bpfMemEvents.bpf: Invalid argument (os error 22)
+BpfLoader-rs: panicked at system/bpf/loader/bpfloader.rs:736:17:
+Error when loading /system/etc/bpf/bpfRingbufProg.bpf: Invalid argument (os error 22)
+init: Service bpfloader has 'reboot_on_failure' option and failed, shutting down system.
+init: Reboot start, reason: reboot,bpfloader-failed, reboot_target: bpfloader-failed
+```
+
+**Why**: the programs in `bpfRingbufProg.bpf` and in the two memevents
+files use BPF ring buffers, which arrived in Linux 5.8. Up to 23.2 the
+platform loader skipped them on kernels older than 5.10; AOSP commit
+`94106e81` ("bpfloader.rs: remove KVER_5_10") dropped that bound, since the
+platform now requires 5.10. On this 4.14 the kernel refuses the ring buffer
+map, and `bpfRingbufProg.bpf` is marked `critical`, so the loader panics and
+init, which runs it with `reboot_on_failure`, restarts the phone.
+
+**What it does**: reverts `94106e81`. Those maps and programs carry the
+5.10 lower bound again and are skipped here, as they were in 23.2. The
+tethering programs loaded by `netbpfload` are a separate matter: the ones
+this kernel refuses are marked optional and only log a line.
+
+## packages_modules_Connectivity-netd-stats-old-kernels.patch
+
+**Project**: `packages/modules/Connectivity`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: a boot loop, ten seconds a turn:
+
+```
+NetBpfLoad: skipping prog ingress_stats: api 3700 is outside required range [3300, 3500)
+NetBpfLoad: skipping prog egress_stats: api 3700 is outside required range [3300, 3500)
+NetdUpdatable: libnetd_updatable_init: Failed: Failed to get program from /sys/fs/bpf/netd_shared/prog_netd_egress_stats: No such file or directory
+init: Service netd1shot has 'reboot_on_failure' option and failed, shutting down system.
+```
+
+**Why**: `netd.o` carries one `ingress_stats` and one `egress_stats` program
+per range of kernel and platform versions. The one for kernels 4.9 to 4.19
+was valid on every platform from T on, until AOSP commit `a54d8876674`
+("bpf/netd: adjust api levels to reflect comments") capped it below V, since
+no V device runs those kernels. Android 17 is API 37: on 4.14 no variant is
+left, the loader pins nothing, and netd, which attaches both programs to the
+root cgroup, aborts.
+
+**What it does**: lifts the cap on the two 4.9 to 4.19 programs, as before
+that commit. They are the same programs 23.2 ran on this kernel. The other
+`netd.o` programs this kernel cannot take (bind, connect, sendmsg/recvmsg,
+sockopt, AccECN) need 4.19 or later, were skipped in 23.2 too, and netd only
+attaches them on kernels that have them.
+
+## packages_modules_Connectivity-netd-ringbufs-old-kernels.patch
+
+**Project**: `packages/modules/Connectivity`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: the boot animation runs forever. system_server aborts ten
+seconds after it starts, zygote goes down with it, and the cycle repeats:
+
+```
+signal 6 (SIGABRT)
+  #01 libservice-connectivity.so (LocalNetEventHandler::GetRingbuf()::$_0::operator()() const+224)
+  #03 libservice-connectivity.so (android::nativeGetLocalNetAccessRingbufFd(_JNIEnv*, _jclass*)+44)
+  #08 service-connectivity.jar (LocalNetEventListener.<init>+60)
+  #14 service-connectivity.jar (ConnectivityService.<init>+1402)
+```
+
+**Why**: on Android 16 and later, `ConnectivityService` always builds a
+`LocalNetEventListener`, which opens the BPF ring buffer
+`map_netd_local_net_note_op_ringbuf`. `netd.o` creates that map on 5.10 and
+later kernels only (ring buffers came with 5.8); on 4.14 it is skipped, and
+`BpfRingbuf` aborts when the map it is given cannot be opened.
+
+Once past that, `systemReady()` does the same with the loopback access ring
+buffer, `map_netd_loopback_access_ringbuf`, also 5.10 and later:
+
+```
+signal 6 (SIGABRT)
+  #01 libservice-connectivity.so (LoopbackEventHandler::GetPoller()::$_0::operator()() const+512)
+  #05 service-connectivity.jar (ConnectivityService.systemReadyInternal+438)
+```
+
+**What it does**: touches netd's ring buffers only when the kernel is 5.10
+or later, checked with `Os.uname()`. Below that `mLocalNetEventListener`
+stays `null`, the value `ConnectivityService` already handles for releases
+before 16, and the loopback event consumer is not started. What goes missing
+is the local network and loopback access metrics and the app-op notes, which
+need BPF programs this kernel cannot load anyway.
+
+## packages_modules_Connectivity-netstats-counters-npe.patch
+
+**Project**: `packages/modules/Connectivity`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: system_server dies in boot phase 550, now and then:
+
+```
+java.lang.RuntimeException: Failed to boot service com.android.server.NetworkStatsServiceInitializer: onBootPhase threw an exception during phase 550
+Caused by: java.lang.NullPointerException: Attempt to invoke virtual method 'int android.net.connectivity.com.android.server.net.PersistentInt.get()' on a null object reference
+    at android.net.connectivity.com.android.server.net.NetworkStatsService.makeRecordersLocked(NetworkStatsService.java:1173)
+```
+
+preceded by
+
+```
+TerribleErrorLog: Failed to create persistent counters, skip: java.io.IOException: Failed to create directory for /data/misc/apexdata/com.android.tethering/netstats/fastdatainput.successes.new
+```
+
+**Why**: an upstream bug. `makeRecordersLocked()` catches the failure to
+create its two FastDataInput counters and turns the feature off, and then
+reads the counters anyway, which are still `null`.
+
+**What it does**: reads the counters only when they were created. Why the
+file could not be created is a separate question (an occasional `EINVAL` on
+file creation in `/data`, under investigation); this only stops it from
+taking system_server down.
+
