@@ -1,68 +1,37 @@
-# MediaTek proprietary blobs extracted from the stock system.img.
-# These are the components the GSI was missing: mtkfusionrild ran but kept
-# looping on the rild-oem socket with no framework counterpart.
-# Generated from the files actually present in the stock image.
-
-# Telephony and IMS framework
-system/framework/mediatek-common.jar
-system/framework/mediatek-framework-net.jar
-system/framework/mediatek-framework.jar
-system/framework/mediatek-ims-base.jar
-system/framework/mediatek-ims-common.jar
-system/framework/mediatek-ims-extension-plugin.jar
-system/framework/mediatek-ims-legacy.jar
-system/framework/mediatek-services.jar
-system/framework/mediatek-telecom-common.jar
-system/framework/mediatek-telephony-base.jar
-system/framework/mediatek-telephony-common.jar
-system/framework/mediatek-wfo-legacy.jar
-system/framework/mediatek-res.apk:system/app/mediatek-res/mediatek-res.apk;PRESIGNED
-
-# Permissions
-system/etc/permissions/com.mediatek.wfo.legacy.xml
-system/etc/permissions/privapp-permissions-mediatek.xml
-
-# Native libraries.
+# MediaTek proprietary files, extracted from the stock system image.
 #
-# DISABLE_DEPS on every one of them. extract-utils reads the ELF's DT_NEEDED
-# and writes a shared_libs list, which soong then insists on resolving to
-# modules:
+# Only the video call libraries below are still needed.
 #
-#   error: vendor/doogee/s88pro/Android.bp:42:1: "libmtkperf_client" depends
-#     on undefined module "vendor.mediatek.hardware.mtkpower@1.0".
+# The list used to carry the MediaTek framework .jars, mediatek-res.apk, their
+# two permission files and two more /system/lib64 libraries, on the theory
+# that mtkfusionrild needed a framework counterpart. Nothing loads them on
+# LineageOS. Checked on the phone: no process maps any of them, no permission
+# file other than their own names the .jars, and the vendor daemons use their
+# own copies of the libraries, in /vendor and in the VNDK 29 APEX. Two of them
+# were doing harm besides: com.mediatek.wfo.legacy.xml declared a shared
+# library that put a stock .jar ahead of ImsService's own classes, and
+# privapp-permissions-mediatek.xml allowlisted privileged permissions for
+# forty-seven packages, most of which do not exist here.
 #
-# Those dependencies are MediaTek HIDL interfaces that exist only as libraries
-# inside the stock vendor image, which this device ships whole rather than
-# building. There is no module to point at, and none is needed: the linker
-# finds them at runtime through the vendor namespace.
-system/lib64/libmediatek_exceptionlog.so;DISABLE_DEPS
+# The old list is in git: `git show b2167a8:proprietary-files.txt`.
+
+# Video calls over LTE.
+#
+# ImsService reaches the video call service through libmtk_vt_wrapper.so,
+# which the stock ROM kept in /system/lib64 with what it links against. The
+# vendor image has copies of some, which a system app may not load.
+# libhidltransport and libhwbinder are linked too; AOSP folded them into
+# libhidlbase in Android 11 but still builds them, so they come from device.mk
+# rather than from here, where they would be defined twice.
+#
+# DISABLE_DEPS: extract-utils would list each library's DT_NEEDED as
+# shared_libs, and soong wants a module for every one. Some are MediaTek HIDL
+# interfaces that exist only in the vendor image; the linker finds them at
+# runtime.
 system/lib64/libmtk_vt_wrapper.so;DISABLE_DEPS
-system/lib64/libmtkperf_client.so;DISABLE_DEPS
-
-# IMS (VoLTE) -- see docs/bringup/volte-stato-esperimento.md
-#
-# Libraries that the stock ROM also kept in /system/lib64 and that we lack:
-# some live only in /vendor (and the system namespace cannot load them from
-# there), others AOSP has removed outright -- libhwbinder and libhidltransport
-# were folded into libhidlbase in Android 11.
-#
-# Without these, libmtk_vt_wrapper.so does not load and ImsService dies with
-# UnsatisfiedLinkError as soon as it touches the video call provider.
-system/lib64/vendor.mediatek.hardware.videotelephony@1.0.so;DISABLE_DEPS
 system/lib64/libvcodec_cap.so;DISABLE_DEPS
 system/lib64/libvcodec_capenc.so;DISABLE_DEPS
-
-# libhidltransport and libhwbinder must NOT be taken from stock: Android 12
-# still builds them (deprecated, folded into libhidlbase) and copying them here
-# would define them twice --
-#   error: overriding commands for target .../libhidltransport.so
-# They are added to PRODUCT_PACKAGES in device.mk instead, so the system
-# versions are used, consistent with the rest of the build.
-
-# com.android.ims.ImsServiceBase, which AOSP removed after Android 10 and which
-# ImsService.apk still requires. It is installed under a different name so as
-# not to clash with the ims-common.jar we build ourselves, which is needed.
-system/framework/ims-common.jar:system/framework/mtk-ims-compat.jar
+system/lib64/vendor.mediatek.hardware.videotelephony@1.0.so;DISABLE_DEPS
 
 # FM radio.
 #
@@ -116,7 +85,6 @@ system/framework/ims-common.jar:system/framework/mtk-ims-compat.jar
 # no decision at all. The old list survives in git -- `git show
 # 9ef0088:proprietary-files.txt` -- with its 84 exclusions already made.
 #
-# Only the system files stay here: the MediaTek framework .jars, without which
-# mtkfusionrild keeps looping on the rild-oem socket, and the libraries that
-# go with them.
+# The system files that used to stay here are gone as well: see the top of
+# this file.
 # ---------------------------------------------------------------------------

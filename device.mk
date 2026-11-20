@@ -440,12 +440,10 @@ PRODUCT_PACKAGES += \
     ImsService
 endif
 
-# libhidltransport and libhwbinder: required by libmtk_vt_wrapper.so, which
-# ImsService loads for the video call provider. They are deprecated (folded
-# into libhidlbase in Android 11) but Android 12 still builds them, so we take
-# them from here rather than from the blobs: copying them from stock would
-# define them twice and the build would stop with "overriding commands for
-# target".
+# libhidltransport and libhwbinder: libmtk_vt_wrapper.so and the video
+# telephony interface library link against them, for video calls. Deprecated
+# since Android 11, folded into libhidlbase, but still built: see
+# proprietary-files.txt.
 PRODUCT_PACKAGES += \
     libhidltransport \
     libhwbinder
