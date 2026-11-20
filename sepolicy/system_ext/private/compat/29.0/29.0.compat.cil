@@ -82,4 +82,9 @@
 ;; and nearly never written: leave it untrimmed, quietly.
 (dontaudit vold persist_block_device (blk_file (getattr)))
 (dontaudit vold persist_data_file (dir (getattr open read search ioctl)))
+;; The MediaTek video encoder announces itself to the memory controller through
+;; /sys/bus/platform/drivers/emi_ctrl/concurrency_scenario. Init hands that file
+;; to media, but the stock policy never labelled it, so the write was refused on
+;; Android 10 as well. Encoding and screen mirroring run at full rate without it.
+(dontaudit mediacodec sysfs (file (write)))
 (dontaudit secure_element system_data_file (file (open)))
