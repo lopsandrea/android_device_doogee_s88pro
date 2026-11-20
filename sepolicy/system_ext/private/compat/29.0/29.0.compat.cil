@@ -87,6 +87,11 @@
 ;; to media, but the stock policy never labelled it, so the write was refused on
 ;; Android 10 as well. Encoding and screen mirroring run at full rate without it.
 (dontaudit mediacodec sysfs (file (write)))
+;; At the end of a screen recording a vendor library loaded by surfaceflinger
+;; reads /sys/class/BOOT/BOOT/boot/boot_mode, the normal/factory boot flag.
+;; Neither the stock platform policy nor the vendor one allows surfaceflinger
+;; that node, so Android 10 refused the read as well.
+(dontaudit surfaceflinger sysfs_boot_mode (file (read)))
 (dontaudit secure_element system_data_file (file (open)))
 ;; vtservice, the system half of MediaTek's video calls. Its domain, vtservice,
 ;; and all its rules are the vendor policy's, written for a binary labelled
