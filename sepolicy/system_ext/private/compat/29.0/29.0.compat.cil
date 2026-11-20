@@ -1,0 +1,80 @@
+;; Rules between this system and the stock Android 10 (29.0) vendor policy.
+;;
+;; init compiles this file at boot together with the vendor policy
+;; (LoadSplitPolicy, system_ext/etc/selinux/mapping/29.0.compat.cil), so it may
+;; name types that exist only on the vendor side -- which no .te file in this
+;; tree can, since system_ext policy is built against the platform alone. Each
+;; rule comes from a denial measured under enforcing on 24.0. A misspelt type
+;; here does not fail the build, it fails init at boot: check any change with
+;; the boot-time compile replay before flashing.
+
+;; Platform services meeting vendor-labelled nodes.
+
+;; vold writes "add" to the uevent of the eMMC to have it rescanned.
+(allow vold sysfs_mmcblk (file (getattr open write)))
+(allow init sysfs_mmcblk (file (getattr open write)))
+;; misctrl and kcmdlinectrl use the misc partition, which on MediaTek is
+;; "para"; AOSP grants them the same on misc_block_device.
+(allow misctrl para_block_device (blk_file (getattr open read write ioctl lock append map)))
+(allow kcmdlinectrl para_block_device (blk_file (getattr open read write ioctl lock append map)))
+;; The software codecs load the vendor gralloc, which talks to the GPU
+;; driver through /proc/ged.
+(allow mediaswcodec proc_ged (file (getattr open read write ioctl)))
+;; ioctls are also filtered by number: every domain has an allowx for
+;; FIOCLEX on every file type, so any other command needs its own.
+(allowx mediaswcodec proc_ged (ioctl file ((range 0x0000 0xffff))))
+
+;; Vendor daemons doing what they did on Android 10.
+
+;; Boot mode and device tree: modem, NVRAM, GPS, fuel gauge, audio, Bluetooth.
+(allow ccci_mdinit sysfs_dt_firmware_android (dir (search)))
+(allow ccci_mdinit sysfs_dt_firmware_android (file (getattr open read)))
+(allow nvram_daemon sysfs_dt_firmware_android (dir (search)))
+(allow nvram_daemon sysfs_dt_firmware_android (file (getattr open read)))
+(allow fuelgauged_nvram sysfs_dt_firmware_android (dir (search)))
+(allow fuelgauged_nvram sysfs_dt_firmware_android (file (getattr open read)))
+(allow mnld sysfs_dt_firmware_android (dir (search)))
+(allow mnld sysfs_dt_firmware_android (file (getattr open read)))
+(allow mtk_hal_audio sysfs_dt_firmware_android (dir (search)))
+(allow mtk_hal_audio sysfs_dt_firmware_android (file (getattr open read)))
+(allow nvram_daemon proc_cmdline (file (getattr open read)))
+(allow fuelgauged_nvram proc_cmdline (file (getattr open read)))
+(allow mnld proc_cmdline (file (getattr open read)))
+(allow mtk_hal_audio proc_cmdline (file (getattr open read)))
+(allow mtk_hal_bluetooth proc_cmdline (file (getattr open read)))
+;; They look for a running GSI under /metadata/gsi; there is none.
+(dontaudit ccci_mdinit gsi_metadata_file (dir (search)))
+(dontaudit nvram_daemon gsi_metadata_file (dir (search)))
+(dontaudit fuelgauged_nvram gsi_metadata_file (dir (search)))
+(dontaudit mnld gsi_metadata_file (dir (search)))
+(dontaudit mtk_hal_audio gsi_metadata_file (dir (search)))
+(dontaudit mtk_hal_bluetooth gsi_metadata_file (dir (search)))
+(allow ccci_mdinit init_service_status_private_prop (file (getattr open read map)))
+(allow rild logmuch_prop (file (getattr open read map)))
+(allow rild radio_cdma_ecm_prop (file (getattr open read map)))
+(allow aee_aedv proc_ppm (dir (search)))
+(allow aee_aedv proc_ppm (file (getattr open read)))
+(allow mtk_hal_sensors sysfs (file (getattr open read)))
+(allow stflashtool nfc_data_file (dir (search)))
+(allow stflashtool nfc_data_file (file (getattr open read)))
+(allow stflashtool nfc_prop (file (getattr open read map)))
+;; The Wi-Fi HAL publishes the driver and firmware versions.
+(allow mtk_hal_wifi vendor_default_prop (property_service (set)))
+(allow vendor_init proc_dirty (file (getattr open write)))
+
+;; Noise: accesses whose refusal changes nothing, or whose grant would.
+
+;; vendor_init sets ro.telephony.sim.count, ro.mtk_cam_stereo_camera_support,
+;; ro.faceunlock.tee and ro.have_aacencode_feature, which carry no label it
+;; may set. They have been unset since 24.0 and telephony works on two SIMs;
+;; setting the sim count back to 3 would bring the virtual SIM slot back.
+(dontaudit vendor_init default_prop (property_service (set)))
+(dontaudit mtk_hal_camera default_prop (file (read)))
+(dontaudit mediacodec default_prop (file (read)))
+(dontaudit init self (capability (sys_ptrace)))
+(dontaudit kernel self (capability (dac_override dac_read_search)))
+(dontaudit init binderfs (chr_file (setattr)))
+(dontaudit mediaserver debugfs_ion (dir (search)))
+(dontaudit mtk_hal_neuralnetworks system_data_file (dir (search)))
+(dontaudit system_server tkcore_systa_file (dir (getattr)))
+(dontaudit secure_element system_data_file (file (open)))

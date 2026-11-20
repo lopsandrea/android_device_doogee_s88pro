@@ -1141,6 +1141,95 @@ file could not be created is a separate question (an occasional `EINVAL` on
 file creation in `/data`, under investigation); this only stops it from
 taking system_server down.
 
+## frameworks_base-fs-verity-pre-r-devices.patch
+
+**Project**: `frameworks/base`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: hundreds of error stack traces per boot, one per settings
+write, from `ResilientAtomicFile`, `AccessPersistence` and
+`RuntimePermissionsPersistenceImpl`:
+
+```
+java.io.IOException: Failed to enable fs-verity on FD(142): Inappropriate ioctl for device
+    at com.android.internal.security.VerityUtils.setUpFsverity(VerityUtils.java:76)
+    at com.android.server.security.FileIntegrity.setUpFsVerity(FileIntegrity.java:66)
+```
+
+**Why**: this kernel has no fs-verity, which is only required of devices
+launched with Android 11 or later. `VerityUtils.isFsVeritySupported()` says
+exactly that, but `FileIntegrity.setUpFsVerity()`, documented as "enables
+fs-verity, if supported by the filesystem", does not ask it.
+
+**What it does**: returns early from `FileIntegrity.setUpFsVerity()` when
+`isFsVeritySupported()` is false. Every caller goes through it, the
+permission module included.
+
+## system_memory_lmkd-pidfd-fallback.patch
+
+**Project**: `system/memory/lmkd`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: one line per started process, and no process ever registered:
+
+```
+lowmemorykiller: pidfd_open for pid 2741 failed; errno=38
+lowmemorykiller: Failed to initialize memevents listener
+```
+
+**Why**: AOSP commit `2c6472d` ("Remove pidfd_supported check") calls
+`pidfd_open()` unconditionally; it arrived in Linux 5.3 and fails here with
+`ENOSYS`, upon which `cmd_procprio()` returns without registering the
+process. lmkd then knows of no app to kill under memory pressure. The
+memevents listener needs BPF ring buffers, loaded on 5.10 and later only.
+
+**What it does**: reverts `2c6472d` (merged by hand with the cgroup kill path
+added since): without pidfd lmkd registers the process with no fd, kills
+with `kill()` and checks `/proc/<pid>`, as in 23.2. It also skips the
+memevents listener below 5.10 instead of failing it; lmkd uses vmstats then,
+which is what it fell back to anyway.
+
+## frameworks_base-biometrics-config-by-modality.patch
+
+**Project**: `frameworks/base`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: on a fingerprint-only device, at every boot and on every
+enrollment query from Settings:
+
+```
+E AuthService: Unknown modality: 2
+E AuthService: Face configuration exists, but FaceService is null.
+E AuthService: No face sensors.
+```
+
+**Why**: `config_biometric_sensors` lists every modality, and AuthService hands
+the whole list to the face and iris registrars, which treat the fingerprint
+entry as their own; with no face hardware there is also no FaceService.
+
+**What it does**: gives each registrar only the entries of its modality, and
+does not report a missing FaceService as an error when asked for enrollment.
+
+## frameworks_base-vibrator-empty-frequency-profile.patch
+
+**Project**: `frameworks/base`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: `VibratorInfo: Invalid frequency profile received from HAL.
+resonantFrequencyHz=NaN, frequenciesHz=null, outputAccelerationsGs=null`,
+six times per boot, from every process that receives the vibrator info.
+
+**Why**: a vibrator without frequency control has no frequency profile, and
+the framework builds an empty one for it; the constructor validates it as
+if it had to be complete.
+
+**What it does**: keeps the error for inconsistent data and stays silent on
+a profile that is simply absent.
+
 ## frameworks_av-legacy-call-routing.patch
 
 **Project**: `frameworks/av`

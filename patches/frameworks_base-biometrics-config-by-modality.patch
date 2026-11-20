@@ -1,0 +1,50 @@
+diff --git a/services/core/java/com/android/server/biometrics/AuthService.java b/services/core/java/com/android/server/biometrics/AuthService.java
+index 5314437f50d83..fed7d15616dc8 100644
+--- a/services/core/java/com/android/server/biometrics/AuthService.java
++++ b/services/core/java/com/android/server/biometrics/AuthService.java
+@@ -575,9 +575,8 @@ public class AuthService extends SystemService {
+                     } else {
+                         Slog.e(TAG, "No face sensors.");
+                     }
+-                } else {
+-                    Slog.e(TAG, "No face sensors.");
+                 }
++                // No face service: the device has no face hardware, which is not an error.
+ 
+                 return enrollmentStatusList;
+             } finally {
+@@ -963,10 +962,32 @@ public class AuthService extends SystemService {
+         registerFingerprintSensors(mInjector.getFingerprintAidlInstances(),
+                 mInjector.getFingerprintConfiguration(getContext()), getContext(),
+                 mInjector.getFingerprintService(), handlerProvider);
++        // config_biometric_sensors lists every modality: hand each registrar only its own
++        // entries, or a fingerprint-only device logs face and iris configuration errors.
+         registerFaceSensors(mInjector.getFaceAidlInstances(),
+-                mInjector.getFaceConfiguration(getContext()), getContext(),
++                filterConfigByModality(mInjector.getFaceConfiguration(getContext()),
++                        BiometricAuthenticator.TYPE_FACE), getContext(),
+                 mInjector.getFaceService(), handlerProvider);
+-        registerIrisSensors(mInjector.getIrisConfiguration(getContext()));
++        registerIrisSensors(filterConfigByModality(mInjector.getIrisConfiguration(getContext()),
++                BiometricAuthenticator.TYPE_IRIS));
++    }
++
++    private static String[] filterConfigByModality(String[] configStrings, int modality) {
++        if (configStrings == null) {
++            return null;
++        }
++        final List<String> filtered = new ArrayList<>();
++        for (String configString : configStrings) {
++            try {
++                if (new SensorConfig(configString).modality == modality) {
++                    filtered.add(configString);
++                }
++            } catch (Exception e) {
++                // Keep it, so that the registrar reports the malformed entry as before.
++                filtered.add(configString);
++            }
++        }
++        return filtered.toArray(new String[0]);
+     }
+ 
+     private void registerIrisSensors(String[] hidlConfigStrings) {

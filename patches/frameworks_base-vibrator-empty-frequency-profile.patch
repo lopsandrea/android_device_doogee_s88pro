@@ -1,0 +1,26 @@
+diff --git a/core/java/android/os/VibratorInfo.java b/core/java/android/os/VibratorInfo.java
+index 8e10dd7506522..50632183cfebe 100644
+--- a/core/java/android/os/VibratorInfo.java
++++ b/core/java/android/os/VibratorInfo.java
+@@ -596,11 +596,17 @@ public class VibratorInfo implements Parcelable {
+                     && (frequenciesHz.length > 0)
+                     && (Float.isNaN(resonantFrequencyHz) || (resonantFrequencyHz > 0));
+ 
++            // No frequency data at all is how a HAL without frequency control answers:
++            // an empty profile, not an invalid one.
++            boolean isEmpty = frequenciesHz == null && outputAccelerationsGs == null;
++
+             if (!isValid) {
+-                Slog.e(TAG, "Invalid frequency profile received from HAL."
+-                        + " resonantFrequencyHz=" + resonantFrequencyHz
+-                        + ", frequenciesHz=" + Arrays.toString(frequenciesHz)
+-                        + ", outputAccelerationsGs=" + Arrays.toString(outputAccelerationsGs));
++                if (!isEmpty) {
++                    Slog.e(TAG, "Invalid frequency profile received from HAL."
++                            + " resonantFrequencyHz=" + resonantFrequencyHz
++                            + ", frequenciesHz=" + Arrays.toString(frequenciesHz)
++                            + ", outputAccelerationsGs=" + Arrays.toString(outputAccelerationsGs));
++                }
+ 
+                 mFrequenciesHz = null;
+                 mOutputAccelerationsGs = null;

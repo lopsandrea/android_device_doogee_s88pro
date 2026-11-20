@@ -1,0 +1,16 @@
+diff --git a/services/core/java/com/android/server/security/FileIntegrity.java b/services/core/java/com/android/server/security/FileIntegrity.java
+index b8f187e0ee3af..c558cdd0a85f0 100644
+--- a/services/core/java/com/android/server/security/FileIntegrity.java
++++ b/services/core/java/com/android/server/security/FileIntegrity.java
+@@ -63,6 +63,11 @@ public final class FileIntegrity {
+     @SystemApi(client = SystemApi.Client.SYSTEM_SERVER)
+     public static void setUpFsVerity(@NonNull ParcelFileDescriptor parcelFileDescriptor)
+             throws IOException {
++        // fs-verity is only guaranteed on devices launched with R or later; on older kernels
++        // the ioctl fails with ENOTTY on every write, and every caller logs it as an error.
++        if (!VerityUtils.isFsVeritySupported()) {
++            return;
++        }
+         VerityUtils.setUpFsverity(parcelFileDescriptor.getFd());
+     }
+ }
