@@ -6,6 +6,17 @@
 -->
 <resources>
     <!--
+         The hardware keys, for Settings > System > Buttons: the volume rocker
+         (64), the orange key on the left of the case, which the key layout
+         makes the assistant key (8), and the camera key below it (32). See
+         rootdir/usr/keylayout/mtk-kpd.kl.
+    -->
+    <integer name="config_deviceHardwareKeys">104</integer>
+
+    <!-- Any of them may wake the phone, if the user so chooses. -->
+    <integer name="config_deviceHardwareWakeKeys">104</integer>
+
+    <!--
          Prevent accidental wake-up: before a wake key turns the screen on, the
          proximity sensor is checked. It matters for double tap to wake, which
          the touchscreen's key layout sends as WAKEUP for this reason (see

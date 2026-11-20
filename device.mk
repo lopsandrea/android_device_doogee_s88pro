@@ -166,8 +166,9 @@ PRODUCT_COPY_FILES += \
 # Key layout, taken from the stock ROM.
 #
 # Without this file we fall back to Generic.kl. The two programmable keys on
-# the case come from here: the side one as F5 (scancode 63) and the other as
-# CAMERA (212); the action to bind is chosen in S88ProParts.
+# the case come from here: the orange one as ASSIST (scancode 63, F5 on stock)
+# and the one below it as CAMERA (212). LineageOS's button settings give them
+# their actions; see the lineage-sdk overlay.
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/usr/keylayout/mtk-kpd.kl:$(TARGET_COPY_OUT_SYSTEM)/usr/keylayout/mtk-kpd.kl
 
