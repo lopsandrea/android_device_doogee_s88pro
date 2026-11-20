@@ -17,6 +17,7 @@ denial measured on the phone under enforcing, and is as narrow as it can be.
 | `system_app.te` | S88ProParts: the LED directories and the reverse charging node. Plus a quiet refusal for Settings' memory page |
 | `seapp_contexts`, `platform_app.te` | the FM radio app, see below |
 | `property_contexts` | `ro.audio.legacy_call_routing` |
+| `service_contexts` | the binder services of MediaTek's ImsService, which runs in the phone UID |
 | `compat/29.0/29.0.compat.cil` | every rule that names a vendor type, see below |
 
 ## Rules that name vendor types

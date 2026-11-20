@@ -1,0 +1,7 @@
+# MediaTek's ImsService runs in the phone UID, so its binder services are the
+# phone's: mtkIms and mwis it registers itself, wfo it looks up and Wi-Fi
+# calling would provide. radio_service is the type of the phone's other
+# services, and radio already registers and finds those.
+mtkIms                                    u:object_r:radio_service:s0
+mwis                                      u:object_r:radio_service:s0
+wfo                                       u:object_r:radio_service:s0
