@@ -1,0 +1,44 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+// /system/lib{,64}/vndk-29 and vndk-sp-29, pointing into the VNDK 29 APEX.
+//
+// The Android 10 vendor carries its own libhidlbase, and that looks for
+// passthrough HALs in /system/lib64/vndk-sp-29/hw/ -- the path it was built
+// with, before the VNDK moved into an APEX. Up to 23.2 the build made these
+// links for every VNDK APEX of version 29 or older (makeCompatSymlinks in
+// build/soong/apex/vndk.go); 24.0 dropped them ("apex: clean up vndk
+// symlinks", 9b82cbcae8). Without them vendor processes cannot load
+// android.hidl.memory@1.0-impl.so, and the PQ HAL dies on its first shared
+// memory buffer:
+//   E libhidlmemory: Could not fetch mapper for ashmem shared memory
+//   F libc    : Fatal signal 11 (SIGSEGV) ... (pq@2.2-service)
+// taking the AAL service with it, which is what applies the backlight level:
+// the screen stays at full brightness whatever the framework asks.
+
+install_symlink {
+    name: "vndk-29_lib64_symlink",
+    installed_location: "lib64/vndk-29",
+    symlink_target: "/apex/com.android.vndk.v29/lib64",
+}
+
+install_symlink {
+    name: "vndk-sp-29_lib64_symlink",
+    installed_location: "lib64/vndk-sp-29",
+    symlink_target: "/apex/com.android.vndk.v29/lib64",
+}
+
+install_symlink {
+    name: "vndk-29_lib_symlink",
+    installed_location: "lib/vndk-29",
+    symlink_target: "/apex/com.android.vndk.v29/lib",
+}
+
+install_symlink {
+    name: "vndk-sp-29_lib_symlink",
+    installed_location: "lib/vndk-sp-29",
+    symlink_target: "/apex/com.android.vndk.v29/lib",
+}

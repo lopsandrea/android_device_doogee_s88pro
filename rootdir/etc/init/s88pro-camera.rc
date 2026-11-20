@@ -1,0 +1,22 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Rear camera video: the EIS algorithm in bypass.
+#
+# Aperture asks for video stabilization (control.videoStabilizationMode 1) and
+# the rear camera has it, so the MediaTek pipeline reconfigures the 1080p
+# stream through EIS (eis_mode 0x160, factor 116) and the WPE warp engine.
+# On 24.0 every frame recorded that way came out as one flat colour -- in a
+# five second clip, luma minimum equal to maximum on every frame but the first
+# -- while the front camera, which has no EIS, recorded normally. No error
+# anywhere in the camera HAL.
+#
+# With the algorithm in bypass the same 1080p recording is a normal video, so
+# the fault is in what the algorithm computes -- and it has nothing to compute
+# from: this phone has no gyroscope (the sensor list is accelerometer,
+# magnetometer, orientation, light and proximity), yet the HAL advertises
+# video stabilization. Nothing is lost: there was no stabilization to have.
+on post-fs-data
+    setprop vendor.debug.camera.eis.bypass 1

@@ -1141,3 +1141,30 @@ file could not be created is a separate question (an occasional `EINVAL` on
 file creation in `/data`, under investigation); this only stops it from
 taking system_server down.
 
+## frameworks_av-legacy-call-routing.patch
+
+**Project**: `frameworks/av`
+
+**Branch**: from `lineage-24.0` on; the same code is in 23.2, where calls
+were simply never tested.
+
+**Symptom**: a call connects and is silent both ways:
+
+```
+W AudioALSAHardware: sinks[0].type == AUDIO_PORT_TYPE_DEVICE
+E AudioALSAHardware: Fail status -38
+E APM_AudioPolicyManager: connectTelephonyRxAudioSource failed to start Telephony Rx AudioSource
+W AudioALSASpeechPhoneCallController: muteDlUlForRouting(), speech off!! do nothing!!
+```
+
+**Why**: the stock audio policy configuration declares "Voice Call In" and
+"Telephony Tx" on the primary module with `halVersion="3.0"`. Since Android 12
+that makes `updateCallRoutingInternal()` bridge the call with device to device
+patches, which this Android 10 HAL does not implement. Android 10's policy
+routed the call on the primary output instead, and that is when the HAL
+turns the modem speech path on.
+
+**What it does**: adds `ro.audio.legacy_call_routing`. When true, the
+hardware bridge branch is skipped and the call takes the legacy route on the
+primary output. The device sets it in `device.mk` and labels it
+`audio_config_prop` in `sepolicy/system_ext/private/property_contexts`.

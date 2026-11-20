@@ -1,0 +1,18 @@
+diff --git a/services/audiopolicy/managerdefault/AudioPolicyManager.cpp b/services/audiopolicy/managerdefault/AudioPolicyManager.cpp
+index 2b588eceec2..af9fdb91392 100644
+--- a/services/audiopolicy/managerdefault/AudioPolicyManager.cpp
++++ b/services/audiopolicy/managerdefault/AudioPolicyManager.cpp
+@@ -822,8 +822,12 @@ status_t AudioPolicyManager::updateCallRoutingInternal(
+                                           AUDIO_FORMAT_DEFAULT);
+ 
+     // RX and TX Telephony device are declared by Primary Audio HAL
++    // ro.audio.legacy_call_routing: for primary HALs that declare the telephony
++    // devices but cannot bridge them with a device to device patch, and expect
++    // the call to be routed on the primary output as before Android 12.
+     if (isPrimaryModule(telephonyRxModule) && isPrimaryModule(telephonyTxModule) &&
+-            (telephonyRxModule->getHalVersionMajor() >= 3)) {
++            (telephonyRxModule->getHalVersionMajor() >= 3) &&
++            !property_get_bool("ro.audio.legacy_call_routing", false /* default_value */)) {
+         if (rxSourceDevice == 0 || txSinkDevice == 0) {
+             // RX / TX Telephony device(s) is(are) not currently available
+             ALOGE("%s() no telephony Tx and/or RX device", __func__);

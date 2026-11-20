@@ -135,6 +135,20 @@ PRODUCT_TARGET_VNDK_VERSION := 29
 PRODUCT_EXTRA_VNDK_VERSIONS := 29
 PRODUCT_SHIPPING_API_LEVEL := 29
 
+# The /system/lib{,64}/vndk-29 and vndk-sp-29 links into the VNDK APEX, which
+# the build stopped making in 24.0: see vndk/Android.bp.
+#
+# linkerconfig also reads /system/etc/vndkcorevariant.libraries.txt for a
+# VNDK 29 vendor and logs "Failed to open file" at every boot when it is
+# missing: an empty list, no core variant libraries, which is the case here.
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/vndk/vndkcorevariant.libraries.txt:$(TARGET_COPY_OUT_SYSTEM)/etc/vndkcorevariant.libraries.txt
+PRODUCT_PACKAGES += \
+    vndk-29_lib64_symlink \
+    vndk-sp-29_lib64_symlink \
+    vndk-29_lib_symlink \
+    vndk-sp-29_lib_symlink
+
 
 # Framework resource overlay: declares the fingerprint reader.
 # See the comment inside overlay/frameworks/base/core/res/res/values/config.xml
@@ -344,6 +358,11 @@ PRODUCT_SYSTEM_PROPERTIES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init/s88pro-vt.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-vt.rc
 
+# Rear camera video recorded black frames through EIS. See the comment in the
+# file.
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/rootdir/etc/init/s88pro-camera.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-camera.rc
+
 # Virtual SIM off: the vendor's radio daemon adds a third protocol stack for
 # it, which polls the modem for a network it never finds. The product
 # build.prop loads after the vendor one and overrides it. See the comment in
@@ -359,6 +378,23 @@ PRODUCT_COPY_FILES += \
 # Device system properties
 PRODUCT_SYSTEM_PROPERTIES += \
     ro.hardware=mt6771
+
+# Voice call audio: route the call on the primary output, as Android 10 did.
+#
+# The stock audio policy configuration declares "Voice Call In" and
+# "Telephony Tx" on the primary module, with halVersion 3.0. Since Android 12
+# that makes the audio policy bridge the call with device to device patches
+# (Telephony Rx -> earpiece, mic -> Telephony Tx), which this Android 10 HAL
+# does not implement: the call connects and is silent both ways.
+#   W AudioALSAHardware: sinks[0].type == AUDIO_PORT_TYPE_DEVICE
+#   E AudioALSAHardware: Fail status -38
+#   E APM_AudioPolicyManager: connectTelephonyRxAudioSource failed to start Telephony Rx AudioSource
+#   W AudioALSASpeechPhoneCallController: muteDlUlForRouting(), speech off!! do nothing!!
+# The HAL turns the modem speech path on when the primary output is routed in
+# call mode, which is what Android 10's policy did. The property comes with
+# patches/frameworks_av-legacy-call-routing.patch.
+PRODUCT_SYSTEM_PROPERTIES += \
+    ro.audio.legacy_call_routing=true
 
 # GPU AFBC compression: must be turned off.
 #

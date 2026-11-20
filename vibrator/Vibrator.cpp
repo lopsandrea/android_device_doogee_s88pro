@@ -106,7 +106,17 @@ ndk::ScopedAStatus Vibrator::off() {
 }
 
 ndk::ScopedAStatus Vibrator::setAmplitude(float amplitude) {
-    if (amplitude <= 0.0f || amplitude > 1.0f) {
+    /*
+     * Android 17 can pass VibrationEffect.DEFAULT_AMPLITUDE (-1) through
+     * unresolved, from SetAmplitudeVibratorStep.startVibrating(). Refusing it
+     * failed every such vibration ("Error setting amplitude to -1.0") and the
+     * phone did not vibrate at all, so read it as full strength. Zero falls
+     * below the threshold and plays nothing.
+     */
+    if (amplitude < 0.0f) {
+        amplitude = 1.0f;
+    }
+    if (amplitude > 1.0f) {
         return ndk::ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
     }
     std::lock_guard<std::mutex> lock(mLock);
@@ -133,8 +143,11 @@ ndk::ScopedAStatus Vibrator::perform(Effect /*effect*/, EffectStrength /*strengt
     return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
 }
 
-ndk::ScopedAStatus Vibrator::getSupportedEffects(std::vector<Effect>* /*_aidl_return*/) {
-    return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
+ndk::ScopedAStatus Vibrator::getSupportedEffects(std::vector<Effect>* _aidl_return) {
+    /* No predefined effects, so perform() refuses them all. An empty list rather than
+     * an error: the framework asks every HAL for it and logs a refusal as an error. */
+    _aidl_return->clear();
+    return ndk::ScopedAStatus::ok();
 }
 
 ndk::ScopedAStatus Vibrator::setExternalControl(bool /*enabled*/) {

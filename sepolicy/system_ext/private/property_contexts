@@ -1,0 +1,2 @@
+# Read by audioserver: see the voice call audio comment in device.mk.
+ro.audio.legacy_call_routing u:object_r:audio_config_prop:s0 exact bool
