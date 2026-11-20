@@ -1,0 +1,19 @@
+diff --git a/libprocessgroup/task_profiles.cpp b/libprocessgroup/task_profiles.cpp
+index 9d9c871b12..cf946a6148 100644
+--- a/libprocessgroup/task_profiles.cpp
++++ b/libprocessgroup/task_profiles.cpp
+@@ -1006,7 +1006,13 @@ bool TaskProfiles::Load(const CgroupMap& cg_map, const std::string& file_name) {
+                 auto controller = cg_map.FindController(controller_name);
+                 if (controller.HasValue()) {
+                     if (controller.version() == 1) {
+-                        profile->Add(std::make_unique<SetCgroupAction>(controller, path));
++                        // An optional controller the kernel does not have, such
++                        // as blkio on older kernels, is described but never
++                        // mounted: joining it could only fail, with a warning,
++                        // every time a process takes the profile. Leave it out.
++                        if (controller.IsUsable()) {
++                            profile->Add(std::make_unique<SetCgroupAction>(controller, path));
++                        }
+                     } else {
+                         LOG(WARNING) << "A JoinCgroup action in the " << profile_name
+                                      << " profile is used for controller " << controller_name

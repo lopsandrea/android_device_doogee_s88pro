@@ -1,0 +1,33 @@
+diff --git a/src/org/lineageos/lineageparts/notificationlight/BrightnessPreference.java b/src/org/lineageos/lineageparts/notificationlight/BrightnessPreference.java
+index 242e2c0c..a607ae84 100644
+--- a/src/org/lineageos/lineageparts/notificationlight/BrightnessPreference.java
++++ b/src/org/lineageos/lineageparts/notificationlight/BrightnessPreference.java
+@@ -6,6 +6,7 @@
+ package org.lineageos.lineageparts.notificationlight;
+ 
+ import android.app.Notification;
++import android.app.NotificationChannel;
+ import android.app.NotificationManager;
+ import android.content.Context;
+ import android.content.DialogInterface;
+@@ -81,7 +82,19 @@ public class BrightnessPreference extends CustomDialogPreference<AlertDialog>
+         bundle.putBoolean(LineageNotification.EXTRA_FORCE_SHOW_LIGHTS, true);
+         bundle.putInt(LineageNotification.EXTRA_FORCE_LIGHT_BRIGHTNESS, LIGHT_BRIGHTNESS_MAXIMUM);
+ 
+-        mNotificationBuilder = new Notification.Builder(mContext);
++        // The preview needs a channel: since Android 8 a notification without
++        // one is dropped, and the LED never lights. The same channel as the
++        // preview in LightSettingsDialog.
++        final String channelId = mContext.getString(R.string.channel_light_settings_id);
++        final NotificationChannel channel = new NotificationChannel(channelId,
++                mContext.getString(R.string.channel_light_settings_name),
++                NotificationManager.IMPORTANCE_LOW);
++        channel.enableLights(true);
++        channel.enableVibration(false);
++        channel.setShowBadge(false);
++        mNotificationManager.createNotificationChannel(channel);
++
++        mNotificationBuilder = new Notification.Builder(mContext, channelId);
+         mNotificationBuilder.setExtras(bundle)
+                 .setContentTitle(mContext.getString(R.string.led_notification_title))
+                 .setContentText(mContext.getString(R.string.led_notification_text))

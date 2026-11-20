@@ -1298,3 +1298,82 @@ early on kernels older than 5.4, read once from `uname`. The tries stay empty,
 which is what the loaded programs expect anyway. On its own, and for every
 kernel, the generation ID now goes back to even in a `finally`, so a failed
 walk can no longer leave it odd.
+
+## frameworks_base-fingerprint-hidl-death-on-handler.patch
+
+**Project**: `frameworks/base`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: `system_server` dies when the fingerprint HAL goes away, as it
+does at every shutdown when init stops it, and the framework restarts:
+
+```
+java.lang.NullPointerException: Attempt to invoke virtual method
+  'int com.android.server.biometrics.sensors.BiometricSchedulerOperation.getProtoEnum()'
+  on a null object reference
+    at com.android.server.biometrics.sensors.BiometricScheduler$1.lambda$onClientFinished$0(BiometricScheduler.java:217)
+```
+
+Seen once, during a `reboot bootloader`. It is a race, so most deaths pass.
+
+**Why**: the Sunwave HAL is HIDL, and `HidlToAidlSensorAdapter.serviceDied()`
+runs on a hwbinder thread. Since AOSP dropped the `hidl_service_died_fix`
+flag it calls `onBinderDied()` from there, and that resets the scheduler:
+`mCurrentOperation = null`. The scheduler belongs to the sensor's handler,
+which may be halfway through finishing that very operation. It checked the
+field for null a few lines before line 217, and finds it null at 217. The
+AIDL path, `FingerprintProvider.binderDied()`, posts to the handler.
+
+**What it does**: posts `onBinderDied()` to the sensor's handler. The face
+adapter has the same call, but this phone has no face HAL to try it with.
+
+## packages_apps_LineageParts-brightness-preview-channel.patch
+
+**Project**: `packages/apps/LineageParts`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: while the brightness slider of Notification light or Battery
+light is dragged, the LED should show the level; it stays dark, and every
+move logs
+
+```
+E NotificationService: No Channel found for pkg=org.lineageos.lineageparts,
+  channelId=null, id=1, ...
+```
+
+**Why**: `BrightnessPreference` builds its preview notification with the
+`Notification.Builder(Context)` constructor, which leaves the channel unset.
+Since Android 8 a notification without a channel is dropped.
+`LightSettingsDialog`, the colour picker next to it, already creates a
+channel for its own preview.
+
+**What it does**: the brightness preview creates and uses that same channel.
+
+## system_core-task-profiles-unmounted-controllers.patch
+
+**Project**: `system/core`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: a warning for almost every app that starts, 27 in an hour of
+use,
+
+```
+W libprocessgroup: SetCgroup::ExecuteForProcess: failed to open /dev/blkio//cgroup.procs: No such file or directory
+```
+
+and in the kernel log, for the services init starts with an I/O profile,
+`libprocessgroup: Failed to apply NormalIoPriority process profile`.
+
+**Why**: this kernel has no blkio controller, and `system_core-cgroups-json.patch`
+marks it optional so that init boots. The controller then stays in the
+description without being mounted, and the task profiles that join it, the
+I/O priority ones, still get a `JoinCgroup` action for it. The action can
+only fail.
+
+**What it does**: when the profiles are loaded, a `JoinCgroup` action for a
+v1 controller that is described but not mounted is left out. The mount state
+is the one libprocessgroup already reads from `/proc/mounts` for each v1
+controller, and `processgroup.cpp` and `sched_policy.cpp` already go by it.

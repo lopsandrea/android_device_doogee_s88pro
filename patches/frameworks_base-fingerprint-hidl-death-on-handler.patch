@@ -1,0 +1,18 @@
+diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/HidlToAidlSensorAdapter.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/HidlToAidlSensorAdapter.java
+index 98fc293d495ce..4b1fa49bd0f1b 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/HidlToAidlSensorAdapter.java
++++ b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/HidlToAidlSensorAdapter.java
+@@ -128,7 +128,12 @@ public class HidlToAidlSensorAdapter extends Sensor implements IHwBinder.DeathRe
+         mSession = null;
+         mDaemon = null;
+         mCurrentUserId = UserHandle.USER_NULL;
+-        onBinderDied();
++        // This runs on a hwbinder thread. onBinderDied() resets the scheduler,
++        // which belongs to the sensor's handler: called from here it can clear
++        // the current operation while the handler is finishing it, and the
++        // handler's next dereference takes system_server down. The AIDL path,
++        // FingerprintProvider.binderDied(), posts for the same reason.
++        getHandler().post(this::onBinderDied);
+     }
+ 
+     @Override
