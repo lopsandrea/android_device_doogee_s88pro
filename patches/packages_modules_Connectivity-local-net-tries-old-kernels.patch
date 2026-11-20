@@ -1,0 +1,91 @@
+diff --git a/service/src/com/android/server/BpfNetMaps.java b/service/src/com/android/server/BpfNetMaps.java
+index c1a47997afe..068245e4e10 100644
+--- a/service/src/com/android/server/BpfNetMaps.java
++++ b/service/src/com/android/server/BpfNetMaps.java
+@@ -1762,6 +1762,7 @@ public class BpfNetMaps {
+             final InetAddress address, final int protocol, final int remotePort,
+             final boolean isAllowed) {
+         throwIfPre25Q2("addLocalNetAccess is not available on pre-B devices");
++        if (!LNP_TRIES_USABLE) return;
+         if (iface == null) {
+             Log.e(TAG, "Null iface, skip addLocalNetAccess for " + address);
+             return;
+@@ -1798,6 +1799,7 @@ public class BpfNetMaps {
+     public void removeLocalNetAccess(final int lpmBitlen, @Nullable final String iface,
+             final InetAddress address, final int protocol, final int remotePort) {
+         throwIfPre25Q2("removeLocalNetAccess is not available on pre-B devices");
++        if (!LNP_TRIES_USABLE) return;
+         final int ifIndex;
+         if (iface == null) {
+             ifIndex = 0;
+@@ -1946,6 +1948,7 @@ public class BpfNetMaps {
+     @RequiresApi(Build.VERSION_CODES.BAKLAVA)
+     public void addLocalNetUidAccess(final int uid, @NonNull final String iface) {
+         throwIfPre25Q2("addLocalNetUidAccess is not available on pre-B devices");
++        if (!LNP_TRIES_USABLE) return;
+         int ifIndex = mInterfaceTracker.getInterfaceIndex(iface);
+         if (ifIndex == 0) {
+             Log.e(TAG, "Failed to get if index, skip addLocalNetUidAccess for uid: " + uid
+@@ -1967,6 +1970,7 @@ public class BpfNetMaps {
+     @RequiresApi(Build.VERSION_CODES.BAKLAVA)
+     public void removeLocalNetUidAccess(final int uid, @NonNull final String iface) {
+         throwIfPre25Q2("removeLocalNetUidAccess is not available on pre-B devices");
++        if (!LNP_TRIES_USABLE) return;
+         final int ifIndex = mInterfaceTracker.getInterfaceIndex(iface);
+         if (ifIndex == 0) {
+             Log.e(TAG, "Failed to get if index, skip removeLocalNetUidAccess for uid: " + uid
+@@ -1994,6 +1998,7 @@ public class BpfNetMaps {
+     public void addLocalNetUidHostAccess(final int uid, final int ifIndex,
+             @NonNull final InetAddress address) {
+         throwIfPre25Q2("addLocalNetUidHostAccess is not available on pre-B devices");
++        if (!LNP_TRIES_USABLE) return;
+         final LocalNetUidHostAllowlistKey key = new LocalNetUidHostAllowlistKey(
+                 uid, ifIndex, address);
+         synchronized (sLocalNetAccessLock) {
+@@ -2009,6 +2014,7 @@ public class BpfNetMaps {
+     @RequiresApi(Build.VERSION_CODES.BAKLAVA)
+     public void removeLocalNetHostAllowlistForInterface(final int ifIndex) {
+         throwIfPre25Q2("removeLocalNetHostAllowlistForInterface is not available on pre-B devices");
++        if (!LNP_TRIES_USABLE) return;
+         synchronized (sLocalNetAccessLock) {
+             incrementLnpGenerationId(true);
+             try {
+@@ -2022,9 +2028,12 @@ public class BpfNetMaps {
+                         }
+                     }
+                 });
+-                incrementLnpGenerationId(false);
+             } catch (ErrnoException e) {
+                 Log.wtf("Failed to iterate over sLocalNetUidHostAllowlistMap", e);
++            } finally {
++                // Back to even whatever happened above, or the next update finds the generation
++                // ID odd and throws, taking system_server down.
++                incrementLnpGenerationId(false);
+             }
+         }
+     }
+@@ -2321,6 +2330,24 @@ public class BpfNetMaps {
+         }
+     }
+ 
++    /**
++     * Local network protection is enforced by the netd.o programs for 5.4 and later kernels; older
++     * ones load the T variants, which never read the local net LPM tries. Those tries cannot even
++     * be maintained there: deleting an entry came with 4.15 and iterating with 4.16.
++     */
++    private static final boolean LNP_TRIES_USABLE = isKernelAtLeast(5, 4);
++
++    private static boolean isKernelAtLeast(int major, int minor) {
++        final String[] version = android.system.Os.uname().release.split("[.-]", 3);
++        try {
++            final int kMajor = Integer.parseInt(version[0]);
++            final int kMinor = Integer.parseInt(version[1]);
++            return kMajor > major || (kMajor == major && kMinor >= minor);
++        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
++            return true;
++        }
++    }
++
+     @GuardedBy("sLocalNetAccessLock")
+     private void incrementLnpGenerationId(boolean expectEven) throws IllegalStateException {
+         if (expectEven != ((sLnpGenerationID & 1) == 0)) {

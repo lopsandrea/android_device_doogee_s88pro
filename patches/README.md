@@ -1257,3 +1257,44 @@ turns the modem speech path on.
 hardware bridge branch is skipped and the call takes the legacy route on the
 primary output. The device sets it in `device.mk` and labels it
 `audio_config_prop` in `sepolicy/system_ext/private/property_contexts`.
+
+## packages_modules_Connectivity-local-net-tries-old-kernels.patch
+
+**Project**: `packages/modules/Connectivity`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: `system_server` restarts on its own, more often with two SIMs,
+whenever a network interface goes away and another one comes up:
+
+```
+I am_wtf  : [...,BpfNetMaps,nativeDeleteMapEntry failed: ENOSYS (Function not implemented)]
+I am_wtf  : [...,Failed to iterate over sLocalNetUidHostAllowlistMap,nativeGetNextMapKey failed: errno 524]
+E AndroidRuntime: *** FATAL EXCEPTION IN SYSTEM PROCESS: ConnectivityServiceThread
+E AndroidRuntime: java.lang.IllegalStateException: Parity error in the local net cache generation ID. This should never happen.
+E AndroidRuntime:   at BpfNetMaps.incrementLnpGenerationId(BpfNetMaps.java:2327)
+E AndroidRuntime:   at BpfNetMaps.addLocalNetAccess(BpfNetMaps.java:1783)
+```
+
+**Why**: `local_net_access_map` and `local_net_uid_host_allowlist_map` are
+`LPM_TRIE` maps. On 4.14 a trie can be created, read and written, but not
+emptied: `map_delete_elem` came in 4.15 and returns ENOSYS before it, and
+`MAP_GET_NEXT_KEY` came in 4.16 and returns ENOTSUPP (524) before it.
+`packages_modules_Connectivity-lpm-trie-no-next-key.patch` covers the walks
+done at boot; this one covers those done at run time.
+
+`removeLocalNetHostAllowlistForInterface()` raises the generation ID to odd,
+walks the allowlist, and only lowers it back to even after the walk
+succeeds. On 4.14 the walk throws, the ID stays odd, and the next update of
+either trie finds it so and throws `IllegalStateException` on the
+ConnectivityService thread.
+
+The tries are not even used here. Local network protection is enforced by
+the netd.o programs with API level 25Q2 and up, which exist for 5.4 and later
+kernels only; 4.14 loads the T variants, where the check is compiled out.
+
+**What it does**: the six methods that add or remove trie entries return
+early on kernels older than 5.4, read once from `uname`. The tries stay empty,
+which is what the loaded programs expect anyway. On its own, and for every
+kernel, the generation ID now goes back to even in a `finally`, so a failed
+walk can no longer leave it odd.
