@@ -27,6 +27,17 @@
     <bool name="config_proximityCheckOnWakeEnabledByDefault">true</bool>
 
     <!--
+         Two lights, one per setting (light/Lights.cpp): the RGB LED at the top
+         of the front is the battery light (Settings > Battery > Battery
+         light), the light strip around the rear cameras the notification
+         light (Settings > Notifications > Notification light). RGB for
+         notifications (1) and battery (2), pulsing (8), battery light (64).
+         Brightness needs no flag of its own: with RGB, the framework scales
+         the colour.
+    -->
+    <integer name="config_deviceLightCapabilities">75</integer>
+
+    <!--
          Adds our key handler alongside the LineageOS one.
 
          PhoneWindowManager loads these classes at boot and hands them every

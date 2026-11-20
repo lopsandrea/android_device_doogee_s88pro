@@ -130,4 +130,8 @@
          Gestures > Swipe fingerprint for notifications. See
          rootdir/usr/keylayout/sf-keys.kl. -->
     <bool name="config_supportSystemNavigationKeys">true</bool>
+
+    <!-- There is a notification LED; without this, the notification light
+         settings stay hidden. -->
+    <bool name="config_intrusiveNotificationLed">true</bool>
 </resources>

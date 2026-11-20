@@ -1,1 +1,3 @@
 genfscon sysfs /devices/platform/11005000.i2c/i2c-6/6-002b/mt5725group/reverse_charger u:object_r:sysfs_rvs:s0
+genfscon sysfs /class/tp_gesture u:object_r:sysfs_tp_gesture:s0
+genfscon sysfs /devices/platform/11011000.i2c/i2c-1/1-006a/leds/aw22xxx_led/rgb u:object_r:sysfs_aw22xxx_rgb:s0

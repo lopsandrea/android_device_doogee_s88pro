@@ -101,6 +101,16 @@
 ;; attribute.
 (typeattributeset vtservice_service_29_0 (vtservice_s88pro_service))
 
+;; The rear light strip (aw22xxx), driven by the lights HAL
+;; (light/Lights.cpp). Its nodes have types of their own in the stock vendor
+;; policy, which grants them to system_server and system_app only:
+;;   (allow system_server_29_0 sys_leds_aw22xxx_led_effect (file (ioctl read write getattr open)))
+;; -- system_server ran the strip on stock, from BatteryService. The same, for
+;; the service that drives it now.
+(allow hal_light_s88pro sys_leds_aw22xxx_led_hwen (file (ioctl read write getattr open)))
+(allow hal_light_s88pro sys_leds_aw22xxx_led_effect (file (ioctl read write getattr open)))
+(allow hal_light_s88pro sys_leds_aw22xxx_led_cfg (file (ioctl read write getattr open)))
+
 ;; The Sunwave fingerprint HAL reads /vendor/etc/sw_config.xml, over which
 ;; rootdir/etc/init/s88pro-fingerprint.rc mounts ours, labelled sw_config_file
 ;; (file.te). The vendor policy knows nothing of that type.

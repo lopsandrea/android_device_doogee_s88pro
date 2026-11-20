@@ -16,10 +16,10 @@ cc_binary {
         "service.cpp",
     ],
     shared_libs: [
+        "android.hardware.light-V2-ndk",
         "libbase",
         "libbinder_ndk",
         "liblog",
-        "android.hardware.light-V2-ndk",
     ],
     // Not vendor: the vendor image is the stock prebuilt one. See
     // BoardConfig.mk, BOARD_PREBUILT_VENDORIMAGE.

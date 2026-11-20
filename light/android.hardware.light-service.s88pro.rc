@@ -1,3 +1,9 @@
+# The rear light strip's colours, which this service writes; its other nodes
+# are handed to system by the vendor's init.mt6771.rc.
+on post-fs-data
+    chown system system /sys/devices/platform/11011000.i2c/i2c-1/1-006a/leds/aw22xxx_led/rgb
+    chmod 0664 /sys/devices/platform/11011000.i2c/i2c-1/1-006a/leds/aw22xxx_led/rgb
+
 service light-s88pro /system_ext/bin/hw/android.hardware.light-service.s88pro
     class hal
     user system

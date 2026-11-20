@@ -28,3 +28,7 @@ allow init vendor_configs_file:file mounton;
 #   denied { getattr } for comm="init" path="/vendor/etc/sw_config.xml"
 #     tcontext=u:object_r:sw_config_file:s0 tclass=file
 allow init sw_config_file:file getattr;
+
+# The lights HAL's init script hands the rear light strip's rgb node to
+# system; same reason as for the gesture mask above.
+allow init sysfs_aw22xxx_rgb:file setattr;

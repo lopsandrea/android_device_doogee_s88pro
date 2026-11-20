@@ -34,3 +34,9 @@ type sysfs_tp_gesture, fs_type, sysfs_type;
 # -- a vendor domain, which may not read system files at large -- is granted
 # this one alone, in compat/29.0/29.0.compat.cil.
 type sw_config_file, system_file_type, file_type;
+
+# The rear light strip's rgb node, its nine colours: the vendor labels the
+# strip's other nodes with types of its own, but not this one, which stays
+# generic sysfs and so out of reach. The lights HAL writes it; its init script
+# hands it to system on post-fs-data.
+type sysfs_aw22xxx_rgb, fs_type, sysfs_type;

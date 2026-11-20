@@ -28,11 +28,17 @@ class Lights : public BnLights {
   private:
     void setBacklight(const HwLightState& state);
     void updateIndicator();
+    void updateRear();
 
     std::mutex mLock;
-    // The last state asked for each of the three lights that share the one
-    // RGB indicator. Which of them shows is decided in updateIndicator().
+    // The last state asked for each of the three indicator lights. The front
+    // LED shows the battery light (updateIndicator()), the rear strip the
+    // notification light (updateRear()).
     std::map<LightType, HwLightState> mIndicator;
+    // What the rear strip shows: its colour, 0 when dark and -1 before the
+    // first update, and the effect playing it.
+    int32_t mRearColour = -1;
+    int mRearEffect = -1;
 };
 
 }  // namespace light

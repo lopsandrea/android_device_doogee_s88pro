@@ -25,3 +25,7 @@ hal_server_domain(hal_light_s88pro, hal_light)
 # sysfs_leds rules come with hal_light.
 allow hal_light_s88pro sysfs:dir search;
 allow hal_light_s88pro sysfs:lnk_file read;
+
+# The rear light strip's rgb node; see file.te. Its other nodes are vendor
+# types, granted in compat/29.0/29.0.compat.cil.
+allow hal_light_s88pro sysfs_aw22xxx_rgb:file rw_file_perms;
