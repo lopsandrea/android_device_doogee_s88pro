@@ -77,4 +77,9 @@
 (dontaudit mediaserver debugfs_ion (dir (search)))
 (dontaudit mtk_hal_neuralnetworks system_data_file (dir (search)))
 (dontaudit system_server tkcore_systa_file (dir (getattr)))
+;; Idle maintenance runs fstrim on every mounted filesystem, the MediaTek
+;; persist partition included (mmcblk0p16, /mnt/vendor/persist). It is small
+;; and nearly never written: leave it untrimmed, quietly.
+(dontaudit vold persist_block_device (blk_file (getattr)))
+(dontaudit vold persist_data_file (dir (getattr open read search ioctl)))
 (dontaudit secure_element system_data_file (file (open)))

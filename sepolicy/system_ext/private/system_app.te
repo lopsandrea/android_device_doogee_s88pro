@@ -31,3 +31,7 @@ allow system_app sysfs_rvs:file rw_file_perms;
 # Getting there means traversing /sys/devices/platform/..., which stays generic
 # sysfs. The prohibitions on sysfs are all on :file, never on :dir.
 allow system_app sysfs:dir search;
+
+# Settings, Developer options, Memory: reads /proc/vmallocinfo, which AOSP
+# grants it nowhere. The page works without it; keep the refusal quiet.
+dontaudit system_app proc_vmallocinfo:file r_file_perms;
