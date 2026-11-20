@@ -39,9 +39,7 @@
 
   <!--
     The kernel sources. BoardConfig builds the kernel from them, so they are
-    required: the charter forbids shipping a prebuilt kernel. The image in
-    prebuilt/ also comes from here, for anyone who wants to install without
-    rebuilding.
+    required: the charter forbids shipping a prebuilt kernel.
   -->
   <project path="kernel/doogee/s88pro"
            name="lopsandrea/android_kernel_doogee_s88pro"

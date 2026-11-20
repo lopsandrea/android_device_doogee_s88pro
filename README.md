@@ -51,11 +51,6 @@ The kernel is built from source: the charter requires it, and
 an ALPS 4.14 tree in which the missing drivers were reconstructed by reverse
 engineering the stock kernel, checking every fix against the original binary.
 
-`prebuilt/kernel` is a pre-built `Image.gz-dtb` kept for anyone who only wants
-to install without rebuilding; it is used only with
-`TARGET_FORCE_PREBUILT_KERNEL`. `prebuilt/README.md` explains how to
-regenerate it.
-
 Known limitations
 -----------------
 

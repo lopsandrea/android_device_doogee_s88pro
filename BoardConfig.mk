@@ -51,7 +51,6 @@ BOARD_KERNEL_CMDLINE := bootopt=64S3,32N2,64N2 androidboot.fstab_suffix=s88pro
 BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOTIMG_HEADER_VERSION)
 BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
-TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/kernel
 # The device tree blob. The stock boot.img has a separate one of 110,368 bytes
 # (header version 2), and mkbootimg insists on it:
 #   ValueError: DTB image must not be empty.
@@ -418,10 +417,6 @@ TARGET_HAS_FUSEBLK_SEPOLICY_ON_VENDOR := true
 # The LineageOS charter requires it: "Non-GKI devices MUST NOT ship a prebuilt
 # kernel". The sources live in kernel/doogee/s88pro, and the local manifest
 # (s88pro.xml) pulls them down along with the rest.
-#
-# prebuilt/kernel stays in the repo for anyone who only wants to install
-# without rebuilding: LineageOS would use it only with
-# TARGET_FORCE_PREBUILT_KERNEL.
 
 # The fstab recovery uses. It was there, in rootdir/etc/, but was not declared,
 # and without this line the build produces NO installable ROM at all:
@@ -435,8 +430,6 @@ TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/rootdir/etc/fstab.mt6771
 # DIRECTORY:
 #   cp "out/.../obj/KERNEL_OBJ/arch/arm64/boot/" "out/.../kernel"
 #   cp: Skipped dir '...': No such file or directory
-# It was only needed with the prebuilt kernel, where the file was already
-# chosen.
 BOARD_KERNEL_IMAGE_NAME := Image.gz-dtb
 
 TARGET_KERNEL_SOURCE := kernel/doogee/s88pro
