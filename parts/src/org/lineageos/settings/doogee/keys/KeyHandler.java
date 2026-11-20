@@ -14,7 +14,6 @@ import android.content.pm.PackageManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
 import android.os.SystemClock;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.KeyEvent;
 
@@ -47,6 +46,7 @@ import com.android.internal.os.DeviceKeyHandler;
 public class KeyHandler implements DeviceKeyHandler {
 
     private static final String TAG = "S88ProParts";
+    private static final String PARTS_PACKAGE = "org.lineageos.settings.doogee";
 
     public static final String PREF_KEY_F5_ACTION = "key_f5_action";
     public static final String PREF_KEY_F5_PACKAGE = "key_f5_package";
@@ -69,6 +69,8 @@ public class KeyHandler implements DeviceKeyHandler {
 
     private final Context mContext;
     private final CameraManager mCameraManager;
+
+    private Context mPartsContext;
 
     private boolean mTorchEnabled;
     private String mTorchCameraId;
@@ -105,9 +107,9 @@ public class KeyHandler implements DeviceKeyHandler {
                 return event;
         }
 
-        final SharedPreferences prefs =
-                PreferenceManager.getDefaultSharedPreferences(mContext);
-        final String action = prefs.getString(actionPref, ACTION_NONE);
+        final SharedPreferences prefs = getPrefs();
+        final String action = prefs != null
+                ? prefs.getString(actionPref, ACTION_NONE) : ACTION_NONE;
 
         if (ACTION_NONE.equals(action)) {
             return event;
@@ -166,9 +168,9 @@ public class KeyHandler implements DeviceKeyHandler {
                 break;
         }
 
-        final SharedPreferences prefs =
-                PreferenceManager.getDefaultSharedPreferences(mContext);
-        final String action = prefs.getString(actionPref, ACTION_NONE);
+        final SharedPreferences prefs = getPrefs();
+        final String action = prefs != null
+                ? prefs.getString(actionPref, ACTION_NONE) : ACTION_NONE;
 
         // "dpad" is the only action that lets the event through as it is: it is for
         // those who genuinely want arrow keys from the sensor.
@@ -200,6 +202,32 @@ public class KeyHandler implements DeviceKeyHandler {
         // Even with "no action" the event is consumed: see the comment at the top of
         // the class.
         return null;
+    }
+
+    /**
+     * The choices made in DeviceSettingsFragment, read from this app's own data
+     * directory. The context we are constructed with is system_server's, the
+     * "android" package, which has no data directory: preferences read through
+     * it throw "No data directory found for package android" on every key, and
+     * PhoneWindowManager then delivers the key untouched.
+     *
+     * Null until the user unlocks the phone for the first time, since the file
+     * is in credential encrypted storage; the callers then fall back to "none".
+     */
+    private SharedPreferences getPrefs() {
+        try {
+            if (mPartsContext == null) {
+                mPartsContext = mContext.createPackageContext(PARTS_PACKAGE, 0);
+            }
+            // MODE_MULTI_PROCESS because the settings screen writes the file from
+            // another process: it is the only mode in which the instance cached in
+            // system_server reloads it when it changes.
+            return mPartsContext.getSharedPreferences(
+                    mPartsContext.getPackageName() + "_preferences",
+                    Context.MODE_MULTI_PROCESS);
+        } catch (PackageManager.NameNotFoundException | IllegalStateException e) {
+            return null;
+        }
     }
 
     private static KeyEvent remap(KeyEvent event, int keyCode) {
