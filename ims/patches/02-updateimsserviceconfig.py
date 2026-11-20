@@ -14,7 +14,7 @@ regardless.
 The call is patched inside the APK and NOT in the framework. ImsManager lives
 in ims-common.jar, which is on the bootclasspath: replacing that jar breaks the
 checksums of the precompiled boot image and the phone no longer boots (recovery
-only through TWRP). See docs/bringup/volte-stato-esperimento.md
+only through TWRP).
 
 Usage: 02-updateimsserviceconfig.py <smali-dir>
 """

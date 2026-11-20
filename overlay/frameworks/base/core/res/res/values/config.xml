@@ -110,4 +110,11 @@
         <item>100</item>
         <item>40</item>
     </integer-array>
+
+    <!--
+         The device can do VoLTE: ImsManager reports IMS voice as unavailable
+         without this, whatever the carrier and the ImsService say. Only
+         applies with ImsService installed, see device.mk.
+    -->
+    <bool name="config_device_volte_available">true</bool>
 </resources>

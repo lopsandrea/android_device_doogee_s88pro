@@ -4,36 +4,54 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# Prepares ImsService.apk for VoLTE: disassembles the stock ROM's dex, applies
-# the patches in patches/, reassembles and aligns. Signing is NOT done here:
-# the build system takes care of it, because Android.mk declares
-# LOCAL_CERTIFICATE := platform. The platform key is needed because the APK
-# uses sharedUserId="android.uid.phone" and has to share the UID with com.android.phone.
+# Prepares ImsService.apk, MediaTek's ImsService, for VoLTE.
+#
+# The starting point is not the stock ROM's copy but TrebleDroid's: the build of
+# MediaTek's ImsService for Android 10 vendors that Phh Treble Settings installs
+# on GSIs running on a "MediaTek Q" vendor, that is one registering
+# vendor.mediatek.hardware.mtkradioex@1.x with imsSlotN instances, as this phone
+# does:
+#
+#   https://treble.phh.me/stable/ims-mtk-q.apk
+#
+# Unlike the stock copy it does not lean on MediaTek's framework jars, nor on
+# framework methods AOSP never had. Android 17 still lacks a few things it
+# calls, and the scripts in patches/ deal with those, each explaining why. The
+# dex is disassembled, patched and reassembled, and the APK aligned.
+#
+# Signing is left to the build system (Android.mk declares
+# LOCAL_CERTIFICATE := platform): the APK shares android.uid.phone with
+# com.android.phone, so it has to carry our platform signature.
 #
 # Usage:
-#   ./prepare-imsservice.sh /path/to/stock/rom/system/priv-app/ImsService/ImsService.apk
+#   ./prepare-imsservice.sh /path/to/ims-mtk-q.apk
 #
-# The result is ImsService.apk in this directory, which device.mk installs as
-# priv-app if it finds it. Without it, the build carries on without VoLTE.
-#
-# The status of this work -- what works and what does not -- is in
-# docs/bringup/volte-stato-esperimento.md
+# The result is ImsService.apk in this directory, which device.mk installs if
+# it finds it. Without it, the build carries on without VoLTE.
 
 set -e
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
-SRC="${1:?the path to the stock ImsService.apk is required}"
+SRC="${1:?the path to ims-mtk-q.apk is required}"
 OUT="$DIR/ImsService.apk"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-: "${ANDROID_BUILD_TOP:?run first: source build/envsetup.sh && lunch lineage_s88pro-userdebug}"
+# The file the patches were written against: any other one has to be looked at
+# before patching it.
+SHA256=cdba840a6192d113d5808392f282b6f8d6d02f0da071a1af4990ab1d1e0d24c3
 
-JAVA="$ANDROID_BUILD_TOP/prebuilts/jdk/jdk11/linux-x86/bin/java"
+: "${ANDROID_BUILD_TOP:?run first: source build/envsetup.sh && lunch lineage_s88pro-cp2a-userdebug}"
+
+JAVA="$(ls -d "$ANDROID_BUILD_TOP"/prebuilts/jdk/jdk*/linux-x86 | sort -V | tail -1)/bin/java"
 SMALI_DIR="$ANDROID_BUILD_TOP/prebuilts/extract-tools/common/smali"
-ZIPALIGN="$ANDROID_BUILD_TOP/out/soong/host/linux-x86/bin/zipalign"
+ZIPALIGN="$ANDROID_BUILD_TOP/prebuilts/build-tools/linux-x86/bin/zipalign"
 
-echo "== extracting the dex from $SRC"
+echo "== checking $SRC"
+echo "$SHA256  $SRC" | sha256sum -c --quiet - || {
+    echo "this is not the ims-mtk-q.apk the patches were written for"; exit 1; }
+
+echo "== extracting the dex"
 unzip -o -q "$SRC" "classes*.dex" -d "$WORK"
 [ -f "$WORK/classes2.dex" ] && { echo "expected a single dex, this APK has more than one"; exit 1; }
 
@@ -74,4 +92,3 @@ echo "== aligning"
 
 echo
 echo "done: $OUT"
-echo "rebuild and reflash, then see docs/bringup/volte-stato-esperimento.md for activation."

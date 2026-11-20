@@ -419,19 +419,21 @@ PRODUCT_SYSTEM_PROPERTIES += \
 
 # VoLTE: MediaTek's ImsService.
 #
-# WORK IN PROGRESS. The stack binds to the framework and the MMTEL feature
-# reaches READY, but the capabilities stay empty and registration on the
-# network does not happen yet. VoWiFi is deliberately left out: it depends on a
-# method MediaTek added to WifiManager which AOSP does not have.
-# Status, reconstruction and how to pick it up: docs/bringup/volte-stato-esperimento.md
+# TrebleDroid's build of it for Android 10 vendors, patched for Android 17:
+# ims/prepare-imsservice.sh. It registers on IMS and carries calls both ways,
+# verified on TIM's network with a Kena SIM. Video calls and VoWiFi are left
+# off.
 #
-# The APK is not in tree: it is prepared once with ims/prepare-imsservice.sh
-# starting from the stock ROM's copy. If it is missing, the build carries on
-# without VoLTE and these two lines do no harm: they declare libraries and
-# permissions for a package that is not there, which PackageManager ignores.
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/ims/mediatek-ims-libs.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/mediatek-ims-libs.xml \
-    $(LOCAL_PATH)/ims/privapp-permissions-mtk-ims.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/permissions/privapp-permissions-mtk-ims.xml
+# The APK is not in tree. If it has not been prepared, the build carries on
+# without VoLTE, and the overlays that point at it change nothing: ImsResolver
+# finds no package to bind.
+#
+# What else it takes, besides the APK:
+#   - config_ims_mmtel_package, overlay/packages/services/Telephony;
+#   - config_device_volte_available, overlay/frameworks/base;
+#   - carrier_volte_available_bool for the carriers that do not declare it,
+#     overlay/packages/apps/CarrierConfig;
+#   - persist.vendor.mtk.volte.enable, further down.
 
 # The module exists only if the APK has been prepared: naming it regardless
 # would fail the build with "module ImsService not found".
@@ -475,7 +477,7 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     android.hardware.light-service.s88pro
 
-# The modem keeps VoLTE off until told otherwise.
+# The modem keeps VoLTE off until told otherwise. See the VoLTE section above.
 PRODUCT_SYSTEM_PROPERTIES += \
     persist.vendor.mtk.volte.enable=1
 

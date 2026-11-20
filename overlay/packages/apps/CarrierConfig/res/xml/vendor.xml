@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<!--
+     Copyright (C) 2026 The LineageOS Project
+
+     SPDX-License-Identifier: Apache-2.0
+-->
+
+<!--
+     Read after the per-carrier files in CarrierConfig's assets, and applied
+     to every SIM whose MCC and MNC match.
+-->
+<carrier_config_list>
+    <!--
+         TIM's network, 222 01: TIM itself and the MVNOs on it, Kena among
+         them. The AOSP file for TIM Italy (carrier ID 33) never declares
+         VoLTE, so the framework keeps IMS voice off however well the stack
+         works. Verified with a Kena SIM: registration, HD calls in both
+         directions. Where a SIM is not provisioned for VoLTE, registration
+         fails and calls fall back to CSFB as before.
+
+         Emergency calls stay on the circuit-switched path (CSFB to 2G), the
+         one this phone has been seen to work on; emergency over IMS has not
+         been tried.
+    -->
+    <carrier_config mcc="222" mnc="01">
+        <boolean name="carrier_volte_available_bool" value="true" />
+        <boolean name="carrier_use_ims_first_for_emergency_bool" value="false" />
+    </carrier_config>
+</carrier_config_list>
