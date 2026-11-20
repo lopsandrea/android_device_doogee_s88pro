@@ -10,11 +10,13 @@ denial measured on the phone under enforcing, and is as narrow as it can be.
 
 | file | what it is for |
 |---|---|
-| `file_contexts`, `genfs_contexts`, `file.te` | `/data/nfc` as `nfc_data_file`; the fstab at the root of system; the two HAL binaries; the reverse charging node, which had the generic `sysfs` type and so could not be written by anyone |
-| `hal_light_s88pro.te`, `hal_vibrator_s88pro.te` | the AIDL lights and vibrator services that stand in for the stock HIDL ones. The lights one also needs `patches/system_sepolicy-core-domain-lights-hal.patch`, because `sysfs_leds` is kept from core domains |
-| `init.te` | the `volte_imsa2`, `volte_ut` and `vendor.bip` sockets, which vendor `.rc` files declare without a context |
+| `file_contexts`, `genfs_contexts`, `file.te` | `/data/nfc` as `nfc_data_file`; the fstab at the root of system; the HAL binaries; the reverse charging node and the touch driver's gesture switches, which had the generic `sysfs` type and so could not be written by anyone |
+| `hal_light_s88pro.te`, `hal_vibrator_s88pro.te` | the AIDL lights and vibrator services that stand in for the stock HIDL ones. The lights one also needs `patches/system_sepolicy-core-domain-lights-hal.patch`, because `sysfs_leds` is kept from core domains, and drives the rear light strip through the vendor types granted in `compat/29.0/29.0.compat.cil` |
+| `hal_power_s88pro.te` | the AIDL power service: double tap to wake through `/sys/class/tp_gesture`, everything else passed to MediaTek's HIDL power HAL |
+| `hal_lineage_touch_s88pro.te`, `hal_lineage_powershare_s88pro.te` | LineageOS's touchscreen gesture and PowerShare (reverse charging) HALs |
+| `init.te` | the `volte_imsa2`, `volte_ut` and `vendor.bip` sockets, which vendor `.rc` files declare without a context; the owner of the touch driver's gesture mask |
 | `lmkd.te` | see below |
-| `system_app.te` | S88ProParts: the LED directories and the reverse charging node. Plus a quiet refusal for Settings' memory page |
+| `system_app.te` | a quiet refusal for Settings' memory page |
 | `seapp_contexts`, `platform_app.te` | the FM radio app, see below |
 | `property_contexts` | `ro.audio.legacy_call_routing` |
 | `service_contexts` | the binder services of MediaTek's ImsService, which runs in the phone UID |

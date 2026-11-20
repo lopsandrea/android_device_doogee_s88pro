@@ -193,10 +193,6 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/sw_config.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/sw_config.xml \
     $(LOCAL_PATH)/rootdir/etc/init/s88pro-fingerprint.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-fingerprint.rc
 
-# Device-specific settings: case LEDs, keys, reverse charging.
-PRODUCT_PACKAGES += \
-    S88ProParts
-
 # SurfaceFlinger: the values the stock configstore HAL used to answer.
 #
 # That HAL cannot run here any more. It is sandboxed by a seccomp filter
@@ -308,11 +304,6 @@ PRODUCT_PACKAGES += \
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/etc/init/s88pro-fm.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-fm.rc
-
-# The privileged permission allowlist for S88ProParts: without it the system
-# does not boot at all. See the comment inside the file.
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/parts/privapp-permissions-s88pro.xml:$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/permissions/privapp-permissions-s88pro.xml
 
 # EAS boost for foreground apps: without it the UI stutters. Median frame time
 # goes from 19 to 11 ms and janky frames from 28.4% to 0.4%. See the comment

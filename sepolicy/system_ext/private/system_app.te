@@ -3,35 +3,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# S88ProParts, which runs as system_app.
-
-# The case LEDs. The nodes themselves are already its own: the MediaTek policy
-# says
-#
-#   allow system_app_29_0 sys_leds_aw22xxx_led_hwen   (file (read write ...))
-#   allow system_app_29_0 sys_leds_aw22xxx_led_effect (file (ioctl read write ...))
-#   allow system_app_29_0 sys_leds_aw22xxx_led_cfg    (file (ioctl read write ...))
-#
-# and those are its own types, not sysfs_leds. What was missing was traversing
-# the directory holding them, which is a platform one instead:
-#
-#   denied { search } for comm="settings.doogee" name="leds"
-#     scontext=u:r:system_app:s0 tcontext=u:object_r:sysfs_leds:s0 tclass=dir
-#
-# The neverallow in system/sepolicy/private/coredomain.te:32 forbids
-# sysfs_leds:file, not sysfs_leds:dir: the search can be granted, and that is
-# all it takes for the LEDs to work again in enforcing mode.
-allow system_app sysfs_leds:dir search;
-
-# Reverse charging. The node being written has a type of its own, see file.te
-# and genfs_contexts: as generic sysfs nobody could have touched it, not even
-# init.
-allow system_app sysfs_rvs:file rw_file_perms;
-
-# Getting there means traversing /sys/devices/platform/..., which stays generic
-# sysfs. The prohibitions on sysfs are all on :file, never on :dir.
-allow system_app sysfs:dir search;
-
 # Settings, Developer options, Memory: reads /proc/vmallocinfo, which AOSP
 # grants it nowhere. The page works without it; keep the refusal quiet.
 dontaudit system_app proc_vmallocinfo:file r_file_perms;

@@ -36,24 +36,4 @@
          the colour.
     -->
     <integer name="config_deviceLightCapabilities">75</integer>
-
-    <!--
-         Adds our key handler alongside the LineageOS one.
-
-         PhoneWindowManager loads these classes at boot and hands them every
-         key before delivering it to the foreground app. The two lists run in
-         parallel, so order matters: the first path goes with the first class.
-
-         The LineageParts entry has to be repeated, because an overlay replaces
-         the whole array and dropping it would disable the gestures.
-    -->
-    <string-array name="config_deviceKeyHandlerLibs" translatable="false">
-        <item>/system_ext/priv-app/LineageParts/LineageParts.apk</item>
-        <item>/system_ext/priv-app/S88ProParts/S88ProParts.apk</item>
-    </string-array>
-
-    <string-array name="config_deviceKeyHandlerClasses" translatable="false">
-        <item>org.lineageos.lineageparts.gestures.KeyHandler</item>
-        <item>org.lineageos.settings.doogee.keys.KeyHandler</item>
-    </string-array>
 </resources>
