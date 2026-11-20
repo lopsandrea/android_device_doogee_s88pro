@@ -1,0 +1,19 @@
+# The AIDL power HAL, in system_ext for the same reason as the vibrator's: the
+# vendor image is the stock prebuilt one. See hal_vibrator_s88pro.te.
+#
+# It serves android.hardware.power in place of MediaTek's HIDL HAL and passes
+# that HAL every hint but one, so it is a client of hal_power as well as a
+# server: system_server is the same, a core domain calling the vendor's HAL.
+type hal_power_s88pro, domain, coredomain;
+type hal_power_s88pro_exec, system_file_type, exec_type, file_type;
+
+init_daemon_domain(hal_power_s88pro)
+hal_server_domain(hal_power_s88pro, hal_power)
+hal_client_domain(hal_power_s88pro, hal_power)
+
+# The hint it handles itself, double tap to wake: the touch driver's
+# /sys/class/tp_gesture/gesenable, system:system 0664 once the vendor's
+# init.mt6771.rc has run on post-fs-data.
+allow hal_power_s88pro sysfs:dir search;
+allow hal_power_s88pro sysfs_tp_gesture:dir search;
+allow hal_power_s88pro sysfs_tp_gesture:file rw_file_perms;

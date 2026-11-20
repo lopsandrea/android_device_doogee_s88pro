@@ -1,0 +1,10 @@
+# The touch driver's gesture mask, which this service writes. Its sibling
+# gesenable is handed to the system user by the vendor's init.mt6771.rc.
+on post-fs-data
+    chown system system /sys/class/tp_gesture/gesmask
+    chmod 0664 /sys/class/tp_gesture/gesmask
+
+service touch-s88pro /system_ext/bin/hw/vendor.lineage.touch-service.s88pro
+    class hal
+    user system
+    group system

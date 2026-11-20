@@ -1,0 +1,12 @@
+# mtk-tpd: the touchscreen, as an input device for keys.
+#
+# With double tap to wake on, the Ilitek driver reports the double tap as the
+# power key (scancode 116). As WAKEUP instead, the double tap goes through
+# LineageOS's check of the proximity sensor before turning the screen on
+# (Settings > Display > Prevent accidental wake-up), which the framework only
+# applies to WAKEUP: a double tap in a pocket stays dark. The power key itself
+# is on mtk-kpd and is not affected.
+#
+# Nothing else on this device sends keys: the keys the input device declares
+# besides it are never reported by the driver.
+key 116   WAKEUP

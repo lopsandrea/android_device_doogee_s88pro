@@ -21,3 +21,9 @@ type sysfs_rvs, fs_type, sysfs_type;
 # are the vendor policy's, which the build cannot see; this type is joined to
 # that domain in compat/29.0/29.0.compat.cil.
 type vtservice_s88pro_exec, system_file_type, exec_type, file_type;
+
+# /sys/class/tp_gesture, the touch driver's gesture switches. It
+# needs a type for the same reason as the reverse charging node above: as
+# generic sysfs neither init, which changes its owner on post-fs-data, nor the
+# HALs that write it (power and touch) may touch it.
+type sysfs_tp_gesture, fs_type, sysfs_type;

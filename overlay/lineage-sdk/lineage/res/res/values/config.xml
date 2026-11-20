@@ -6,6 +6,16 @@
 -->
 <resources>
     <!--
+         Prevent accidental wake-up: before a wake key turns the screen on, the
+         proximity sensor is checked. It matters for double tap to wake, which
+         the touchscreen's key layout sends as WAKEUP for this reason (see
+         rootdir/usr/keylayout/mtk-tpd.kl); on by default, since double tap to
+         wake is.
+    -->
+    <bool name="config_proximityCheckOnWake">true</bool>
+    <bool name="config_proximityCheckOnWakeEnabledByDefault">true</bool>
+
+    <!--
          Adds our key handler alongside the LineageOS one.
 
          PhoneWindowManager loads these classes at boot and hands them every

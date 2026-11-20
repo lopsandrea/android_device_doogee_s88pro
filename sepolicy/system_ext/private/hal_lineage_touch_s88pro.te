@@ -1,0 +1,19 @@
+# LineageOS's touch HAL, for the touchscreen gestures, in system_ext for the
+# same reason as the vibrator's: the vendor image is the stock prebuilt one.
+# See hal_vibrator_s88pro.te.
+type hal_lineage_touch_s88pro, domain, coredomain;
+type hal_lineage_touch_s88pro_exec, system_file_type, exec_type, file_type;
+
+init_daemon_domain(hal_lineage_touch_s88pro)
+hal_server_domain(hal_lineage_touch_s88pro, hal_lineage_touch)
+
+# Registering with servicemanager. AOSP's HAL attributes grant it to every
+# server (binder_call(hal_power_server, servicemanager) and the like);
+# LineageOS's do not.
+binder_use(hal_lineage_touch_s88pro)
+
+# /sys/class/tp_gesture/gesmask, system:system 0664 once its init script has
+# run on post-fs-data.
+allow hal_lineage_touch_s88pro sysfs:dir search;
+allow hal_lineage_touch_s88pro sysfs_tp_gesture:dir search;
+allow hal_lineage_touch_s88pro sysfs_tp_gesture:file rw_file_perms;

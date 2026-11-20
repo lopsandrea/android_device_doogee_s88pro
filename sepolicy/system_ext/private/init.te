@@ -12,3 +12,11 @@
 # The others are volte_ut and vendor.bip.
 allow init socket_device:sock_file { create setattr unlink };
 
+
+# vendor.lineage.touch-service.s88pro.rc hands /sys/class/tp_gesture/gesmask to
+# the system user on post-fs-data. Its sibling gesenable gets the same from the
+# vendor's init.mt6771.rc, which runs as vendor_init, allowed to; a system .rc
+# runs as init, which is not:
+#   denied { setattr } for comm="init" name="gesmask"
+#     tcontext=u:object_r:sysfs_tp_gesture:s0 tclass=file
+allow init sysfs_tp_gesture:file setattr;

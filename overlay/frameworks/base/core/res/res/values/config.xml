@@ -120,4 +120,9 @@
 
     <!-- And video calls over LTE: ImsService with vtservice. -->
     <bool name="config_device_vt_available">true</bool>
+
+    <!-- Double tap to wake, Settings > Display > Tap to wake. The power HAL
+         (power/) switches the touch controller's gesture mode, in which a
+         double tap on the dark panel comes back as the power key. -->
+    <bool name="config_supportDoubleTapWake">true</bool>
 </resources>

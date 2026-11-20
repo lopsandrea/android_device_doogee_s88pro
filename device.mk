@@ -171,6 +171,11 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/rootdir/usr/keylayout/mtk-kpd.kl:$(TARGET_COPY_OUT_SYSTEM)/usr/keylayout/mtk-kpd.kl
 
+# The touchscreen's key layout: double tap to wake as WAKEUP, so that the
+# proximity check applies to it. See the comment inside.
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/rootdir/usr/keylayout/mtk-tpd.kl:$(TARGET_COPY_OUT_SYSTEM)/usr/keylayout/mtk-tpd.kl
+
 # Fingerprint sensor gestures.
 #
 # The Sunwave reader registers a second input device, sf-keys, which reports
@@ -481,6 +486,20 @@ PRODUCT_PACKAGES += \
 # sepolicy/system_ext/private/hal_light_s88pro.te.
 PRODUCT_PACKAGES += \
     android.hardware.light-service.s88pro
+
+# Power. The stock vendor's HIDL power HAL boosts the CPU on the framework's
+# hints but only logs the one feature it is asked to switch, double tap to
+# wake. This AIDL service takes its place towards the framework: it switches
+# that feature itself, through the touch driver, and hands every other hint to
+# MediaTek's HAL exactly as the framework would have. See power/Power.h.
+PRODUCT_PACKAGES += \
+    android.hardware.power-service.s88pro
+
+# Touchscreen gestures drawn on the dark screen, for LineageOS's gesture
+# settings. The touch driver recognises them; this service tells it which ones
+# the user wants. See touch/TouchscreenGesture.h.
+PRODUCT_PACKAGES += \
+    vendor.lineage.touch-service.s88pro
 
 # The modem keeps VoLTE off until told otherwise. See the VoLTE section above.
 PRODUCT_SYSTEM_PROPERTIES += \

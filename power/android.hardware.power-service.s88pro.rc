@@ -1,0 +1,4 @@
+service power-s88pro /system_ext/bin/hw/android.hardware.power-service.s88pro
+    class hal
+    user system
+    group system

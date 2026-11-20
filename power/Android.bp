@@ -1,0 +1,32 @@
+//
+// Copyright (C) 2026 The LineageOS Project
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+cc_binary {
+    name: "android.hardware.power-service.s88pro",
+    relative_install_path: "hw",
+    init_rc: ["android.hardware.power-service.s88pro.rc"],
+    // addService rejects an instance that no VINTF manifest declares.
+    vintf_fragments: ["android.hardware.power-service.s88pro.xml"],
+    srcs: [
+        "Power.cpp",
+        "service.cpp",
+    ],
+    shared_libs: [
+        "android.hardware.power-V5-ndk",
+        "android.hardware.power@1.0",
+        "android.hardware.power@1.1",
+        "android.hardware.power@1.2",
+        "android.hardware.power@1.3",
+        "libbase",
+        "libbinder_ndk",
+        "libhidlbase",
+        "liblog",
+        "libutils",
+    ],
+    // Not vendor: the vendor image is the stock prebuilt one. See
+    // BoardConfig.mk, BOARD_PREBUILT_VENDORIMAGE.
+    system_ext_specific: true,
+}
