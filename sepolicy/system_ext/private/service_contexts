@@ -5,3 +5,6 @@
 mtkIms                                    u:object_r:radio_service:s0
 mwis                                      u:object_r:radio_service:s0
 wfo                                       u:object_r:radio_service:s0
+
+# vtservice's service; see service.te.
+media.VTS                                 u:object_r:vtservice_s88pro_service:s0

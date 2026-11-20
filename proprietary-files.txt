@@ -1,6 +1,6 @@
 # MediaTek proprietary files, extracted from the stock system image.
 #
-# Only the video call libraries below are still needed.
+# Only the video call files below are still needed.
 #
 # The list used to carry the MediaTek framework .jars, mediatek-res.apk, their
 # two permission files and two more /system/lib64 libraries, on the theory
@@ -17,9 +17,11 @@
 
 # Video calls over LTE.
 #
-# ImsService reaches the video call service through libmtk_vt_wrapper.so,
-# which the stock ROM kept in /system/lib64 with what it links against. The
-# vendor image has copies of some, which a system app may not load.
+# Two halves live on the system side. ImsService reaches the video call
+# service through libmtk_vt_wrapper.so, which the stock ROM kept in
+# /system/lib64 with what it links against; the vendor image has copies of
+# some, which a system app may not load. And vtservice, the daemon that runs
+# the call's media, is a 32-bit system binary with its own libraries.
 # libhidltransport and libhwbinder are linked too; AOSP folded them into
 # libhidlbase in Android 11 but still builds them, so they come from device.mk
 # rather than from here, where they would be defined twice.
@@ -32,6 +34,27 @@ system/lib64/libmtk_vt_wrapper.so;DISABLE_DEPS
 system/lib64/libvcodec_cap.so;DISABLE_DEPS
 system/lib64/libvcodec_capenc.so;DISABLE_DEPS
 system/lib64/vendor.mediatek.hardware.videotelephony@1.0.so;DISABLE_DEPS
+
+# vtservice. Five framework symbols its libraries import have changed since
+# Android 10; extract-files.py adds libshim_vtservice.so, which provides them,
+# to its DT_NEEDED: see shims/vtservice.cpp. Its SELinux domain and rules are
+# the vendor policy's; see sepolicy/system_ext/private/compat/29.0.
+system/bin/vtservice;DISABLE_DEPS
+system/etc/init/init.vtservice.rc
+system/lib/libcomutils.so;DISABLE_DEPS
+system/lib/libimsma.so;DISABLE_DEPS
+system/lib/libimsma_adapt.so;DISABLE_DEPS
+system/lib/libimsma_rtp.so;DISABLE_DEPS
+system/lib/libimsma_socketwrapper.so;DISABLE_DEPS
+system/lib/libmtk_vt_service.so;DISABLE_DEPS
+system/lib/libsignal.so;DISABLE_DEPS
+# MODULE_SUFFIX: a Rust crate in external/rust/beto-rust is called libsink too.
+system/lib/libsink.so;DISABLE_DEPS;MODULE_SUFFIX=_vt
+system/lib/libsource.so;DISABLE_DEPS
+system/lib/libvcodec_cap.so;DISABLE_DEPS
+system/lib/libvcodec_capenc.so;DISABLE_DEPS
+system/lib/libvt_avsync.so;DISABLE_DEPS
+system/lib/vendor.mediatek.hardware.videotelephony@1.0.so;DISABLE_DEPS
 
 # FM radio.
 #

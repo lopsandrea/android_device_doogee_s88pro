@@ -3,42 +3,45 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# Video calling off, because nothing on this system can carry it, and leaving
-# it on costs a busy loop in the radio daemon.
+# Video calls over LTE on, over Wi-Fi off.
 #
 # The stock vendor declares persist.vendor.vilte_support=1 and
-# persist.vendor.viwifi_support=1. Video over LTE and over Wi-Fi on MediaTek
-# needs two halves: vtservice_hidl in the vendor image, which is here and
-# running, and the system-side vtservice daemon, which lived in the stock MTK
-# system image and has no counterpart in LineageOS. The radio daemon does not
-# know that. Profiled with simpleperf, its RfxSender_11 thread spends all its
-# time in
+# persist.vendor.viwifi_support=1. Video over LTE needs two halves:
+# vtservice_hidl in the vendor image, and vtservice, the system-side daemon,
+# extracted from the stock system image with a shim for the framework symbols
+# it lost (see proprietary-files.txt and shims/). Video over Wi-Fi needs Wi-Fi
+# calling, which is off.
+#
+# Leaving a half on with nothing to answer it is not free. Without vtservice
+# the radio daemon's RfxSender_11 thread spent all its time in
 #
 #   RmcVtReqHandler::handleRequestUpdateOpid
 #     RmcVtReqHandler::sendMsgToVTS
 #       usleep
 #
-# retrying a message to a video service that never answers. Measured: about
-# 4800 wakeups a second and 7.3 percent of a core, around the clock, whether
-# a SIM is inserted or not -- the single largest idle drain found on this
-# phone. With both properties at 0 the daemon drops to about 6 wakeups a
-# second and 0.35 percent of a core.
+# retrying a message to a video service that never answers: about 4800
+# wakeups a second and 7.3 percent of a core, around the clock. With nobody to
+# answer the Wi-Fi half the same would happen, hence the second property.
 #
-# Voice over LTE is governed by other properties (see device.mk,
-# persist.vendor.mtk.volte.enable) and is not affected.
+# Both values have to be forced, not just set once: vendor/build.prop defines
+# the properties, and earlier builds of this tree saved vilte_support=0 in
+# /data, which would otherwise outlive them. post-fs-data runs before
+# class main, where the radio daemon (vendor.ril-daemon-mtk) starts; the
+# trigger catches any later write of 1 to the Wi-Fi one.
 #
-# The value has to be forced, not just set once: vendor/build.prop defines
-# both properties, and a value defined in a build.prop wins over the one saved
-# in /data at every boot. post-fs-data runs before class main, where the radio
-# daemon (vendor.ril-daemon-mtk) is started; the property triggers catch any
-# later write of 1.
-
+# One more property, for video over LTE on networks MediaTek's dynamic IMS
+# switch does not list for it, TIM's among them. ImsService asks the radio
+# daemon, feature by feature, whether the operator supports it, and turns
+# every one the daemon denies back off before it reaches the modem: the
+# framework asked for video, the modem got AT+EIMSCFG=1,0,... With
+# force.notify set, ImsService keeps the framework's value, and TIM accepted
+# the registration with video (+CIREGU: 1,d) and a video call. Whether a
+# carrier offers video is then down to its carrier config, as everywhere
+# else in Android.
 on post-fs-data
-    setprop persist.vendor.vilte_support 0
+    setprop persist.vendor.vilte_support 1
     setprop persist.vendor.viwifi_support 0
-
-on property:persist.vendor.vilte_support=1
-    setprop persist.vendor.vilte_support 0
+    setprop vendor.ril.imsconfig.force.notify 1
 
 on property:persist.vendor.viwifi_support=1
     setprop persist.vendor.viwifi_support 0

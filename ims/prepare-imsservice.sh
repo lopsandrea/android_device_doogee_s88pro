@@ -58,6 +58,19 @@ unzip -o -q "$SRC" "classes*.dex" -d "$WORK"
 echo "== disassembling"
 "$JAVA" -Xmx3g -jar "$SMALI_DIR/baksmali.jar" d "$WORK/classes.dex" -o "$WORK/smali"
 
+echo "== compiling the gate"
+# S88ViLteGate (gate/, see patches/07) is compiled against two stubs standing
+# in for the APK's classes, and only the gate itself goes into the smali tree.
+JDK_BIN="$(dirname "$JAVA")"
+ANDROID_JAR="$ANDROID_BUILD_TOP/prebuilts/sdk/current/public/android.jar"
+mkdir -p "$WORK/gate/classes" "$WORK/gate/dex"
+"$JDK_BIN/javac" -source 11 -target 11 -nowarn -cp "$ANDROID_JAR" -d "$WORK/gate/classes" \
+    $(find "$DIR/gate" -name "*.java")
+"$JAVA" -cp "$ANDROID_BUILD_TOP/prebuilts/r8/r8.jar" com.android.tools.r8.D8 --release \
+    --min-api 29 --lib "$ANDROID_JAR" --classpath "$WORK/gate/classes" \
+    --output "$WORK/gate/dex" "$WORK/gate/classes/com/mediatek/ims/config/internal/S88ViLteGate.class"
+"$JAVA" -jar "$SMALI_DIR/baksmali.jar" d "$WORK/gate/dex/classes.dex" -o "$WORK/smali"
+
 echo "== applying the patches"
 for p in "$DIR"/patches/*.py; do
     python3 "$p" "$WORK/smali"

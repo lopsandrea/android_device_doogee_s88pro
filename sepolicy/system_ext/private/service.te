@@ -1,0 +1,10 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# media.VTS, vtservice's binder service. The stock ROM labelled it
+# vtservice_service, which, like vtservice's domain, only the vendor policy
+# knows; this type is joined to it in compat/29.0/29.0.compat.cil.
+type vtservice_s88pro_service, service_manager_type;

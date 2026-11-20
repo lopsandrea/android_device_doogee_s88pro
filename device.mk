@@ -450,6 +450,11 @@ PRODUCT_PACKAGES += \
     libhidltransport \
     libhwbinder
 
+# The Android 10 framework symbols vtservice still imports. See
+# shims/vtservice.cpp.
+PRODUCT_PACKAGES += \
+    libshim_vtservice
+
 # Vibration. Android 16 deleted hardware/interfaces/vibrator/1.0 and speaks
 # only AIDL to a vibrator, while this phone's stock vendor offers HIDL 1.0 and
 # nothing else, so on 23.2 the phone simply never buzzed. See manifest.xml.

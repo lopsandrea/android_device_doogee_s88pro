@@ -117,4 +117,7 @@
          applies with ImsService installed, see device.mk.
     -->
     <bool name="config_device_volte_available">true</bool>
+
+    <!-- And video calls over LTE: ImsService with vtservice. -->
+    <bool name="config_device_vt_available">true</bool>
 </resources>

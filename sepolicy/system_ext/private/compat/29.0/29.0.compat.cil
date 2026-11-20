@@ -88,3 +88,15 @@
 ;; Android 10 as well. Encoding and screen mirroring run at full rate without it.
 (dontaudit mediacodec sysfs (file (write)))
 (dontaudit secure_element system_data_file (file (open)))
+;; vtservice, the system half of MediaTek's video calls. Its domain, vtservice,
+;; and all its rules are the vendor policy's, written for a binary labelled
+;; vtservice_exec. The build cannot see that type, so the binary carries
+;; vtservice_s88pro_exec (file.te) and these join it to the vendor's domain
+;; the way the vendor policy joins vtservice_exec.
+(typetransition init vtservice_s88pro_exec process vtservice)
+(allow init vtservice_s88pro_exec (file (read getattr map execute open)))
+(allow vtservice vtservice_s88pro_exec (file (read getattr map execute entrypoint open)))
+;; Its binder service, media.VTS, the same way: the vendor policy lets
+;; vtservice and vtservice_hidl add it and radio find it, through this
+;; attribute.
+(typeattributeset vtservice_service_29_0 (vtservice_s88pro_service))

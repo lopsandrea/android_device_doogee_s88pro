@@ -16,3 +16,8 @@
 # sysfs_type:file concerns untrusted apps (app_neverallows.te:100), and
 # S88ProParts is not one of those.
 type sysfs_rvs, fs_type, sysfs_type;
+
+# /system/bin/vtservice. Its domain and the type the stock ROM gave its binary
+# are the vendor policy's, which the build cannot see; this type is joined to
+# that domain in compat/29.0/29.0.compat.cil.
+type vtservice_s88pro_exec, system_file_type, exec_type, file_type;
