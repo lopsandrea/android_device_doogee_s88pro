@@ -2,7 +2,7 @@ Device tree for DOOGEE S88 Pro (s88pro)
 =======================================
 
 The DOOGEE S88 Pro is a rugged smartphone from 2020. This tree builds
-LineageOS 20.
+LineageOS 24.0 on it, over the stock Android 10 vendor partition.
 
 Specifications, measured on the device
 --------------------------------------
@@ -26,18 +26,21 @@ needed (see the comment inside `s88pro.xml` for why):
 
     mkdir -p .repo/local_manifests
     curl -o .repo/local_manifests/s88pro.xml \
-      https://raw.githubusercontent.com/lopsandrea/android_device_doogee_s88pro/lineage-20/s88pro.xml
+      https://raw.githubusercontent.com/lopsandrea/android_device_doogee_s88pro/lineage-24.0/s88pro.xml
     repo sync
 
-    source build/envsetup.sh
-    breakfast lineage_s88pro-userdebug
-    mka bacon
+Then apply the patches in [`patches/`](patches): they touch common projects,
+so they cannot live in the device tree, and they have to be reapplied after
+every `repo sync`. The README next to them explains, for each one, symptom,
+cause and change.
 
-Before building, apply the seven patches in [`patches/`](patches): they touch
-common projects, so they cannot live in the device tree. Without the telephony
-one there is no usable SIM, and without the Bluetooth one the stack aborts in a
-loop and the adapter never turns on. The README next to them explains, for each
-one, symptom, cause and change.
+For VoLTE, prepare MediaTek's ImsService once with
+`ims/prepare-imsservice.sh` (the comment at its top says where the APK comes
+from). Without it the build works the same, without VoLTE.
+
+    source build/envsetup.sh
+    lunch lineage_s88pro-cp2a-userdebug
+    mka bacon
 
 The kernel
 ----------
@@ -45,22 +48,21 @@ The kernel
 The kernel is built from source: the charter requires it, and
 `BoardConfig.mk` points at `kernel/doogee/s88pro`. The sources are in
 [android_kernel_doogee_s88pro](https://github.com/lopsandrea/android_kernel_doogee_s88pro):
-an ALPS 4.14.141 tree in which the missing drivers were reconstructed by
-reverse engineering the stock kernel, checking every fix against the original
-binary.
+an ALPS 4.14 tree in which the missing drivers were reconstructed by reverse
+engineering the stock kernel, checking every fix against the original binary.
 
 `prebuilt/kernel` is a pre-built `Image.gz-dtb` kept for anyone who only wants
 to install without rebuilding; it is used only with
 `TARGET_FORCE_PREBUILT_KERNEL`. `prebuilt/README.md` explains how to
 regenerate it.
 
-What does not work
-------------------
+Known limitations
+-----------------
 
-- **video recording with the rear camera**: the file comes out with every frame
-  a flat colour. It is not the kernel -- the stock one gets it wrong the same
-  way -- and it is not the HAL, because OpenCamera and Telegram record fine on
-  the same camera.
-- **52 SELinux denials at boot**, between MediaTek vendor types: not closable
-  from the device tree because the vendor policy arrives precompiled. None of
-  them prevents anything. See `sepolicy/`.
+- **Video calls and Wi-Fi calling are off.** VoLTE voice works; the video and
+  Wi-Fi halves of MediaTek's IMS stack are not set up.
+- **Emergency calls go over the circuit-switched network**, falling back from
+  LTE, even with VoLTE registered: emergency over IMS has not been tried.
+- **The kernel is 4.14.** A few things Android 17 expects from a newer one are
+  not there, local network protection among them; the patches in `patches/`
+  keep the platform from tripping over their absence.

@@ -150,8 +150,8 @@ PRODUCT_PACKAGES += \
     vndk-sp-29_lib_symlink
 
 
-# Framework resource overlay: declares the fingerprint reader.
-# See the comment inside overlay/frameworks/base/core/res/res/values/config.xml
+# Resource overlays for the framework and the system apps. See the comments
+# inside overlay/.
 DEVICE_PACKAGE_OVERLAYS += $(LOCAL_PATH)/overlay
 
 # Wi-Fi module overlay: 5 GHz and 802.11ac, as on stock. See the comment
@@ -513,105 +513,9 @@ PRODUCT_SYSTEM_PROPERTIES += \
     bluetooth.profile.pbap.server.enabled=true \
     bluetooth.profile.sap.server.enabled=true
 
-# Proprietary blobs extracted from the stock images (Task 4).
-# The line kicks in once vendor/doogee/s88pro exists: before that the build
-# would fail looking for a makefile that is not there.
+# The stock vendor image: vendor/doogee/s88pro.
 $(call inherit-product-if-exists, vendor/doogee/s88pro/s88pro-vendor.mk)
 
-
-# Not drm@1.2-service.clearkey either: it is the test DRM for CTS, and its
-# fragment declares android.hardware.drm 1.2/clearkey while the device manifest
-# declares the stock 1.0/default. Two versions of the same HAL, and
-# assemble_vintf stops. drm@1.0-service, the real one, stays.
-#
-# No cas: the stock vendor had android.hardware.cas@1.1-service, but here AOSP
-# builds the HAL at version 1.2, which is already installed and brings its own
-# VINTF fragment. Asking for 1.1 as well installs two modules for the same HAL,
-# and assemble_vintf stops:
-#   HAL "android.hardware.cas" has a conflict: Conflicting major version:
-#     1.2 (from .../cas@1.2-service.xml) vs. 1.1 (from .../cas@1.1-service.xml)
-
-
-
-# No libtinycompress, and it is worth knowing why.
-#
-# The stock vendor ships it in lib and lib64; here the 32-bit variant does not
-# compile:
-#   generated_kernel_includes/gen/usr/include/asm/sigcontext.h:74:2:
-#     error: unknown type name '__uint128_t'
-# The UAPI headers are generated with ARCH=arm64 and end up in the 32-bit
-# compile too, where that type does not exist. This is not a flaw in our
-# kernel: it is that the same headers serve two architectures.
-#
-# It is needed for compressed audio (offload playback). If one day it is truly
-# missing, the way forward is to generate the UAPI headers for ARCH=arm as
-# well, not to force this one.
-
-# A note on libraries with the .vendor suffix: in soong a "vendor_available"
-# module produces two variants, and PRODUCT_PACKAGES without the suffix
-# installs the system one. Declared without it, they landed in /system/lib64
-# and vendor was left without -- something you only see by comparing the two
-# images, the build says nothing.
-
-# The properties that lived in the stock /vendor/default.prop.
-#
-# The file is not copied: it declares ro.vndk.version=29, that is the Android
-# 10 VNDK, while the build generates 33. Init reads one and then the other, the
-# linker ends up with two versions, and the first to suffer is the BoringSSL
-# self test -- which does not fail with a message but reboots the phone:
-#   reboot: Restarting system with command 'boringssl-self-check-failed'
-# Two rounds of bootloop before finding it, because nothing suggests a line in
-# a property file is involved.
-#
-# Only the ones the build does not generate itself and that are genuinely
-# needed stay here: ro.zygote, ro.bionic.* and ro.vndk.version are its job,
-# rightly so. ro.apex.updatable: without it, the phone does not boot.
-#
-# BoardConfig sets TARGET_FLATTEN_APEX := false, so the APEXes are 26 .apex
-# files that apexd has to mount. But apexd mounts them only when told to with
-# this property, which lives in build/make/target/product/updatable_apex.mk
-# together with the flag:
-#
-#   PRODUCT_VENDOR_PROPERTIES := ro.apex.updatable=true
-#   TARGET_FLATTEN_APEX := false
-#
-# The device tree had picked up only the second line. The first is a VENDOR
-# property, and until now it came from the stock vendor -- which has it --
-# without anyone noticing. From the moment we install our own vendor image it
-# disappears, and the chain is this:
-#
-#   apexd: ActivateFlattenedApex        (looks for directories, finds files: 0 activated)
-#   linkerconfig: Unable to access VNDK APEX at path: /apex/com.android.vndk.v33
-#   linkerconfig: terminated by exit(255)
-#   reboot: Restarting system with command 'boringssl-self-check-failed'
-#
-# The last message is misleading -- encryption has nothing to do with it:
-# without configured namespaces the self test cannot find libcrypto, and that
-# service, when it fails, reboots the phone instead of complaining. The same
-# trap is already described in the TARGET_FLATTEN_APEX comment in
-# BoardConfig.mk: the second half of the same story.
-#
-# Careful with this block: on this device it does nothing.
-#
-# The vendor image is prebuilt (BOARD_PREBUILT_VENDORIMAGE), so it is copied
-# rather than built, and PRODUCT_VENDOR_PROPERTIES never reaches /vendor.
-# The values below that do show up on the phone -- ro.logd.size.stats,
-# camera.disable_zsl_mode, the dalvik.vm.isa.* ones -- are the stock vendor's
-# own, which is where they were extracted from in the first place. The two that
-# only exist here, ro.vendor.rc and ro.oem_unlock_supported, read back empty.
-# A vendor property that has to change must go somewhere else.
-PRODUCT_VENDOR_PROPERTIES += \
-    ro.apex.updatable=true \
-    ro.vendor.rc=/vendor/etc/init/hw/ \
-    ro.oem_unlock_supported=1 \
-    camera.disable_zsl_mode=1 \
-    ro.logd.size.stats=64K \
-    ro.logd.kernel=false \
-    log.tag.stats_log=I \
-    dalvik.vm.isa.arm64.variant=cortex-a53 \
-    dalvik.vm.isa.arm64.features=default \
-    dalvik.vm.isa.arm.variant=cortex-a53 \
-    dalvik.vm.isa.arm.features=default
 
 # No HALs or libraries to request for vendor: it is a prebuilt image, see
 # BOARD_PREBUILT_VENDORIMAGE in BoardConfig. Everything it needs is already

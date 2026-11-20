@@ -28,9 +28,7 @@ TARGET_BOOTLOADER_BOARD_NAME := E977
 TARGET_NO_BOOTLOADER := true
 TARGET_SCREEN_DENSITY := 480
 
-# Prebuilt kernel: Doogee never published the S88 Pro sources. The binary is
-# extracted from the stock boot.img and is identical to the one in the stock
-# recovery (9531111 bytes, verified in Phase 1).
+# Boot image layout, as in the stock boot.img.
 BOARD_KERNEL_BASE := 0x40078000
 BOARD_KERNEL_PAGESIZE := 2048
 BOARD_RAMDISK_OFFSET := 0x14f88000
@@ -123,18 +121,6 @@ BOARD_FLASH_BLOCK_SIZE := 131072
 BOARD_BOOTIMAGE_PARTITION_SIZE := 33554432
 BOARD_RECOVERYIMAGE_PARTITION_SIZE := 33554432
 
-# The cache size is for the OTA generator, not for us.
-#
-# On a non-A/B device the update is applied through /cache, and
-# build/make/tools/releasetools/blockimgdiff.py sizes the transfers from how
-# big it is. Without being told, "mka bacon" dies like this:
-#
-#   non_ab_ota.py WARNING: --- can't determine the cache partition size ---
-#   blockimgdiff.py:1561  assert cache_size is not None -> AssertionError
-#
-# The value is the real one, read from the phone:
-#   blockdev --getsize64 /dev/block/by-name/cache
-
 # The vendor image is not built: we take the stock one.
 #
 # This phone's vendor is Android 10 and we have the sources for none of what it
@@ -181,6 +167,17 @@ BOARD_RECOVERYIMAGE_PARTITION_SIZE := 33554432
 # require a modified prebuilt vendor image.
 BOARD_PREBUILT_VENDORIMAGE := vendor/doogee/s88pro/vendor.img
 
+# The cache size is for the OTA generator, not for us.
+#
+# On a non-A/B device the update is applied through /cache, and
+# build/make/tools/releasetools/blockimgdiff.py sizes the transfers from how
+# big it is. Without being told, "mka bacon" dies like this:
+#
+#   non_ab_ota.py WARNING: --- can't determine the cache partition size ---
+#   blockimgdiff.py:1561  assert cache_size is not None -> AssertionError
+#
+# The value is the real one, read from the phone:
+#   blockdev --getsize64 /dev/block/by-name/cache
 BOARD_CACHEIMAGE_PARTITION_SIZE := 452984832
 BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
 
@@ -307,39 +304,6 @@ TARGET_USERIMAGES_USE_F2FS := true
 # unsigned image is instead accepted with the "orange state" warning.
 BOARD_AVB_ENABLE := false
 
-# APEXes as packages, not flattened.
-#
-# The AOSP default is TARGET_FLATTEN_APEX := true: the APEXes end up in
-# /system/apex as directories, and init is supposed to bind-mount them onto
-# /apex. On this device that does not happen, and boot dies like this:
-#   apexd: Scanning /system/apex for pre-installed ApexFiles
-#   apexd: Activated 0 packages.
-#   linkerconfig: executing /apex/com.android.runtime/bin/linkerconfig
-#                 failed: No such file or directory
-# apexd looks for .apex *files* and finds only directories. Without
-# /apex/com.android.runtime there is no linker (/system/bin/linker is a symlink
-# in there), so the first service init launches in early-init fails to start
-# and the device reboots with
-#   reboot: Restarting system with command 'boringssl-self-check-failed'
-# a misleading message: it is not encryption, it is the missing interpreter.
-#
-# The GSI that boots on this phone has the APEXes as files: it inherits
-# updatable_apex.mk through generic_system.mk. We take only this line, without
-# PRODUCT_COMPRESSED_APEX: .capex files have to be decompressed into /data on
-# first boot, a complication we do not need.
-TARGET_FLATTEN_APEX := false
-
-# FM radio: the native library comes from the device, not from LineageOS.
-#
-# packages/apps/FMRadio ships a generic libfmjni, which however cannot talk to
-# the MediaTek driver. Its Android.mk allows for our case:
-#   ifneq ($(BOARD_HAVE_MTK_FM),true) ... builds its own ... endif
-# Declaring this stops the generic one being built and leaves ours in place,
-# taken from the stock ROM (see proprietary-files.txt). Without this line the
-# build stops with
-#   MODULE.TARGET.SHARED_LIBRARIES.libfmjni already defined
-BOARD_HAVE_MTK_FM := true
-
 # VINTF is enforced, and it has to be.
 #
 # The vendor partition is the factory one, Android 10, and the charter allows
@@ -407,24 +371,15 @@ $(call soong_config_set_bool,libui,legacy_gralloc,true)
 #   device/lineage/sepolicy/common/public/property.te: syntax error at
 #   token system_vendor_config_prop
 #
-# The mismatch with the vendor's prebuilt policy is instead solved by removing
-# that policy from the vendor image itself, so init has nothing to compare
-# against and uses the system policy directly.
-PRODUCT_SEPOLICY_SPLIT := true
-
-BOARD_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/vendor
+# The Android 10 vendor policy is bridged by the 29.0 mapping instead: see
+# TARGET_USES_PREBUILT_VENDOR_SEPOLICY below.
 
 # Rules between SYSTEM types go here, not in BOARD_SEPOLICY_DIRS
-# (BOARD_PLAT_PRIVATE_SEPOLICY_DIR is obsolete).
+# (BOARD_PLAT_PRIVATE_SEPOLICY_DIR is obsolete); see the README inside.
 #
-# They close two denials measured on the phone with SELinux Enforcing:
-#   system_app -> sysfs_leds       S88ProParts could not reach the notification LEDs
-#   nfc        -> system_data_file /data/nfc is not mapped in AOSP
-#
-# The 52 boot-time denials (vold -> sysfs_mmcblk, aee_aedv -> proc_ppm) are NOT
-# closable from here: those types are defined by the vendor policy, which
-# arrives already compiled in the blob (TARGET_USES_PREBUILT_VENDOR_SEPOLICY).
-# Neither of them blocks anything.
+# Rules that name vendor types go here too, in compat/29.0/29.0.compat.cil:
+# init compiles that file at boot together with the stock vendor policy, so it
+# can see those types, which the build cannot.
 SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS += $(DEVICE_PATH)/sepolicy/system_ext/private
 
 # The vendor sepolicy is the stock one; we do not build it.
