@@ -92,6 +92,22 @@
 ;; Neither the stock platform policy nor the vendor one allows surfaceflinger
 ;; that node, so Android 10 refused the read as well.
 (dontaudit surfaceflinger sysfs_boot_mode (file (read)))
+;; An app that draws video through the GPU -- Jelly playing one, for one --
+;; loads MediaTek's picture quality library in its RenderThread with the
+;; graphics stack. For every frame it looks up the PQ HAL, which the stock
+;; policy lets system apps alone find (hal_pq_client), opens /dev/ashmem
+;; before falling back to memfd, and reads the boot mode node. All three were
+;; refused on Android 10 as well; the frame is drawn without PQ. Thousands of
+;; denials a minute of video otherwise.
+(dontaudit untrusted_app_all mtk_hal_pq_hwservice (hwservice_manager (find)))
+(dontaudit untrusted_app_all ashmem_device (chr_file (open)))
+(dontaudit untrusted_app_all sysfs_boot_mode (file (read)))
+;; When a video decoder starts, MediaTek's performance hints in the codec
+;; process set dalvik.vm.dex2oat-threads and look into /proc/ppm. Neither the
+;; stock policy nor ours gives mediacodec either one: Android 10 refused them
+;; as well, and decoding does not depend on them.
+(dontaudit mediacodec dalvik_dynamic_config_prop (property_service (set)))
+(dontaudit mediacodec proc_ppm (dir (search)))
 (dontaudit secure_element system_data_file (file (open)))
 ;; vtservice, the system half of MediaTek's video calls. Its domain, vtservice,
 ;; and all its rules are the vendor policy's, written for a binary labelled
