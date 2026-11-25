@@ -1,0 +1,16 @@
+#
+# Copyright (C) 2026 The LineageOS Project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# The audio policy configuration.
+#
+# The stock /vendor/etc/audio_policy_configuration.xml gives the Bluetooth SCO
+# headset microphone, an input, an output channel mask. Our copy, with that
+# mask corrected, is mounted over the vendor's before audioserver starts with
+# class core on boot; the files it includes are still found next to it in
+# /vendor/etc. Only audioserver reads it -- no vendor library or service names
+# the file -- so it keeps the label of the rest of /system/etc. The vendor
+# image stays as it is.
+on post-fs
+    mount none /system/etc/audio_policy_configuration.xml /vendor/etc/audio_policy_configuration.xml bind

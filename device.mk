@@ -396,6 +396,22 @@ PRODUCT_SYSTEM_PROPERTIES += \
 PRODUCT_SYSTEM_PROPERTIES += \
     ro.audio.legacy_call_routing=true
 
+# Audio policy configuration: the stock one, with one input corrected.
+#
+# The vendor's file gives "BT SCO Headset Mic" AUDIO_CHANNEL_OUT_STEREO.
+# Android 10 let it pass. Now the audio policy cannot turn that port into its
+# AIDL form, so while a hands-free headset is connected listing the audio
+# ports fails for every client, and each one retries every 100 ms until the
+# headset goes:
+#   W AidlConversionCppNdk: legacy2aidl_audio_channel_mask_t_AudioChannelLayout: no AudioChannelLayout found for legacy input / voice audio_channel_mask_t value 0x3
+#   E AudioSystem: Function: listAudioPorts Line: 1914 Failed
+#   W AudioManager: updateAudioPortCache: listAudioPorts failed
+# Our copy is mounted over the vendor's at boot, see
+# rootdir/etc/init/s88pro-audio.rc.
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/rootdir/etc/audio_policy_configuration.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/audio_policy_configuration.xml \
+    $(LOCAL_PATH)/rootdir/etc/init/s88pro-audio.rc:$(TARGET_COPY_OUT_SYSTEM)/etc/init/s88pro-audio.rc
+
 # GPU AFBC compression: must be turned off.
 #
 # The Mali G72 compresses the framebuffers it composes with AFBC, and gralloc
