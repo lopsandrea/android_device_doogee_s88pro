@@ -1377,3 +1377,46 @@ only fail.
 v1 controller that is described but not mounted is left out. The mount state
 is the one libprocessgroup already reads from `/proc/mounts` for each v1
 controller, and `processgroup.cpp` and `sched_policy.cpp` already go by it.
+
+## packages_modules_Bluetooth-sniff-subrating-command-status.patch
+
+**Project**: `packages/modules/Bluetooth`
+
+**Branch**: from `lineage-24.0` on.
+
+**Symptom**: with a headset connected, `com.android.bluetooth` aborts a few
+seconds after the music is paused, and every Bluetooth connection drops:
+
+```
+I bluetooth: system/bta/av/bta_av_aact.cc:1929 bta_av_str_stopped: Delayed Sniff Subrating
+I bt_btm_pm: system/stack/acl/btm_pm.cc:306 BTM_SetSsrParams: Set sniff subrating state:immediate:active[0] max_latency:0x04b0 ...
+W bluetooth: system/gd/hci/hci_layer.cc:220 on_command_status: Received UNEXPECTED command status:UNSUPPORTED_REMOTE_OR_LMP_FEATURE(0x1a) opcode:SNIFF_SUBRATING(0x0811)
+F libc    : Fatal signal 6 (SIGABRT) ... (gd_stack_thread)
+Abort message: 'system/gd/hci/hci_layer.cc:283 handle_command_response: SNIFF_SUBRATING(0x0811) was not expecting status event'
+```
+
+**Why**: when the A2DP stream stops, `bta_dm_pm_ssr()` asks for sniff
+subrating through `BTM_SetSsrParams()`, which checks that the local
+controller supports it but not the peer. The headset does not, and the
+controller refuses the command. HCI_Sniff_Subrating calls for a Command
+Complete, and a controller following that answers with one carrying the
+error; the MT6631 here answers with a Command Status instead. The GD HCI
+layer accepts that only for vendor specific commands and asserts on anything
+else. Android 10's HCI layer, before GD, took the status as the command's
+outcome.
+
+**What it does**: two changes, either of which stops the crash.
+- `send_sniff_subrating()` in `stack/acl/btm_pm.cc`, the one place both of
+  `btm_pm.cc`'s paths send the command from, does nothing for a peer whose
+  LMP features lack sniff subrating. It asks
+  `acl_peer_supports_sniff_subrating()`, which `bta_dm_act.cc` already
+  uses.
+- In `gd/hci/hci_layer.cc`, a failed Command Status for any command waiting
+  for a Command Complete takes the path vendor specific commands already
+  take: the callback gets an empty Command Complete carrying the status and
+  reads it as an invalid response, which `check_complete()` logs. A warning
+  names the command when it is not a vendor one.
+
+Verified on the phone with the headset that crashed it, the same sequence:
+`send_sniff_subrating: Peer xx:xx:xx:xx:72:19 does not support sniff
+subrating`, and the stack stays up.
